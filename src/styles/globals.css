@@ -17,6 +17,7 @@
   --color-surface-raised: var(--rf-surface-raised);
   --color-surface-hover: var(--rf-surface-hover);
   --color-surface-active: var(--rf-surface-active);
+  --color-glass: var(--rf-glass);
 
   --color-edge: var(--rf-edge);
   --color-edge-strong: var(--rf-edge-strong);
@@ -30,87 +31,109 @@
   --color-accent-soft: var(--rf-accent-soft);
   --color-on-accent: var(--rf-on-accent);
 
+  --color-tooltip: var(--rf-tooltip-bg);
+  --color-tooltip-text: var(--rf-tooltip-text);
+
   --color-success: var(--rf-success);
   --color-warning: var(--rf-warning);
   --color-danger: var(--rf-danger);
 
+  --shadow-xs: var(--rf-shadow-xs);
   --shadow-panel: var(--rf-shadow-panel);
   --shadow-overlay: var(--rf-shadow-overlay);
+  --shadow-tooltip: var(--rf-shadow-tooltip);
 
   --radius-panel: 0.75rem;
+
+  --ease-swift: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ---- Dark (default) ---------------------------------------------- */
 :root,
 :root[data-theme='dark'] {
-  --rf-background: #0c0d0f;
-  --rf-surface: #141518;
-  --rf-surface-raised: #1b1d21;
-  --rf-surface-hover: #212327;
-  --rf-surface-active: #26282d;
+  --rf-background: #0a0b0d;
+  --rf-surface: #121316;
+  --rf-surface-raised: #191b1f;
+  --rf-surface-hover: #1f2126;
+  --rf-surface-active: #25282d;
+  --rf-glass: rgb(18 19 22 / 0.82);
 
-  --rf-edge: rgb(255 255 255 / 0.07);
-  --rf-edge-strong: rgb(255 255 255 / 0.14);
+  --rf-edge: rgb(255 255 255 / 0.065);
+  --rf-edge-strong: rgb(255 255 255 / 0.13);
 
-  --rf-text-primary: #f4f5f6;
-  --rf-text-secondary: #9ba1ab;
-  --rf-text-muted: #62676f;
+  --rf-text-primary: #f5f6f7;
+  --rf-text-secondary: #9aa0aa;
+  --rf-text-muted: #5f646c;
 
   --rf-accent: #4c82f7;
   --rf-accent-hover: #6494f9;
-  --rf-accent-soft: rgb(76 130 247 / 0.14);
+  --rf-accent-soft: rgb(76 130 247 / 0.15);
   --rf-on-accent: #ffffff;
 
-  --rf-success: #3fb970;
+  --rf-tooltip-bg: #26282d;
+  --rf-tooltip-text: #f5f6f7;
+
+  --rf-success: #40ba71;
   --rf-warning: #e8a33d;
   --rf-danger: #e5544b;
 
-  --rf-shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.06),
+  --rf-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --rf-shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.05),
     0 8px 24px rgb(0 0 0 / 0.4);
-  --rf-shadow-overlay: 0 0 0 1px rgb(255 255 255 / 0.08),
-    0 16px 48px rgb(0 0 0 / 0.55);
+  --rf-shadow-overlay: 0 0 0 1px rgb(255 255 255 / 0.07),
+    0 4px 12px rgb(0 0 0 / 0.35), 0 16px 48px rgb(0 0 0 / 0.5);
+  --rf-shadow-tooltip: 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 4px 16px rgb(0 0 0 / 0.5);
 
   --rf-canvas-top: #17191d;
-  --rf-canvas-bottom: #0c0d0f;
-  --rf-grid-cell: #2a2d33;
-  --rf-grid-section: #3d4149;
+  --rf-canvas-bottom: #0a0b0d;
+  --rf-vignette: rgb(0 0 0 / 0.32);
+  --rf-grid-cell: #292c32;
+  --rf-grid-section: #3c4048;
 
   color-scheme: dark;
 }
 
 /* ---- Light -------------------------------------------------------- */
 :root[data-theme='light'] {
-  --rf-background: #eef0f3;
-  --rf-surface: #f9fafb;
+  --rf-background: #e9ebee;
+  --rf-surface: #f7f8fa;
   --rf-surface-raised: #ffffff;
   --rf-surface-hover: #eceef1;
-  --rf-surface-active: #e4e7eb;
+  --rf-surface-active: #e2e5ea;
+  --rf-glass: rgb(250 251 252 / 0.85);
 
-  --rf-edge: rgb(15 18 25 / 0.08);
-  --rf-edge-strong: rgb(15 18 25 / 0.16);
+  --rf-edge: rgb(15 18 25 / 0.07);
+  --rf-edge-strong: rgb(15 18 25 / 0.15);
 
-  --rf-text-primary: #191b1f;
-  --rf-text-secondary: #5b626e;
-  --rf-text-muted: #9aa0aa;
+  --rf-text-primary: #17191d;
+  --rf-text-secondary: #5a616d;
+  --rf-text-muted: #99a0ab;
 
   --rf-accent: #2f6bef;
   --rf-accent-hover: #245ad6;
   --rf-accent-soft: rgb(47 107 239 / 0.1);
   --rf-on-accent: #ffffff;
 
+  --rf-tooltip-bg: #26282d;
+  --rf-tooltip-text: #f5f6f7;
+
   --rf-success: #1f9d55;
   --rf-warning: #c07f1a;
   --rf-danger: #d43d33;
 
-  --rf-shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.06),
-    0 8px 24px rgb(15 18 25 / 0.08);
-  --rf-shadow-overlay: 0 0 0 1px rgb(15 18 25 / 0.08),
-    0 16px 48px rgb(15 18 25 / 0.16);
+  --rf-shadow-xs: 0 1px 2px rgb(15 18 25 / 0.06);
+  --rf-shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.05),
+    0 8px 24px rgb(15 18 25 / 0.07);
+  --rf-shadow-overlay: 0 0 0 1px rgb(15 18 25 / 0.06),
+    0 4px 12px rgb(15 18 25 / 0.08), 0 16px 48px rgb(15 18 25 / 0.14);
+  --rf-shadow-tooltip: 0 4px 16px rgb(15 18 25 / 0.24);
 
-  --rf-canvas-top: #f2f4f7;
-  --rf-canvas-bottom: #dde1e7;
-  --rf-grid-cell: #c3c9d2;
-  --rf-grid-section: #9fa7b3;
+  --rf-canvas-top: #f1f3f6;
+  --rf-canvas-bottom: #d9dde3;
+  --rf-vignette: rgb(30 40 60 / 0.1);
+  --rf-grid-cell: #c2c8d1;
+  --rf-grid-section: #9ca4b0;
 
   color-scheme: light;
 }
@@ -129,6 +152,7 @@ body {
   @apply bg-background font-sans text-primary antialiased;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
@@ -159,11 +183,86 @@ body {
   border-radius: 4px;
 }
 
-/* Viewport backdrop gradient (behind the transparent WebGL canvas) */
+/* ------------------------------------------------------------------ */
+/*  Range inputs (inspector sliders)                                   */
+/*  The filled portion of the track is painted by the component via    */
+/*  a background gradient; these rules style track + thumb.            */
+/* ------------------------------------------------------------------ */
+
+input[type='range'] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 14px;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rf-track, var(--rf-surface-active));
+}
+input[type='range']::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rf-track, var(--rf-surface-active));
+}
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  margin-top: -4.5px;
+  height: 12px;
+  width: 12px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid rgb(15 18 25 / 0.12);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  transition: transform 0.12s var(--ease-swift, ease);
+}
+input[type='range']::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid rgb(15 18 25 / 0.12);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+input[type='range']:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+input[type='range']:focus-visible {
+  outline: none;
+}
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--rf-accent);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Viewport chrome                                                    */
+/* ------------------------------------------------------------------ */
+
+/* Backdrop gradient behind the transparent WebGL canvas */
 .viewport-backdrop {
   background: radial-gradient(
     120% 90% at 50% 0%,
     var(--rf-canvas-top) 0%,
     var(--rf-canvas-bottom) 100%
   );
+}
+
+/* Soft vignette overlay for depth (pointer-events: none in markup) */
+.viewport-vignette {
+  background: radial-gradient(
+    130% 110% at 50% 42%,
+    transparent 55%,
+    var(--rf-vignette) 100%
+  );
+}
+
+/* Frosted glass for floating viewport widgets */
+.glass-panel {
+  background: var(--rf-glass);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
 }

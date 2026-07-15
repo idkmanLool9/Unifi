@@ -1,5 +1,5 @@
 import { LeftSidebar } from '@/components/layout/LeftSidebar';
-import { InspectorPanel } from '@/components/layout/InspectorPanel';
+import { InspectorPanel } from '@/features/inspector/InspectorPanel';
 import { ViewportCanvas } from '@/features/viewport/ViewportCanvas';
 import { useEditorShortcuts } from '@/hooks/useEditorShortcuts';
 

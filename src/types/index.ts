@@ -14,10 +14,32 @@ export interface ViewportStats {
   drawCalls: number;
 }
 
+/** Standard camera view presets offered by the viewport nav widget. */
+export type ViewPreset =
+  | 'perspective'
+  | 'top'
+  | 'front'
+  | 'back'
+  | 'left'
+  | 'right';
+
+/** Current camera state: a named preset, or free orbit after user input. */
+export type CameraView = ViewPreset | 'custom';
+
+/** Commands dispatched from UI chrome to the camera rig inside the canvas. */
+export type CameraCommandInput =
+  | { type: 'preset'; view: ViewPreset }
+  | { type: 'fit' }
+  | { type: 'reset' };
+
+/** A dispatched command, stamped with a nonce so repeats re-trigger. */
+export type CameraCommand = CameraCommandInput & { id: number };
+
 /** A category shown in the device library sidebar. */
 export interface LibraryCategory {
   id: string;
   label: string;
+  description: string;
   /** Number of available devices (0 until the device library ships). */
   count: number;
 }

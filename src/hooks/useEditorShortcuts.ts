@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import type { EditorTool } from '@/types';
 
 const TOOL_KEYS: Record<string, EditorTool> = {
@@ -19,8 +20,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Global editor shortcuts: V/H/O switch tools, [ toggles the library,
- * ] toggles the inspector. Ignored while typing in form fields.
+ * Global editor shortcuts: V/H/O switch tools, [ and ] toggle the side
+ * panels, G toggles the floor grid. Ignored while typing in form fields.
  */
 export function useEditorShortcuts(): void {
   useEffect(() => {
@@ -38,6 +39,8 @@ export function useEditorShortcuts(): void {
         toggleSidebar();
       } else if (key === ']') {
         toggleInspector();
+      } else if (key === 'g') {
+        useViewSettingsStore.getState().toggleGrid();
       }
     }
 

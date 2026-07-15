@@ -33,12 +33,15 @@ src/
 │   └── providers/        # ThemeProvider (theme ↔ DOM sync)
 ├── pages/                # Route-level components (EditorPage, NotFound)
 ├── components/
-│   ├── layout/           # App chrome: toolbar, sidebar, inspector, status bar
-│   └── ui/               # Reusable primitives: IconButton, EmptyState, …
+│   ├── layout/           # App chrome: toolbar, sidebar, status bar
+│   └── ui/               # Reusable primitives: IconButton, Tooltip, Switch,
+│                         # Slider, CollapsibleSection, …
 ├── features/
+│   ├── inspector/        # Right-hand inspector panel and its sections
 │   └── viewport/         # All React Three Fiber code (canvas, scene,
-│                         # lighting, camera, stats probe)
-├── stores/               # Zustand stores (uiStore persisted, viewportStore transient)
+│                         # lighting, camera rig, nav widget, stats probe)
+├── stores/               # Zustand stores (uiStore + viewSettingsStore
+│                         # persisted, viewportStore transient)
 ├── hooks/                # Shared hooks (useResolvedTheme, useEditorShortcuts)
 ├── lib/                  # Utilities and constants (cn, camera config)
 ├── styles/               # Global CSS + design tokens (light/dark themes)
@@ -52,9 +55,14 @@ src/
   theming is a single `data-theme` attribute flip on `<html>`; a pre-paint
   script in `index.html` prevents theme flash.
 - **State** is split by volatility: `uiStore` (theme, panels, active tool)
-  is persisted to localStorage; `viewportStore` (FPS, draw calls) is
+  and `viewSettingsStore` (grid, snap, FOV, lighting) are persisted to
+  localStorage; `viewportStore` (FPS, draw calls, camera commands) is
   transient and written from inside the render loop on a throttle so
   per-frame updates never re-render React trees.
+- **Camera commands**: UI chrome (nav widget, inspector quick actions)
+  dispatches nonce-stamped commands through `viewportStore`; the
+  `CameraRig` inside the canvas consumes them and animates transitions
+  via `camera-controls`.
 - **3D isolation**: everything WebGL lives under `features/viewport/`.
   The rest of the app talks to it only through stores, so future features
   (rack model, drag & drop) plug in without touching the shell.
@@ -71,6 +79,7 @@ src/
 | `O` | Orbit tool            |
 | `[` | Toggle library panel  |
 | `]` | Toggle inspector      |
+| `G` | Toggle floor grid     |
 
 ## Roadmap
 
