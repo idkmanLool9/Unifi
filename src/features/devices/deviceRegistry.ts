@@ -5,6 +5,7 @@ import {
   type DeviceCategory,
   type DeviceDefinition,
 } from './deviceSchema';
+import { assetUrl } from '@/lib/assetUrl';
 
 /**
  * Central device registry. Built-in definitions register synchronously at
@@ -74,17 +75,21 @@ export function searchDevices(query: string): DeviceDefinition[] {
 
 /* ---- Asset paths --------------------------------------------------- */
 
-/** Conventional asset folder for a device. */
+/** Conventional asset folder for a device (base-path aware). */
 export const deviceAssetDir = (d: DeviceDefinition): string =>
-  `/devices/${d.manufacturer}/${d.slug}`;
+  assetUrl(`devices/${d.manufacturer}/${d.slug}`);
 
 /** URL of the device's GLB model (explicit path wins over convention). */
 export const deviceModelUrl = (d: DeviceDefinition): string =>
-  d.frontModelPath ?? `${deviceAssetDir(d)}/model.glb`;
+  d.frontModelPath !== undefined
+    ? assetUrl(d.frontModelPath)
+    : `${deviceAssetDir(d)}/model.glb`;
 
 /** URL of the device's thumbnail (explicit path wins over convention). */
 export const deviceThumbnailUrl = (d: DeviceDefinition): string =>
-  d.thumbnailPath ?? `${deviceAssetDir(d)}/thumbnail.webp`;
+  d.thumbnailPath !== undefined
+    ? assetUrl(d.thumbnailPath)
+    : `${deviceAssetDir(d)}/thumbnail.webp`;
 
 /* ---- Registration & external loading ------------------------------- */
 
@@ -121,7 +126,7 @@ function parseManifest(input: unknown): DeviceManifest | null {
 export async function loadExternalDefinitions(): Promise<void> {
   const store = useRegistryStore.getState();
   try {
-    const response = await fetch('/devices/manifest.json');
+    const response = await fetch(assetUrl('devices/manifest.json'));
     const contentType = response.headers.get('content-type') ?? '';
     if (!response.ok || !contentType.includes('json')) return;
 
@@ -134,7 +139,9 @@ export async function loadExternalDefinitions(): Promise<void> {
     await Promise.all(
       manifest.devices.map(async (folder) => {
         try {
-          const res = await fetch(`/devices/${folder}/metadata.json`);
+          const res = await fetch(
+            assetUrl(`devices/${folder}/metadata.json`),
+          );
           const type = res.headers.get('content-type') ?? '';
           if (!res.ok || !type.includes('json')) return;
           const result = validateDeviceDefinition(await res.json());
