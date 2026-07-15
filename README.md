@@ -39,6 +39,9 @@ src/
 ├── features/
 │   ├── inspector/        # Right-hand inspector: scene sections + rack
 │   │                     # sections (shown when the rack is selected)
+│   ├── library/          # Device library: placeholder catalog, SVG
+│   │                     # faceplate thumbnails, cards, brand groups,
+│   │                     # search/filter overlays, preview panel
 │   ├── rack/             # Parametric EIA-310 rack model, finishes,
 │   │                     # canvas rail textures, selection, welcome flow
 │   └── viewport/         # All React Three Fiber code (canvas, scene,
@@ -102,5 +105,8 @@ presets, live view settings). M3: first rack experience (parametric
 EIA-310 open-frame rack, welcome/create flow, selection, rack
 inspector). M4: visual realism (L-profile steel construction,
 powder-coat materials, studio IBL, ambient occlusion, cinematic
-camera). Upcoming: device library, drag & drop, validation, cable
-routing, pricing, PDF export, AI-generated layouts, collaboration.
+camera). M5: device library experience (manufacturer/category catalog
+browser, procedural faceplate thumbnails, preview panel, favourites &
+recents, search/filter design). Upcoming: drag & drop placement,
+validation, cable routing, pricing, PDF export, AI-generated layouts,
+collaboration.

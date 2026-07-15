@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useLibraryStore } from '@/stores/libraryStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
@@ -47,7 +48,13 @@ export function useEditorShortcuts(): void {
       } else if (key === 'f') {
         useViewportStore.getState().dispatchCamera({ type: 'fit' });
       } else if (key === 'escape') {
-        useRackStore.getState().setSelected(null);
+        // Dismiss the topmost layer first: device preview, then selection.
+        const library = useLibraryStore.getState();
+        if (library.selectedDeviceId) {
+          library.selectDevice(null);
+        } else {
+          useRackStore.getState().setSelected(null);
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import { LeftSidebar } from '@/components/layout/LeftSidebar';
 import { InspectorPanel } from '@/features/inspector/InspectorPanel';
 import { ViewportCanvas } from '@/features/viewport/ViewportCanvas';
+import { DevicePreviewPanel } from '@/features/library/DevicePreviewPanel';
 import { useEditorShortcuts } from '@/hooks/useEditorShortcuts';
 
 /** The rack editor: library panel, 3D viewport, and inspector. */
@@ -10,7 +11,11 @@ export function EditorPage() {
   return (
     <div className="flex min-w-0 flex-1">
       <LeftSidebar />
-      <ViewportCanvas />
+      <div className="relative flex min-w-0 flex-1">
+        <ViewportCanvas />
+        {/* Floating device preview, anchored to the viewport's left edge */}
+        <DevicePreviewPanel />
+      </div>
       <InspectorPanel />
     </div>
   );

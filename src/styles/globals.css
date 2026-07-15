@@ -269,6 +269,26 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
   );
 }
 
+/* Loading shimmer for skeleton placeholders */
+@keyframes rf-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--rf-surface-active) 30%,
+    var(--rf-surface-hover) 50%,
+    var(--rf-surface-active) 70%
+  );
+  background-size: 200% 100%;
+  animation: rf-shimmer 1.6s ease-in-out infinite;
+}
+
 /* Frosted glass for floating viewport widgets */
 .glass-panel {
   background: var(--rf-glass);
