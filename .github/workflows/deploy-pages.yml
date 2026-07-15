@@ -48,6 +48,19 @@ jobs:
           # a repository rename can never break the base path.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
 
+      # While Pages is in "Deploy from a branch" mode, GitHub's built-in
+      # Jekyll pipeline races this workflow on every push and publishes the
+      # raw source tree (a blank page for a Vite app) whenever it finishes
+      # last. Switch the site to workflow deployments so only this
+      # workflow's artifact is ever published.
+      - name: Ensure Pages deploys from Actions (not a branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method PUT "repos/${{ github.repository }}/pages" \
+            -f build_type=workflow \
+            || echo "::warning::Could not switch Pages to workflow deployments automatically. Set Settings → Pages → Source to 'GitHub Actions' manually."
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

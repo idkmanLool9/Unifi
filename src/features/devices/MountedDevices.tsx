@@ -9,7 +9,8 @@ import {
   MousePointer2,
   Trash2,
 } from 'lucide-react';
-import { DeviceModel } from './DeviceModel';
+import { DeviceModel, ModelErrorBoundary } from './DeviceModel';
+import { DevicePlaceholder } from './DevicePlaceholder';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { RackSelection } from '@/features/rack/RackSelection';
 import { devicePlacement, MM_TO_M } from '@/features/rack/rackMath';
@@ -143,7 +144,14 @@ function MountedDeviceView({
       }}
       onPointerOut={() => setHovered(false)}
     >
-      <DeviceModel definition={definition} />
+      {/* Nothing a single device does may blank the scene. */}
+      <ModelErrorBoundary
+        key={`${instance.id}-${instance.definitionId}`}
+        label={`device ${definition.productName}`}
+        fallback={<DevicePlaceholder definition={definition} />}
+      >
+        <DeviceModel definition={definition} />
+      </ModelErrorBoundary>
       {(selected || hovered) && (
         <group position={[0, -h / 2, 0]}>
           <RackSelection

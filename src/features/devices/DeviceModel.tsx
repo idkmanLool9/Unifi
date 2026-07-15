@@ -36,39 +36,33 @@ function LoadedModel({ url }: { url: string }) {
 
 interface ModelBoundaryProps {
   fallback: ReactNode;
-  /** Reset key: retry when the URL changes. */
-  url: string;
+  /** Used for diagnostics; key the boundary by URL to retry a new asset. */
+  label: string;
   children: ReactNode;
 }
 
 /**
- * A corrupt or unloadable GLB must degrade to the placeholder, never
- * blank the scene: loader rejections thrown through Suspense are caught
- * here and logged once.
+ * A corrupt or unloadable GLB (or any crash inside a device's 3D subtree)
+ * must degrade to the placeholder, never blank the scene. State is only
+ * ever set from React's error path — no render-phase updates. Mount with
+ * `key={url}` so a changed asset gets a fresh attempt.
  */
-class ModelErrorBoundary extends Component<
+export class ModelErrorBoundary extends Component<
   ModelBoundaryProps,
-  { failedUrl: string | null }
+  { failed: boolean }
 > {
-  state = { failedUrl: null as string | null };
+  state = { failed: false };
 
-  static getDerivedStateFromError(): { failedUrl: string } {
-    return { failedUrl: 'pending' };
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
   }
 
   componentDidCatch(error: unknown): void {
-    this.setState({ failedUrl: this.props.url });
-    console.warn(`[devices] failed to load model ${this.props.url}:`, error);
+    console.warn(`[devices] ${this.props.label}: falling back —`, error);
   }
 
   render(): ReactNode {
-    if (this.state.failedUrl !== null && this.state.failedUrl !== this.props.url) {
-      // A different model URL — allow a fresh attempt.
-      this.setState({ failedUrl: null });
-    }
-    return this.state.failedUrl !== null
-      ? this.props.fallback
-      : this.props.children;
+    return this.state.failed ? this.props.fallback : this.props.children;
   }
 }
 
@@ -115,7 +109,8 @@ export function DeviceModel({ definition }: DeviceModelProps) {
   return (
     <group scale={t.scale} rotation={rotation} position={offset}>
       <ModelErrorBoundary
-        url={url}
+        key={url}
+        label={`model ${url}`}
         fallback={<DevicePlaceholder definition={definition} />}
       >
         <Suspense fallback={<DevicePlaceholder definition={definition} />}>
