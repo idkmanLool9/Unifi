@@ -18,6 +18,10 @@ export const UBIQUITI_DEVICES: DeviceDefinition[] = [
     description:
       'All-in-one enterprise gateway with integrated switching, protect NVR and 10G uplinks.',
     tags: ['gateway', 'unifi', '10g', 'popular'],
+    // The GLB is authored width-along-Z with its origin at the chassis
+    // base; rotate -90° about Y and drop by half the height (see
+    // public/devices/ubiquiti/dream-machine-pro/metadata.json).
+    modelTransform: { rotationDeg: [0, -90, 0], offsetMm: [0, -22.5, 0] },
     ports: [
       { id: 'lan', type: 'rj45', count: 8, label: 'LAN 1–8' },
       { id: 'wan', type: 'rj45', count: 1, label: 'WAN' },

@@ -19,8 +19,8 @@
   "description": "All-in-one enterprise gateway with integrated switching, protect NVR and 10G uplinks.",
   "modelTransform": {
     "scale": 1,
-    "rotationDeg": [0, 0, 0],
-    "offsetMm": [0, 0, 0]
+    "rotationDeg": [0, -90, 0],
+    "offsetMm": [0, -22.5, 0]
   },
   "mountingOffsetMm": 0,
   "ports": [
