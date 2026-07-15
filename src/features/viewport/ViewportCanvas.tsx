@@ -18,6 +18,7 @@ import { useResolvedTheme } from '@/hooks/useResolvedTheme';
 import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import { CAMERA } from '@/lib/constants';
@@ -81,22 +82,19 @@ export function ViewportCanvas() {
       },
     ];
 
+    const selectionState = useSelectionStore.getState();
+    const rackSelected = selectionState.selection?.kind === 'rack';
     const rackEntries: MenuEntry[] = rackState.rack
       ? [
           { separator: true },
           {
             id: 'select-rack',
-            label:
-              rackState.selectedId === rackState.rack.id
-                ? 'Deselect rack'
-                : 'Select rack',
+            label: rackSelected ? 'Deselect rack' : 'Select rack',
             icon: MousePointer2,
             action: () =>
-              rackState.setSelected(
-                rackState.selectedId === rackState.rack?.id
-                  ? null
-                  : (rackState.rack?.id ?? null),
-              ),
+              rackSelected
+                ? selectionState.clear()
+                : selectionState.selectRack(),
           },
           {
             id: 'frame-rack',
@@ -151,7 +149,7 @@ export function ViewportCanvas() {
             down &&
             Math.hypot(e.clientX - down.x, e.clientY - down.y) >
               CLICK_DRAG_TOLERANCE;
-          if (!moved) useRackStore.getState().setSelected(null);
+          if (!moved) useSelectionStore.getState().clear();
         }}
       >
         <Scene theme={theme} />

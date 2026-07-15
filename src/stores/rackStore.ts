@@ -6,20 +6,16 @@ import type { RackConfig, RackSize } from '@/types';
 interface RackState {
   /** The rack in the scene (single rack for now; multi-rack comes later). */
   rack: RackConfig | null;
-  /** Transient selection — intentionally not persisted. */
-  selectedId: string | null;
 
   createRack: (units: RackSize) => void;
   updateRack: (patch: Partial<Omit<RackConfig, 'id' | 'createdAt'>>) => void;
   deleteRack: () => void;
-  setSelected: (id: string | null) => void;
 }
 
 export const useRackStore = create<RackState>()(
   persist(
     (set) => ({
       rack: null,
-      selectedId: null,
 
       createRack: (units) => {
         const rack: RackConfig = {
@@ -33,16 +29,13 @@ export const useRackStore = create<RackState>()(
           showFloorMarker: true,
           createdAt: new Date().toISOString(),
         };
-        // Select on creation so the inspector opens on the rack.
-        set({ rack, selectedId: rack.id });
+        set({ rack });
       },
 
       updateRack: (patch) =>
         set((s) => (s.rack ? { rack: { ...s.rack, ...patch } } : s)),
 
-      deleteRack: () => set({ rack: null, selectedId: null }),
-
-      setSelected: (selectedId) => set({ selectedId }),
+      deleteRack: () => set({ rack: null }),
     }),
     {
       name: RACK_STORE_KEY,

@@ -22,6 +22,7 @@ npm install
 npm run dev        # start dev server
 npm run build      # typecheck + production build
 npm run typecheck  # typecheck only
+npm run test       # run the vitest suite
 npm run preview    # preview production build
 ```
 
@@ -39,10 +40,14 @@ src/
 │                         # ResizeHandle, CollapsibleSection, …
 ├── features/
 │   ├── commands/         # Command registry + ⌘K command palette
-│   ├── inspector/        # Right-hand inspector: scene sections + rack
-│   │                     # sections (shown when the rack is selected)
-│   ├── library/          # Device library: placeholder catalog, SVG
-│   │                     # faceplate thumbnails, cards, brand groups,
+│   ├── devices/          # Device engine: strict definition schema +
+│   │                     # validator, central registry (built-in +
+│   │                     # external metadata), GLB pipeline with
+│   │                     # parametric placeholders, mounted-device views
+│   ├── inspector/        # Right-hand inspector: scene, rack, and
+│   │                     # device sections (per selection)
+│   ├── library/          # Device library UI: registry-backed catalog
+│   │                     # views, SVG faceplate thumbnails, cards,
 │   │                     # search/filter overlays, preview panel
 │   ├── overlays/         # Settings, shortcuts, confirm dialogs
 │   ├── rack/             # Parametric EIA-310 rack model, finishes,
@@ -72,6 +77,16 @@ src/
   dispatches nonce-stamped commands through `viewportStore`; the
   `CameraRig` inside the canvas consumes them and animates transitions
   via `camera-controls`.
+- **Device engine**: every device is a validated `DeviceDefinition`
+  (metadata, not component logic). The registry seeds from bundled
+  definitions and loads `/devices/manifest.json` folders at startup —
+  dropping `model.glb` into a device folder swaps out its parametric
+  placeholder with zero code changes (see `public/devices/README.md`).
+  Placement flows through pure, unit-tested functions in
+  `features/rack/rackMath.ts` (occupancy, first-free-slot, structured
+  validation), and mounted instances live in a persisted
+  `deviceInstancesStore` with a unified `selectionStore` for
+  rack/device selection.
 - **3D isolation**: everything WebGL lives under `features/viewport/`.
   The rest of the app talks to it only through stores, so future features
   (rack model, drag & drop) plug in without touching the shell.
@@ -115,5 +130,8 @@ camera). M5: device library experience (manufacturer/category catalog
 browser, procedural faceplate thumbnails, preview panel, favourites &
 recents, search/filter design). M6: desktop polish (resizable panels,
 ⌘K command palette, context menus, toasts, dialogs, settings &
-shortcuts windows). Upcoming: drag & drop placement, validation, cable
-routing, pricing, PDF export, AI-generated layouts, collaboration.
+shortcuts windows). M7: device engine (definition schema + registry,
+GLB pipeline with placeholders, rack-unit placement with validation,
+device selection/inspector, tests). Upcoming: drag & drop placement,
+cable routing, pricing, PDF export, AI-generated layouts,
+collaboration.

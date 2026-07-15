@@ -14,8 +14,9 @@ import {
 } from './rackConstants';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
+import { MountedDevices } from '@/features/devices/MountedDevices';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
-import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import type { RackConfig, ResolvedTheme } from '@/types';
 
@@ -40,8 +41,8 @@ export function RackModel({ rack, theme }: RackModelProps) {
   const bornAt = useRef<number>(-1);
   const [hovered, setHovered] = useState(false);
 
-  const selected = useRackStore((s) => s.selectedId === rack.id);
-  const setSelected = useRackStore((s) => s.setSelected);
+  const selected = useSelectionStore((s) => s.selection?.kind === 'rack');
+  const selectRack = useSelectionStore((s) => s.selectRack);
   const dispatchCamera = useViewportStore((s) => s.dispatchCamera);
 
   const finish = RACK_FINISHES[rack.finish];
@@ -145,7 +146,7 @@ export function RackModel({ rack, theme }: RackModelProps) {
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    setSelected(rack.id);
+    selectRack();
   };
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -345,6 +346,9 @@ export function RackModel({ rack, theme }: RackModelProps) {
           />
         </mesh>
       )}
+
+      {/* Mounted devices (inherit the rack's animation and orientation) */}
+      <MountedDevices theme={theme} />
 
       {/* Selection / hover feedback */}
       {(selected || hovered) && (

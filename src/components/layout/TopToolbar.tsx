@@ -26,6 +26,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { useMenuStore } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useUIStore } from '@/stores/uiStore';
 import { toast } from '@/stores/toastStore';
 import { APP_NAME } from '@/lib/constants';
@@ -127,8 +128,9 @@ export function TopToolbar() {
         icon: PencilLine,
         disabled: !hasRack,
         action: () => {
-          const rack = useRackStore.getState().rack;
-          if (rack) useRackStore.getState().setSelected(rack.id);
+          if (useRackStore.getState().rack) {
+            useSelectionStore.getState().selectRack();
+          }
           if (!useUIStore.getState().inspectorOpen)
             useUIStore.getState().toggleInspector();
         },

@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { toast } from '@/stores/toastStore';
 
 export function ConfirmDeleteRackDialog() {
@@ -14,6 +16,8 @@ export function ConfirmDeleteRackDialog() {
   const confirm = () => {
     const name = rack?.name ?? 'Rack';
     deleteRack();
+    useDeviceInstancesStore.getState().clearAll();
+    useSelectionStore.getState().clear();
     setOpen(false);
     toast({
       variant: 'success',

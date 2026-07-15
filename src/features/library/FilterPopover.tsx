@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { Switch } from '@/components/ui/Switch';
-import { CATALOG_BRANDS, devicesByBrand } from './catalog';
+import { catalogBrands, devicesByBrand } from './catalog';
 import { cn } from '@/lib/utils';
 
 /**
@@ -43,7 +43,7 @@ export function FilterPopover({ onClose }: { onClose: () => void }) {
         <div>
           <GroupLabel>Manufacturer</GroupLabel>
           <div className="max-h-[132px] space-y-px overflow-y-auto pr-1">
-            {CATALOG_BRANDS.map((brand) => {
+            {catalogBrands().map((brand) => {
               const active = brands.includes(brand.id);
               return (
                 <button

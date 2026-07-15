@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
-import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
+import { getDevice } from '@/features/devices/deviceRegistry';
+import { toast } from '@/stores/toastStore';
 import type { EditorTool } from '@/types';
 
 const TOOL_KEYS: Record<string, EditorTool> = {
@@ -67,6 +70,20 @@ export function useEditorShortcuts(): void {
         useViewportStore.getState().dispatchCamera({ type: 'fit' });
       } else if (key === '?') {
         overlays.setShortcutsOpen(true);
+      } else if (key === 'delete' || key === 'backspace') {
+        // Remove the selected mounted device.
+        const selection = useSelectionStore.getState().selection;
+        if (selection?.kind === 'device') {
+          const store = useDeviceInstancesStore.getState();
+          const instance = store.instances.find(
+            (i) => i.id === selection.instanceId,
+          );
+          const name =
+            (instance && getDevice(instance.definitionId)?.productName) ??
+            'Device';
+          store.removeDevice(selection.instanceId);
+          toast({ variant: 'success', title: `${name} removed` });
+        }
       } else if (key === 'escape') {
         // Dismiss the topmost layer: menu, device preview, then selection.
         const menu = useMenuStore.getState();
@@ -76,7 +93,7 @@ export function useEditorShortcuts(): void {
         } else if (library.selectedDeviceId) {
           library.selectDevice(null);
         } else {
-          useRackStore.getState().setSelected(null);
+          useSelectionStore.getState().clear();
         }
       }
     }

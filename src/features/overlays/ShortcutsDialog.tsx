@@ -37,6 +37,7 @@ const GROUPS: ReadonlyArray<{ title: string; rows: ShortcutRow[] }> = [
       { label: 'Command palette', keys: ['⌘', 'K'] },
       { label: 'Settings', keys: ['⌘', ','] },
       { label: 'Keyboard shortcuts', keys: ['?'] },
+      { label: 'Remove selected device', keys: ['Del'] },
       { label: 'Dismiss / deselect', keys: ['Esc'] },
     ],
   },

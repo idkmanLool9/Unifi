@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { getDevice } from '@/features/devices/deviceRegistry';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/constants';
 
@@ -73,9 +76,20 @@ export function StatusBar() {
   const toggleSnap = useViewSettingsStore((s) => s.toggleSnap);
   const units = useViewSettingsStore((s) => s.units);
 
-  const selection = useRackStore((s) =>
-    s.rack && s.selectedId === s.rack.id ? s.rack.name : 'None',
-  );
+  const selectionState = useSelectionStore((s) => s.selection);
+  const rackName = useRackStore((s) => s.rack?.name);
+  const instances = useDeviceInstancesStore((s) => s.instances);
+
+  let selection = 'None';
+  if (selectionState?.kind === 'rack' && rackName) {
+    selection = rackName;
+  } else if (selectionState?.kind === 'device') {
+    const instance = instances.find(
+      (i) => i.id === selectionState.instanceId,
+    );
+    const definition = instance && getDevice(instance.definitionId);
+    if (definition) selection = definition.productName;
+  }
 
   return (
     <footer className="flex h-[26px] shrink-0 items-center justify-between border-t border-edge bg-surface px-2.5 text-[11px] text-secondary select-none">

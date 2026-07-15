@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { RACK_SIZES, U_METERS, rackHeight } from './rackConstants';
 import { cn } from '@/lib/utils';
@@ -110,7 +111,9 @@ export function WelcomeOverlay() {
 
   const handleCreate = () => {
     createRack(units);
-    // Fly to the hero three-quarter angle framed around the new rack.
+    // Select it so the inspector opens on the rack, then fly to the hero
+    // three-quarter angle framed around the new rack.
+    useSelectionStore.getState().selectRack();
     dispatchCamera({ type: 'preset', view: 'perspective' });
   };
 

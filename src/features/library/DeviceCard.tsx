@@ -2,8 +2,10 @@ import { motion } from 'framer-motion';
 import { Eye, Heart, Plus, Zap } from 'lucide-react';
 import { DeviceThumbnail } from './DeviceThumbnail';
 import { brandById, CATEGORY_LABELS, type CatalogDevice } from './catalog';
+import { addDeviceToRack } from '@/features/devices/addDeviceAction';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
+import { useRackStore } from '@/stores/rackStore';
 import { cn } from '@/lib/utils';
 
 function Chip({
@@ -71,7 +73,8 @@ export function DeviceCard({ device }: DeviceCardProps) {
             id: 'add',
             label: 'Add to rack',
             icon: Plus,
-            disabled: true,
+            disabled: useRackStore.getState().rack === null,
+            action: () => addDeviceToRack(device.id),
           },
         ]);
       }}
@@ -112,7 +115,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
             <Chip accent>{device.units}U</Chip>
-            {device.ports !== undefined && <Chip>{device.ports} ports</Chip>}
+            {device.ports !== undefined && <Chip>{device.ports}</Chip>}
             {device.poe && (
               <Chip>
                 <Zap className="size-2.5" strokeWidth={2.5} />

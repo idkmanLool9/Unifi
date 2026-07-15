@@ -1,9 +1,19 @@
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InfoRow } from '../InfoRow';
+import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
+import { occupiedUnits } from '@/features/rack/rackMath';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import type { RackConfig } from '@/types';
 
 export function RackUnitsSection({ rack }: { rack: RackConfig }) {
-  const occupied = 0; // device placement arrives in a later milestone
+  const instances = useDeviceInstancesStore((s) => s.instances);
+  useRegistryStore((s) => s.version);
+
+  const occupied = occupiedUnits({
+    rackUnits: rack.units,
+    instances,
+    getDefinition: getDevice,
+  });
   const percent = Math.round((occupied / rack.units) * 100);
 
   return (
@@ -12,6 +22,7 @@ export function RackUnitsSection({ rack }: { rack: RackConfig }) {
         <InfoRow label="Total">{rack.units}U</InfoRow>
         <InfoRow label="Occupied">{occupied}U</InfoRow>
         <InfoRow label="Available">{rack.units - occupied}U</InfoRow>
+        <InfoRow label="Devices">{instances.length}</InfoRow>
         <div className="space-y-1 pt-0.5">
           <div
             role="progressbar"

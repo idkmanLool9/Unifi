@@ -3,9 +3,11 @@ import { Heart, Plus, X, Zap } from 'lucide-react';
 import { DeviceThumbnail } from './DeviceThumbnail';
 import { BrandMonogram } from './BrandGroup';
 import { brandById, CATEGORY_LABELS, deviceById } from './catalog';
+import { addDeviceToRack } from '@/features/devices/addDeviceAction';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { IconButton } from '@/components/ui/IconButton';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useRackStore } from '@/stores/rackStore';
 import { cn } from '@/lib/utils';
 
 function SpecTile({ label, value }: { label: string; value: string }) {
@@ -35,6 +37,7 @@ export function DevicePreviewPanel() {
 
   const device = selectedId ? deviceById(selectedId) : undefined;
   const brand = device ? brandById(device.brandId) : undefined;
+  const hasRack = useRackStore((s) => s.rack !== null);
 
   return (
     <AnimatePresence>
@@ -105,10 +108,7 @@ export function DevicePreviewPanel() {
                 label="Power"
                 value={device.powerW > 0 ? `${device.powerW} W max` : '—'}
               />
-              <SpecTile
-                label="Ports"
-                value={device.ports !== undefined ? String(device.ports) : '—'}
-              />
+              <SpecTile label="Ports" value={device.ports ?? '—'} />
               <SpecTile label="Speed" value={device.speed ?? '—'} />
             </div>
 
@@ -125,12 +125,18 @@ export function DevicePreviewPanel() {
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-2 border-t border-edge px-4 py-3">
-            <Tooltip label="Drag & drop arrives in the next milestone" side="top">
+            <Tooltip
+              label={
+                hasRack ? 'Mount in the first free slot' : 'Create a rack first'
+              }
+              side="top"
+            >
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.98 }}
-                disabled
-                className="flex h-8 items-center gap-1.5 rounded-[9px] bg-accent px-4 text-xs font-medium text-on-accent opacity-50 shadow-xs"
+                disabled={!hasRack}
+                onClick={() => addDeviceToRack(device.id)}
+                className="flex h-8 items-center gap-1.5 rounded-[9px] bg-accent px-4 text-xs font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover disabled:opacity-50"
               >
                 <Plus className="size-3.5" strokeWidth={2} />
                 Add to Rack
@@ -156,7 +162,9 @@ export function DevicePreviewPanel() {
                 fill={favorite ? 'currentColor' : 'none'}
               />
             </button>
-            <p className="ml-auto text-[9.5px] text-muted">Placeholder data</p>
+            <p className="ml-auto text-[9.5px] text-muted">
+              {device.units}U · {device.depthMm} mm
+            </p>
           </div>
         </motion.aside>
       )}

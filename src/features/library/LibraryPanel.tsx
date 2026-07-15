@@ -7,11 +7,12 @@ import { SkeletonCard } from './SkeletonCard';
 import { SearchOverlay } from './SearchOverlay';
 import { FilterPopover } from './FilterPopover';
 import {
-  CATALOG_BRANDS,
-  CATALOG_DEVICES,
+  catalogBrands,
+  catalogDevices,
   deviceById,
   type CatalogDevice,
 } from './catalog';
+import { useRegistryStore } from '@/features/devices/deviceRegistry';
 import { PanelHeader } from '@/components/ui/PanelHeader';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -72,6 +73,11 @@ export function LibraryPanel() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Re-derive the catalog when external definitions finish loading.
+  useRegistryStore((s) => s.version);
+  const brands = catalogBrands();
+  const devices = catalogDevices();
+
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), INITIAL_LOAD_MS);
     return () => clearTimeout(t);
@@ -89,7 +95,7 @@ export function LibraryPanel() {
       <PanelHeader title="Library">
         <div className="flex items-center gap-1">
           <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-[10px] font-semibold text-muted tabular-nums">
-            {CATALOG_DEVICES.length}
+            {devices.length}
           </span>
           <Tooltip label="Filters">
             <IconButton
@@ -165,7 +171,7 @@ export function LibraryPanel() {
           >
               {activeTab === 'browse' && (
                 <div className="space-y-1">
-                  {CATALOG_BRANDS.map((brand) => (
+                  {brands.map((brand) => (
                     <BrandGroup key={brand.id} brand={brand} />
                   ))}
                 </div>
@@ -198,8 +204,7 @@ export function LibraryPanel() {
 
       <div className="border-t border-edge px-4 py-2.5">
         <p className="text-[11px] text-muted">
-          {CATALOG_BRANDS.length} manufacturers · {CATALOG_DEVICES.length}{' '}
-          devices · placeholder catalog
+          {brands.length} manufacturers · {devices.length} devices
         </p>
       </div>
     </div>

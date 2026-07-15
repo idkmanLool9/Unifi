@@ -11,6 +11,8 @@ interface RackSelectionProps {
   accent: string;
   /** Hover shows only the floor outline; selection adds corner brackets. */
   selected: boolean;
+  /** 'device' renders brackets only — no floor outline mid-rack. */
+  variant?: 'rack' | 'device';
 }
 
 const BRACKET_LEN = 0.085;
@@ -53,6 +55,7 @@ export function RackSelection({
   depth,
   accent,
   selected,
+  variant = 'rack',
 }: RackSelectionProps) {
   const groupRef = useRef<Group>(null);
   const floorRef = useRef<Line2>(null);
@@ -104,21 +107,23 @@ export function RackSelection({
       floorRef.current.material.opacity = (selected ? 0.55 : 0.22) * p;
     }
     if (bracketsRef.current) {
-      bracketsRef.current.material.opacity = 0.95 * p;
+      bracketsRef.current.material.opacity = (selected ? 0.95 : 0.35) * p;
     }
   });
 
   return (
     <group ref={groupRef}>
-      <Line
-        ref={floorRef}
-        points={floorPoints}
-        color={accent}
-        lineWidth={1.5}
-        transparent
-        opacity={0}
-      />
-      {selected && (
+      {variant === 'rack' && (
+        <Line
+          ref={floorRef}
+          points={floorPoints}
+          color={accent}
+          lineWidth={1.5}
+          transparent
+          opacity={0}
+        />
+      )}
+      {(selected || variant === 'device') && (
         <Line
           ref={bracketsRef}
           segments
