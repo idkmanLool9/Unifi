@@ -2,7 +2,11 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # Deploy from main once it exists; until then the working branch is
+    # the repository's default branch and deploys directly.
+    branches:
+      - main
+      - claude/rackforge-project-setup-4on0nn
   workflow_dispatch:
 
 permissions:

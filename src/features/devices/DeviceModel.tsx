@@ -1,11 +1,19 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { MathUtils } from 'three';
 import { useGLTF } from '@react-three/drei';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { deviceModelUrl } from './deviceRegistry';
 import { MM_TO_M } from '@/features/rack/rackMath';
+import { assetUrl } from '@/lib/assetUrl';
 import { useAssetAvailability } from '@/stores/assetStore';
 import type { DeviceDefinition } from './deviceSchema';
+
+/**
+ * Draco decoder location. Self-hosted (copied from three's examples into
+ * public/draco) so compressed GLBs never depend on a third-party CDN —
+ * required for offline use, restrictive networks, and subpath deploys.
+ */
+const DRACO_DECODER_PATH = assetUrl('draco/');
 
 /**
  * Renders a device's real GLB. The loaded scene is cached by drei/useGLTF
@@ -15,7 +23,7 @@ import type { DeviceDefinition } from './deviceSchema';
  * disposed on unmount — the cache owns those resources.
  */
 function LoadedModel({ url }: { url: string }) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(url, DRACO_DECODER_PATH);
   const cloned = useMemo(() => scene.clone(true), [scene]);
   useEffect(() => {
     cloned.traverse((node) => {
@@ -24,6 +32,44 @@ function LoadedModel({ url }: { url: string }) {
     });
   }, [cloned]);
   return <primitive object={cloned} />;
+}
+
+interface ModelBoundaryProps {
+  fallback: ReactNode;
+  /** Reset key: retry when the URL changes. */
+  url: string;
+  children: ReactNode;
+}
+
+/**
+ * A corrupt or unloadable GLB must degrade to the placeholder, never
+ * blank the scene: loader rejections thrown through Suspense are caught
+ * here and logged once.
+ */
+class ModelErrorBoundary extends Component<
+  ModelBoundaryProps,
+  { failedUrl: string | null }
+> {
+  state = { failedUrl: null as string | null };
+
+  static getDerivedStateFromError(): { failedUrl: string } {
+    return { failedUrl: 'pending' };
+  }
+
+  componentDidCatch(error: unknown): void {
+    this.setState({ failedUrl: this.props.url });
+    console.warn(`[devices] failed to load model ${this.props.url}:`, error);
+  }
+
+  render(): ReactNode {
+    if (this.state.failedUrl !== null && this.state.failedUrl !== this.props.url) {
+      // A different model URL — allow a fresh attempt.
+      this.setState({ failedUrl: null });
+    }
+    return this.state.failedUrl !== null
+      ? this.props.fallback
+      : this.props.children;
+  }
 }
 
 interface DeviceModelProps {
@@ -68,14 +114,19 @@ export function DeviceModel({ definition }: DeviceModelProps) {
 
   return (
     <group scale={t.scale} rotation={rotation} position={offset}>
-      <Suspense fallback={<DevicePlaceholder definition={definition} />}>
-        <LoadedModel url={url} />
-      </Suspense>
+      <ModelErrorBoundary
+        url={url}
+        fallback={<DevicePlaceholder definition={definition} />}
+      >
+        <Suspense fallback={<DevicePlaceholder definition={definition} />}>
+          <LoadedModel url={url} />
+        </Suspense>
+      </ModelErrorBoundary>
     </group>
   );
 }
 
 /** Warms the GLB cache for a device whose model is known to exist. */
 export function preloadDeviceModel(definition: DeviceDefinition): void {
-  useGLTF.preload(deviceModelUrl(definition));
+  useGLTF.preload(deviceModelUrl(definition), DRACO_DECODER_PATH);
 }
