@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,10 @@ export function StatusBar() {
   const toggleGrid = useViewSettingsStore((s) => s.toggleGrid);
   const toggleSnap = useViewSettingsStore((s) => s.toggleSnap);
 
+  const selection = useRackStore((s) =>
+    s.rack && s.selectedId === s.rack.id ? s.rack.name : 'None',
+  );
+
   return (
     <footer className="flex h-[26px] shrink-0 items-center justify-between border-t border-edge bg-surface px-2.5 text-[11px] text-secondary select-none">
       {/* Left: project + editor state */}
@@ -80,7 +85,7 @@ export function StatusBar() {
           <span className="font-medium">Ready</span>
         </span>
         <Divider />
-        <Field label="Selection">None</Field>
+        <Field label="Selection">{selection}</Field>
         <Divider />
         <Field label="Mode">Design</Field>
         <Divider />

@@ -35,6 +35,28 @@ export type CameraCommandInput =
 /** A dispatched command, stamped with a nonce so repeats re-trigger. */
 export type CameraCommand = CameraCommandInput & { id: number };
 
+/** Rack heights offered when creating a rack, in rack units. */
+export type RackSize = 6 | 9 | 12 | 18 | 24 | 42;
+
+/** Available rack finishes (material presets). */
+export type RackFinishId = 'graphite' | 'steel' | 'sand' | 'midnight';
+
+/** Which face of the rack points toward the default camera. */
+export type RackOrientation = 'front' | 'rear';
+
+/** A rack document — the single design object in Milestone 3. */
+export interface RackConfig {
+  id: string;
+  name: string;
+  units: RackSize;
+  finish: RackFinishId;
+  orientation: RackOrientation;
+  showUnitNumbers: boolean;
+  showRearPosts: boolean;
+  showFloorMarker: boolean;
+  createdAt: string;
+}
+
 /** A category shown in the device library sidebar. */
 export interface LibraryCategory {
   id: string;

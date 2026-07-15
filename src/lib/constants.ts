@@ -10,6 +10,9 @@ export const UI_STORE_KEY = 'rackforge-ui';
 /** localStorage key for persisted viewport/view settings. */
 export const VIEW_SETTINGS_STORE_KEY = 'rackforge-view';
 
+/** localStorage key for the persisted rack document. */
+export const RACK_STORE_KEY = 'rackforge-rack';
+
 /** Camera defaults for the editor viewport. */
 export const CAMERA = {
   position: [8, 6, 10] as const,

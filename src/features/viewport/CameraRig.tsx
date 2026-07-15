@@ -3,13 +3,21 @@ import { PerspectiveCamera, Sphere, Vector3 } from 'three';
 import { useThree } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
+import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
+import { rackHeight } from '@/features/rack/rackConstants';
 import { CAMERA, VIEW_POSES } from '@/lib/constants';
 import type { ViewPreset } from '@/types';
 
-/** Bounding sphere used by "fit view" until real rack geometry exists. */
-const FIT_SPHERE = new Sphere(new Vector3(0, 1, 0), 4.5);
+/** Bounding sphere for "fit view": wraps the rack, or the stage origin. */
+function getFitSphere(): Sphere {
+  const rack = useRackStore.getState().rack;
+  if (!rack) return new Sphere(new Vector3(0, 1, 0), 4.5);
+  const h = rackHeight(rack.units);
+  const radius = Math.max(h * 0.62, 0.85);
+  return new Sphere(new Vector3(0, h / 2, 0), radius);
+}
 
 /**
  * Owns the viewport camera: smooth damped navigation via camera-controls,
@@ -60,7 +68,7 @@ export function CameraRig() {
         flyTo('perspective');
         break;
       case 'fit':
-        void controls.fitToSphere(FIT_SPHERE, true);
+        void controls.fitToSphere(getFitSphere(), true);
         break;
     }
   }, [command, setActiveView]);

@@ -37,11 +37,14 @@ src/
 │   └── ui/               # Reusable primitives: IconButton, Tooltip, Switch,
 │                         # Slider, CollapsibleSection, …
 ├── features/
-│   ├── inspector/        # Right-hand inspector panel and its sections
+│   ├── inspector/        # Right-hand inspector: scene sections + rack
+│   │                     # sections (shown when the rack is selected)
+│   ├── rack/             # Parametric EIA-310 rack model, finishes,
+│   │                     # canvas rail textures, selection, welcome flow
 │   └── viewport/         # All React Three Fiber code (canvas, scene,
 │                         # lighting, camera rig, nav widget, stats probe)
-├── stores/               # Zustand stores (uiStore + viewSettingsStore
-│                         # persisted, viewportStore transient)
+├── stores/               # Zustand stores (uiStore, viewSettingsStore,
+│                         # rackStore persisted; viewportStore transient)
 ├── hooks/                # Shared hooks (useResolvedTheme, useEditorShortcuts)
 ├── lib/                  # Utilities and constants (cn, camera config)
 ├── styles/               # Global CSS + design tokens (light/dark themes)
@@ -80,10 +83,14 @@ src/
 | `[` | Toggle library panel  |
 | `]` | Toggle inspector      |
 | `G` | Toggle floor grid     |
+| `F` | Fit view              |
+| `Esc` | Clear selection     |
 
 ## Roadmap
 
-Milestone 1 (this): application foundation — shell, theming, routing,
-stores, 3D viewport. Upcoming: rack rendering, device library,
-drag & drop, validation, cable routing, pricing, PDF export,
-AI-generated layouts, collaboration.
+Done — M1: application foundation (shell, theming, routing, stores,
+3D viewport). M2: premium UI polish (tooltips, glass widgets, camera
+presets, live view settings). M3: first rack experience (parametric
+EIA-310 open-frame rack, welcome/create flow, selection, rack
+inspector). Upcoming: device library, drag & drop, validation, cable
+routing, pricing, PDF export, AI-generated layouts, collaboration.

@@ -35,8 +35,11 @@ export function SceneLighting() {
       />
       <directionalLight position={[-8, 6, -6]} intensity={0.3 * keyIntensity} />
 
-      {/* Procedural studio environment for image-based reflections */}
+      {/* Procedural studio environment for image-based reflections. The
+          background fill matters: metallic surfaces reflect the whole
+          environment, so without it they read nearly black. */}
       <Environment resolution={128} frames={1}>
+        <color attach="background" args={['#494e56']} />
         <Lightformer
           form="rect"
           intensity={2.2}

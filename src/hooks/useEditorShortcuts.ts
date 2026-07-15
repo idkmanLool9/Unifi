@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useRackStore } from '@/stores/rackStore';
+import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import type { EditorTool } from '@/types';
 
@@ -21,7 +23,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 /**
  * Global editor shortcuts: V/H/O switch tools, [ and ] toggle the side
- * panels, G toggles the floor grid. Ignored while typing in form fields.
+ * panels, G toggles the floor grid, F fits the view, Escape clears the
+ * selection. Ignored while typing in form fields.
  */
 export function useEditorShortcuts(): void {
   useEffect(() => {
@@ -41,6 +44,10 @@ export function useEditorShortcuts(): void {
         toggleInspector();
       } else if (key === 'g') {
         useViewSettingsStore.getState().toggleGrid();
+      } else if (key === 'f') {
+        useViewportStore.getState().dispatchCamera({ type: 'fit' });
+      } else if (key === 'escape') {
+        useRackStore.getState().setSelected(null);
       }
     }
 

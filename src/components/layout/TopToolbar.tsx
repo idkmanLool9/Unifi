@@ -18,6 +18,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useUIStore } from '@/stores/uiStore';
+import { useRackStore } from '@/stores/rackStore';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { EditorTool, ThemePreference } from '@/types';
@@ -99,6 +100,7 @@ export function TopToolbar() {
   const toggleInspector = useUIStore((s) => s.toggleInspector);
 
   const { icon: ThemeIcon, label: themeLabel } = THEME_META[theme];
+  const documentName = useRackStore((s) => s.rack?.name ?? 'Untitled Project');
 
   return (
     <header className="relative z-20 flex h-[52px] shrink-0 items-center justify-between border-b border-edge bg-linear-to-b from-surface-raised/50 to-surface px-2.5">
@@ -127,7 +129,7 @@ export function TopToolbar() {
           className="group flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-surface-hover"
         >
           <span className="truncate text-xs font-medium text-secondary transition-colors group-hover:text-primary">
-            Untitled Rack
+            {documentName}
           </span>
           <span className="size-1 shrink-0 rounded-full bg-warning/80" title="Unsaved changes" />
           <ChevronDown className="size-3 shrink-0 text-muted" strokeWidth={2} />
