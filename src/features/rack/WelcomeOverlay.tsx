@@ -110,7 +110,8 @@ export function WelcomeOverlay() {
 
   const handleCreate = () => {
     createRack(units);
-    dispatchCamera({ type: 'fit' });
+    // Fly to the hero three-quarter angle framed around the new rack.
+    dispatchCamera({ type: 'preset', view: 'perspective' });
   };
 
   return (

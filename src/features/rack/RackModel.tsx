@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Group, MathUtils, MeshStandardMaterial } from 'three';
+import { Group, MathUtils } from 'three';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { RackSelection } from './RackSelection';
@@ -12,6 +12,7 @@ import {
   rackOuterDepth,
   rackOuterWidth,
 } from './rackConstants';
+import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
 import { useRackStore } from '@/stores/rackStore';
@@ -19,6 +20,8 @@ import { useViewportStore } from '@/stores/viewportStore';
 import type { RackConfig, ResolvedTheme } from '@/types';
 
 const ENTRANCE_SECONDS = 0.85;
+/** Small overlap so the L-profile web tucks behind the flange seamlessly. */
+const WELD_OVERLAP = 0.002;
 
 interface RackModelProps {
   rack: RackConfig;
@@ -26,10 +29,11 @@ interface RackModelProps {
 }
 
 /**
- * Parametric open-frame 19in rack built to EIA-310 proportions: four
- * upright columns with cage-nut rails and numbered units, top frame,
- * base plinth with leveling feet. Entrance and front/rear orientation
- * are animated inside the render loop with damped easing.
+ * Parametric open-frame 19in rack built to EIA-310 proportions. Each
+ * upright is a true L-profile (mounting flange + rearward web), joined by
+ * a top frame with corner caps and fasteners over a base plinth with
+ * leveling feet. Entrance and front/rear orientation are animated inside
+ * the render loop with damped easing.
  */
 export function RackModel({ rack, theme }: RackModelProps) {
   const groupRef = useRef<Group>(null);
@@ -48,34 +52,36 @@ export function RackModel({ rack, theme }: RackModelProps) {
   const H = rackHeight(rack.units);
   const railH = railHeight(rack.units);
   const railY0 = railBaseY();
-  const { opening, uprightW, uprightD, depth, baseH, feetH, topH } = RACK_DIMS;
+  const {
+    opening,
+    uprightW,
+    uprightD,
+    flangeD,
+    webT,
+    webD,
+    depth,
+    baseH,
+    feetH,
+    topH,
+  } = RACK_DIMS;
 
   const uprightX = opening / 2 + uprightW / 2;
   const railCenterY = railY0 + railH / 2;
   const topY = railY0 + railH + topH / 2;
+  const uprightH = railH + baseH;
+  const uprightY = feetH + uprightH / 2;
+  const labelW = uprightW * 0.94;
 
-  // Materials (rebuilt per finish, disposed on change)
-  const materials = useMemo(() => {
-    const base = {
-      metalness: finish.metalness,
-      roughness: finish.roughness,
-      envMapIntensity: 1,
-    };
-    return {
-      frame: new MeshStandardMaterial({ color: finish.frame, ...base }),
-      upright: new MeshStandardMaterial({ color: finish.upright, ...base }),
-      plinth: new MeshStandardMaterial({
-        color: finish.frame,
-        metalness: finish.metalness * 0.7,
-        roughness: Math.min(1, finish.roughness + 0.15),
-        envMapIntensity: 0.7,
-      }),
-    };
-  }, [finish]);
+  const corners = useMemo(
+    () =>
+      ([1, -1] as const)
+        .filter((sz) => sz === 1 || rack.showRearPosts)
+        .flatMap((sz) => ([-1, 1] as const).map((sx) => ({ sx, sz }))),
+    [rack.showRearPosts],
+  );
 
-  useEffect(() => {
-    return () => Object.values(materials).forEach((m) => m.dispose());
-  }, [materials]);
+  const materials = useMemo(() => createRackMaterials(finish), [finish]);
+  useEffect(() => () => materials.dispose(), [materials]);
 
   // Rail label textures — regenerated once webfonts are ready so numbers
   // render in Inter rather than the fallback face.
@@ -146,9 +152,9 @@ export function RackModel({ rack, theme }: RackModelProps) {
     dispatchCamera({ type: 'fit' });
   };
 
-  const uprightH = railH + baseH;
-  const uprightY = feetH + uprightH / 2;
-  const labelW = uprightW * 0.94;
+  const flangeZ = (sz: 1 | -1) => sz * (depth / 2 + (uprightD - flangeD) / 2);
+  const webZ = (sz: 1 | -1) =>
+    sz * (depth / 2 + uprightD / 2 - flangeD - webD / 2 + WELD_OVERLAP);
 
   return (
     <group
@@ -161,63 +167,69 @@ export function RackModel({ rack, theme }: RackModelProps) {
       }}
       onPointerOut={() => setHovered(false)}
     >
-      {/* Upright columns (front pair always; rear pair toggleable) */}
-      {[-1, 1].flatMap((sx) =>
-        ([1, -1] as const)
-          .filter((sz) => sz === 1 || rack.showRearPosts)
-          .map((sz) => (
-            <RoundedBox
-              key={`post-${sx}-${sz}`}
-              args={[uprightW, uprightH, uprightD]}
-              radius={0.004}
-              smoothness={4}
-              position={[sx * uprightX, uprightY, (sz * depth) / 2]}
-              castShadow
-              receiveShadow
-              material={materials.upright}
-            />
-          )),
-      )}
+      {/* Upright L-profiles: mounting flange + rearward web on the outer edge */}
+      {corners.map(({ sx, sz }) => (
+        <group key={`upright-${sx}-${sz}`}>
+          <RoundedBox
+            args={[uprightW, uprightH, flangeD]}
+            radius={0.002}
+            smoothness={4}
+            position={[sx * uprightX, uprightY, flangeZ(sz)]}
+            castShadow
+            receiveShadow
+            material={materials.upright}
+          />
+          <RoundedBox
+            args={[webT, uprightH, webD]}
+            radius={0.002}
+            smoothness={4}
+            position={[
+              sx * (uprightX + uprightW / 2 - webT / 2),
+              uprightY,
+              webZ(sz),
+            ]}
+            castShadow
+            receiveShadow
+            material={materials.upright}
+          />
+        </group>
+      ))}
 
-      {/* Rail label strips: numbers + cage-nut holes (front and rear faces) */}
+      {/* Rail label strips: unit numbers + cage-nut holes on each flange */}
       {rack.showUnitNumbers &&
-        [-1, 1].flatMap((sx) =>
-          ([1, -1] as const)
-            .filter((sz) => sz === 1 || rack.showRearPosts)
-            .map((sz) => (
-              <mesh
-                key={`labels-${sx}-${sz}`}
-                position={[
-                  sx * uprightX,
-                  railCenterY,
-                  sz * (depth / 2 + uprightD / 2 + 0.0012),
-                ]}
-                rotation={[0, sz === 1 ? 0 : Math.PI, 0]}
-              >
-                <planeGeometry args={[labelW, railH]} />
-                {/* Holes hug the inner edge: as seen from the viewer, the
-                    right-hand rail's inner edge is its left side. */}
-                <meshBasicMaterial
-                  map={
-                    (sz === 1) === (sx === 1)
-                      ? railTextures.holesLeft
-                      : railTextures.holesRight
-                  }
-                  transparent
-                  toneMapped={false}
-                />
-              </mesh>
-            )),
-        )}
+        corners.map(({ sx, sz }) => (
+          <mesh
+            key={`labels-${sx}-${sz}`}
+            position={[
+              sx * uprightX,
+              railCenterY,
+              sz * (depth / 2 + uprightD / 2 + 0.0012),
+            ]}
+            rotation={[0, sz === 1 ? 0 : Math.PI, 0]}
+          >
+            <planeGeometry args={[labelW, railH]} />
+            {/* Holes hug the inner edge: as seen from the viewer, the
+                right-hand rail's inner edge is its left side. */}
+            <meshBasicMaterial
+              map={
+                (sz === 1) === (sx === 1)
+                  ? railTextures.holesLeft
+                  : railTextures.holesRight
+              }
+              transparent
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
 
-      {/* Top frame */}
+      {/* Top frame beams */}
       {([1, -1] as const)
         .filter((sz) => sz === 1 || rack.showRearPosts)
         .map((sz) => (
           <RoundedBox
             key={`top-x-${sz}`}
-            args={[W, topH, uprightD]}
-            radius={0.004}
+            args={[W - uprightW, topH, uprightD]}
+            radius={0.003}
             smoothness={4}
             position={[0, topY, (sz * depth) / 2]}
             castShadow
@@ -229,8 +241,8 @@ export function RackModel({ rack, theme }: RackModelProps) {
         [-1, 1].map((sx) => (
           <RoundedBox
             key={`top-z-${sx}`}
-            args={[uprightW, topH, depth - uprightD]}
-            radius={0.004}
+            args={[uprightW - 0.008, topH, depth - uprightD]}
+            radius={0.003}
             smoothness={4}
             position={[sx * uprightX, topY, 0]}
             castShadow
@@ -239,7 +251,33 @@ export function RackModel({ rack, theme }: RackModelProps) {
           />
         ))}
 
-      {/* Base plinth + leveling feet */}
+      {/* Corner caps + fasteners where the top frame meets the uprights */}
+      {corners.map(({ sx, sz }) => (
+        <group key={`cap-${sx}-${sz}`}>
+          <RoundedBox
+            args={[uprightW + 0.008, topH + 0.008, uprightD + 0.008]}
+            radius={0.003}
+            smoothness={4}
+            position={[sx * uprightX, topY, (sz * depth) / 2]}
+            castShadow
+            receiveShadow
+            material={materials.frame}
+          />
+          <mesh
+            position={[
+              sx * uprightX,
+              topY + (topH + 0.008) / 2 + 0.0016,
+              (sz * depth) / 2,
+            ]}
+            castShadow
+            material={materials.hardware}
+          >
+            <cylinderGeometry args={[0.0055, 0.0055, 0.0035, 20]} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Base plinth, corner bolts and leveling feet */}
       <RoundedBox
         args={[
           W + 0.016,
@@ -257,6 +295,22 @@ export function RackModel({ rack, theme }: RackModelProps) {
         receiveShadow
         material={materials.plinth}
       />
+      {rack.showRearPosts &&
+        [-1, 1].flatMap((sx) =>
+          [-1, 1].map((sz) => (
+            <mesh
+              key={`bolt-${sx}-${sz}`}
+              position={[
+                sx * (W / 2 - 0.045),
+                feetH + baseH + 0.0016,
+                sz * (D / 2 - 0.028),
+              ]}
+              material={materials.hardware}
+            >
+              <cylinderGeometry args={[0.005, 0.005, 0.0035, 20]} />
+            </mesh>
+          )),
+        )}
       {[-1, 1].flatMap((sx) =>
         [-1, 1].map((sz) => (
           <mesh
@@ -269,9 +323,9 @@ export function RackModel({ rack, theme }: RackModelProps) {
                 : depth / 2 - 0.02 + sz * 0.05,
             ]}
             castShadow
-            material={materials.plinth}
+            material={materials.hardware}
           >
-            <cylinderGeometry args={[0.02, 0.024, feetH, 20]} />
+            <cylinderGeometry args={[0.018, 0.023, feetH, 20]} />
           </mesh>
         )),
       )}

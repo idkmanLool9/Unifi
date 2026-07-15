@@ -1,13 +1,19 @@
-import { CanvasTexture, SRGBColorSpace } from 'three';
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three';
 import type { RackFinish } from './rackConstants';
 import type { RackSize } from '@/types';
 
 const FONT_STACK = '"Inter Variable", system-ui, sans-serif';
 
 /** Pixels drawn per rack unit of rail height. */
-const PX_PER_U = 96;
-/** Rail strip texture width in pixels. */
+const PX_PER_U = 128;
+/** Rail strip texture width in pixels (maps to the flange width). */
 const RAIL_W = 128;
+
+/**
+ * EIA-310 hole centers within one U, measured from the top of the unit:
+ * 6.35mm / 22.225mm / 38.1mm of 44.45mm.
+ */
+const HOLE_FRACTIONS = [6.35 / 44.45, 22.225 / 44.45, 38.1 / 44.45] as const;
 
 function makeCanvas(width: number, height: number) {
   const canvas = document.createElement('canvas');
@@ -18,26 +24,14 @@ function makeCanvas(width: number, height: number) {
   return { canvas, ctx };
 }
 
-function roundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.fill();
-}
-
 /**
  * Draws a full-height mounting rail strip: three square cage-nut holes per
- * U (EIA pattern), a U boundary tick, and the unit number. U1 sits at the
- * bottom, as on a real rack.
+ * U at the EIA pattern, a U boundary tick, and the unit number. U1 sits at
+ * the bottom, as on a real rack. Holes get a faked bevel (dark top edge,
+ * light bottom edge) so they read as punched steel under top lighting.
  *
- * @param mirror  When true the hole column hugs the right edge (for the
- *                right-hand rail) instead of the left.
+ * @param mirror  When true the hole column hugs the right edge (for rails
+ *                whose inner edge faces right as seen by the viewer).
  */
 export function createRailTexture(
   units: RackSize,
@@ -47,9 +41,10 @@ export function createRailTexture(
   const height = units * PX_PER_U;
   const { canvas, ctx } = makeCanvas(RAIL_W, height);
 
-  const holeSize = 24;
-  const holeX = mirror ? RAIL_W - 38 - holeSize / 2 : 38 - holeSize / 2;
-  const numberX = mirror ? RAIL_W - 82 : 82;
+  // ~12.7mm square hole on a ~58mm flange strip.
+  const holeSize = 28;
+  const holeCenterX = mirror ? RAIL_W - 26 : 26;
+  const numberX = mirror ? RAIL_W - 78 : 78;
 
   for (let i = 0; i < units; i++) {
     const uNumber = units - i; // top row is the highest U
@@ -57,34 +52,69 @@ export function createRailTexture(
 
     // U boundary tick across the flange
     ctx.fillStyle = finish.ink;
-    ctx.globalAlpha = 0.35;
-    ctx.fillRect(8, yTop, RAIL_W - 16, 2);
+    ctx.globalAlpha = 0.28;
+    ctx.fillRect(6, yTop, RAIL_W - 12, 2);
     ctx.globalAlpha = 1;
 
-    // Three cage-nut holes per U at the EIA hole pattern
-    ctx.fillStyle = finish.hole;
-    for (const f of [1 / 6, 3 / 6, 5 / 6]) {
-      roundedRect(
-        ctx,
-        holeX,
-        yTop + f * PX_PER_U - holeSize / 2,
-        holeSize,
-        holeSize,
-        4,
-      );
+    for (const f of HOLE_FRACTIONS) {
+      const cy = yTop + f * PX_PER_U;
+      const x = holeCenterX - holeSize / 2;
+      const y = cy - holeSize / 2;
+
+      // Punched square hole with a subtle bevel illusion
+      ctx.fillStyle = finish.hole;
+      ctx.beginPath();
+      ctx.roundRect(x, y, holeSize, holeSize, 4);
+      ctx.fill();
+      // Shadowed top lip
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.roundRect(x, y, holeSize, 5, 4);
+      ctx.fill();
+      // Light-catching bottom lip
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.beginPath();
+      ctx.roundRect(x, y + holeSize - 3, holeSize, 3, 3);
+      ctx.fill();
     }
 
-    // Unit number
+    // Unit number, silkscreen-style
     ctx.fillStyle = finish.ink;
-    ctx.font = `600 30px ${FONT_STACK}`;
+    ctx.font = `500 30px ${FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.85;
     ctx.fillText(String(uNumber), numberX, yTop + PX_PER_U / 2);
+    ctx.globalAlpha = 1;
   }
 
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = 8;
+  return texture;
+}
+
+/**
+ * Small tileable monochrome noise, used as roughness/bump map to give
+ * powder-coated surfaces their slight orange-peel imperfection.
+ */
+export function createNoiseTexture(): CanvasTexture {
+  const size = 128;
+  const { canvas, ctx } = makeCanvas(size, size);
+  const image = ctx.createImageData(size, size);
+  for (let i = 0; i < image.data.length; i += 4) {
+    const v = 165 + Math.random() * 70;
+    image.data[i] = v;
+    image.data[i + 1] = v;
+    image.data[i + 2] = v;
+    image.data[i + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const texture = new CanvasTexture(canvas);
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.repeat.set(6, 6);
   return texture;
 }
 

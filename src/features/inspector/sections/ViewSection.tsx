@@ -35,6 +35,11 @@ export function ViewSection() {
         onChange={s.toggleShadows}
       />
       <SwitchRow
+        label="Ambient occlusion"
+        checked={s.aoEnabled}
+        onChange={s.toggleAO}
+      />
+      <SwitchRow
         label="Snapping"
         checked={s.snapEnabled}
         onChange={s.toggleSnap}

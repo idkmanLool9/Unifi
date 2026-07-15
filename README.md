@@ -69,9 +69,17 @@ src/
 - **3D isolation**: everything WebGL lives under `features/viewport/`.
   The rest of the app talks to it only through stores, so future features
   (rack model, drag & drop) plug in without touching the shell.
-- **Rendering**: the canvas is transparent over a CSS gradient backdrop,
-  so theme switches don't touch GL state. The heavy three.js stack is
-  split into its own bundle chunk.
+- **Rendering**: the canvas is transparent over a CSS gradient backdrop
+  (with a stage glow pooled under the rack), so theme switches don't
+  touch GL state. Image-based lighting comes from a procedural
+  light-former studio (no network HDR); N8AO provides screen-space
+  ambient occlusion with MSAA (toggleable in View settings). The heavy
+  three.js stack is split into its own bundle chunk.
+- **Rack materials** are `MeshPhysicalMaterial` sets built per finish:
+  painted finishes get a powder-coat response (noise-modulated roughness,
+  orange-peel bump, soft clearcoat); bare metal leans on metalness and
+  environment reflections. Rail unit numbers and EIA-310 cage-nut holes
+  are drawn into canvas textures per rail.
 
 ## Keyboard shortcuts
 
@@ -92,5 +100,7 @@ Done — M1: application foundation (shell, theming, routing, stores,
 3D viewport). M2: premium UI polish (tooltips, glass widgets, camera
 presets, live view settings). M3: first rack experience (parametric
 EIA-310 open-frame rack, welcome/create flow, selection, rack
-inspector). Upcoming: device library, drag & drop, validation, cable
+inspector). M4: visual realism (L-profile steel construction,
+powder-coat materials, studio IBL, ambient occlusion, cinematic
+camera). Upcoming: device library, drag & drop, validation, cable
 routing, pricing, PDF export, AI-generated layouts, collaboration.

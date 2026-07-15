@@ -87,6 +87,7 @@
 
   --rf-canvas-top: #17191d;
   --rf-canvas-bottom: #0a0b0d;
+  --rf-stage-glow: rgb(148 168 205 / 0.05);
   --rf-vignette: rgb(0 0 0 / 0.32);
   --rf-grid-cell: #292c32;
   --rf-grid-section: #3c4048;
@@ -131,6 +132,7 @@
 
   --rf-canvas-top: #f1f3f6;
   --rf-canvas-bottom: #d9dde3;
+  --rf-stage-glow: rgb(255 255 255 / 0.45);
   --rf-vignette: rgb(30 40 60 / 0.1);
   --rf-grid-cell: #c2c8d1;
   --rf-grid-section: #9ca4b0;
@@ -242,13 +244,20 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 /*  Viewport chrome                                                    */
 /* ------------------------------------------------------------------ */
 
-/* Backdrop gradient behind the transparent WebGL canvas */
+/* Backdrop behind the transparent WebGL canvas: sky gradient plus a
+   soft stage glow pooled where the rack stands. */
 .viewport-backdrop {
-  background: radial-gradient(
-    120% 90% at 50% 0%,
-    var(--rf-canvas-top) 0%,
-    var(--rf-canvas-bottom) 100%
-  );
+  background:
+    radial-gradient(
+      42% 24% at 50% 74%,
+      var(--rf-stage-glow) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      120% 90% at 50% 0%,
+      var(--rf-canvas-top) 0%,
+      var(--rf-canvas-bottom) 100%
+    );
 }
 
 /* Soft vignette overlay for depth (pointer-events: none in markup) */

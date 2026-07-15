@@ -17,7 +17,7 @@ export const RACK_STORE_KEY = 'rackforge-rack';
 export const CAMERA = {
   position: [8, 6, 10] as const,
   target: [0, 1, 0] as const,
-  fov: 45,
+  fov: 40,
   minFov: 20,
   maxFov: 90,
   near: 0.1,

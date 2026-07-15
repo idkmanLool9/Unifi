@@ -10,6 +10,55 @@ import { rackHeight } from '@/features/rack/rackConstants';
 import { CAMERA, VIEW_POSES } from '@/lib/constants';
 import type { ViewPreset } from '@/types';
 
+/** Damping used while the user drives the camera. */
+const INTERACTIVE_SMOOTH = 0.18;
+/** Damping used for preset/fit transitions — a slower, cinematic glide. */
+const TRANSITION_SMOOTH = 0.5;
+
+interface CameraPose {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+/**
+ * Camera pose for a view preset, framed around the actual rack. A 6U rack
+ * is presented as tightly as a 42U — the hero view sits slightly above
+ * mid-height on a three-quarter angle, like a product photograph.
+ */
+function poseForView(view: ViewPreset): CameraPose {
+  const rack = useRackStore.getState().rack;
+  if (!rack) {
+    const p = VIEW_POSES[view];
+    return { position: [...p.position], target: [...p.target] };
+  }
+
+  const h = rackHeight(rack.units);
+  const cy = h * 0.5;
+  const d = Math.max(1.9, h * 1.3);
+  const face = Math.max(2.4, h * 1.7);
+
+  switch (view) {
+    case 'perspective':
+      return {
+        position: [d * 0.85, cy + h * 0.34, d * 1.15],
+        target: [0, cy * 0.9, 0],
+      };
+    case 'top':
+      return {
+        position: [0, h + Math.max(1.6, h * 0.9), 0.0001],
+        target: [0, 0, 0],
+      };
+    case 'front':
+      return { position: [0, cy, face], target: [0, cy, 0] };
+    case 'back':
+      return { position: [0, cy, -face], target: [0, cy, 0] };
+    case 'left':
+      return { position: [-face, cy, 0], target: [0, cy, 0] };
+    case 'right':
+      return { position: [face, cy, 0], target: [0, cy, 0] };
+  }
+}
+
 /** Bounding sphere for "fit view": wraps the rack, or the stage origin. */
 function getFitSphere(): Sphere {
   const rack = useRackStore.getState().rack;
@@ -21,7 +70,7 @@ function getFitSphere(): Sphere {
 
 /**
  * Owns the viewport camera: smooth damped navigation via camera-controls,
- * animated transitions for view-preset commands dispatched from the UI,
+ * cinematic transitions for view-preset commands dispatched from the UI,
  * and live FOV sync from the view settings store.
  */
 export function CameraRig() {
@@ -40,6 +89,18 @@ export function CameraRig() {
     }
   }, [camera, fov]);
 
+  // A persisted rack should be presented from the hero angle on load.
+  const framedOnce = useRef(false);
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls || framedOnce.current) return;
+    framedOnce.current = true;
+    if (useRackStore.getState().rack) {
+      const { position, target } = poseForView('perspective');
+      void controls.setLookAt(...position, ...target, false);
+    }
+  }, []);
+
   // Any manual orbit means we're no longer in a named preset.
   useEffect(() => {
     const controls = controlsRef.current;
@@ -54,9 +115,16 @@ export function CameraRig() {
     const controls = controlsRef.current;
     if (!command || !controls) return;
 
+    const glide = (move: () => Promise<unknown>) => {
+      controls.smoothTime = TRANSITION_SMOOTH;
+      void move().finally(() => {
+        controls.smoothTime = INTERACTIVE_SMOOTH;
+      });
+    };
+
     const flyTo = (view: ViewPreset) => {
-      const { position, target } = VIEW_POSES[view];
-      void controls.setLookAt(...position, ...target, true);
+      const { position, target } = poseForView(view);
+      glide(() => controls.setLookAt(...position, ...target, true));
       setActiveView(view);
     };
 
@@ -68,7 +136,7 @@ export function CameraRig() {
         flyTo('perspective');
         break;
       case 'fit':
-        void controls.fitToSphere(getFitSphere(), true);
+        glide(() => controls.fitToSphere(getFitSphere(), true));
         break;
     }
   }, [command, setActiveView]);
@@ -80,7 +148,7 @@ export function CameraRig() {
       minDistance={CAMERA.minDistance}
       maxDistance={CAMERA.maxDistance}
       maxPolarAngle={Math.PI / 2 - 0.02}
-      smoothTime={0.18}
+      smoothTime={INTERACTIVE_SMOOTH}
       draggingSmoothTime={0.06}
     />
   );

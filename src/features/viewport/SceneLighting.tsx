@@ -14,15 +14,15 @@ export function SceneLighting() {
 
   return (
     <>
-      <ambientLight intensity={0.35 * ambientIntensity} />
+      <ambientLight intensity={0.3 * ambientIntensity} />
       <hemisphereLight
         args={['#b8c4d6', '#3a3f47']}
-        intensity={0.45 * ambientIntensity}
+        intensity={0.4 * ambientIntensity}
       />
 
       <directionalLight
         position={[6, 10, 6]}
-        intensity={1.55 * keyIntensity}
+        intensity={1.3 * keyIntensity}
         castShadow={shadowsEnabled}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={1}
@@ -33,33 +33,45 @@ export function SceneLighting() {
         shadow-camera-bottom={-12}
         shadow-bias={-0.0002}
       />
-      <directionalLight position={[-8, 6, -6]} intensity={0.3 * keyIntensity} />
+      <directionalLight
+        position={[-8, 6, -6]}
+        intensity={0.28 * keyIntensity}
+      />
 
       {/* Procedural studio environment for image-based reflections. The
           background fill matters: metallic surfaces reflect the whole
           environment, so without it they read nearly black. */}
       <Environment resolution={128} frames={1}>
-        <color attach="background" args={['#494e56']} />
+        <color attach="background" args={['#4b5058']} />
+        {/* Overhead softbox */}
         <Lightformer
           form="rect"
-          intensity={2.2}
-          position={[0, 8, 0]}
+          intensity={3}
+          position={[0, 9, 0]}
           rotation-x={Math.PI / 2}
-          scale={[12, 12, 1]}
+          scale={[14, 14, 1]}
         />
+        {/* Side strips for long highlights along the uprights */}
         <Lightformer
           form="rect"
-          intensity={0.9}
-          position={[-8, 3, -2]}
+          intensity={1}
+          position={[-9, 3.5, -2]}
           rotation-y={Math.PI / 2}
-          scale={[8, 3, 1]}
+          scale={[10, 2.6, 1]}
         />
         <Lightformer
           form="rect"
-          intensity={0.7}
-          position={[8, 3, 2]}
+          intensity={0.85}
+          position={[9, 3.5, 2]}
           rotation-y={-Math.PI / 2}
-          scale={[8, 3, 1]}
+          scale={[10, 2.6, 1]}
+        />
+        {/* Low front fill so faces toward camera never go dead */}
+        <Lightformer
+          form="rect"
+          intensity={0.5}
+          position={[0, 2.5, 10]}
+          scale={[12, 3, 1]}
         />
       </Environment>
     </>

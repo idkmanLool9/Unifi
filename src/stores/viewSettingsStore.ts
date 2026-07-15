@@ -6,6 +6,8 @@ interface ViewSettingsState {
   gridVisible: boolean;
   snapEnabled: boolean;
   shadowsEnabled: boolean;
+  /** Screen-space ambient occlusion (N8AO post pass). */
+  aoEnabled: boolean;
   hintsVisible: boolean;
   fov: number;
   /** Key light intensity multiplier (0–2, 1 = default rig). */
@@ -16,6 +18,7 @@ interface ViewSettingsState {
   toggleGrid: () => void;
   toggleSnap: () => void;
   toggleShadows: () => void;
+  toggleAO: () => void;
   toggleHints: () => void;
   setFov: (fov: number) => void;
   setKeyLightIntensity: (value: number) => void;
@@ -33,6 +36,7 @@ export const useViewSettingsStore = create<ViewSettingsState>()(
       gridVisible: true,
       snapEnabled: true,
       shadowsEnabled: true,
+      aoEnabled: true,
       hintsVisible: true,
       fov: CAMERA.fov,
       keyLightIntensity: 1,
@@ -41,6 +45,7 @@ export const useViewSettingsStore = create<ViewSettingsState>()(
       toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
       toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
       toggleShadows: () => set((s) => ({ shadowsEnabled: !s.shadowsEnabled })),
+      toggleAO: () => set((s) => ({ aoEnabled: !s.aoEnabled })),
       toggleHints: () => set((s) => ({ hintsVisible: !s.hintsVisible })),
       setFov: (fov) => set({ fov }),
       setKeyLightIntensity: (keyLightIntensity) => set({ keyLightIntensity }),

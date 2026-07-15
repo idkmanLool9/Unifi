@@ -13,6 +13,12 @@ export const RACK_DIMS = {
   uprightW: 0.062,
   /** Depth of each upright column (z). */
   uprightD: 0.034,
+  /** Thickness of the mounting flange (front plate of the L-profile). */
+  flangeD: 0.012,
+  /** Thickness of the L-profile web (side plate running rearward). */
+  webT: 0.012,
+  /** How far the web extends behind the flange. */
+  webD: 0.06,
   /** Front-to-rear upright spacing, center to center. */
   depth: 0.7,
   /** Height of the base plinth. */
@@ -20,7 +26,7 @@ export const RACK_DIMS = {
   /** Leveling feet height. */
   feetH: 0.015,
   /** Top frame beam thickness. */
-  topH: 0.04,
+  topH: 0.035,
 } as const;
 
 /** Overall frame width (opening + two uprights). */
@@ -44,6 +50,8 @@ export const rackHeight = (units: RackSize): number =>
 export interface RackFinish {
   id: RackFinishId;
   label: string;
+  /** True for powder-coated paint, false for bare metal. */
+  painted: boolean;
   /** Structural frame color (beams, base). */
   frame: string;
   /** Upright / rail color. */
@@ -52,8 +60,6 @@ export interface RackFinish {
   ink: string;
   /** Mounting-hole color drawn into the rail texture. */
   hole: string;
-  metalness: number;
-  roughness: number;
   /** Swatch color for the inspector picker. */
   swatch: string;
 }
@@ -62,45 +68,41 @@ export const RACK_FINISHES: Record<RackFinishId, RackFinish> = {
   graphite: {
     id: 'graphite',
     label: 'Graphite',
-    frame: '#2b2e33',
-    upright: '#383c42',
+    painted: true,
+    frame: '#2e3136',
+    upright: '#3c4046',
     ink: 'rgba(255, 255, 255, 0.6)',
-    hole: '#141519',
-    metalness: 0.82,
-    roughness: 0.42,
+    hole: '#101114',
     swatch: '#34383e',
   },
   steel: {
     id: 'steel',
     label: 'Steel',
+    painted: false,
     frame: '#9aa1a9',
     upright: '#bfc5cc',
-    ink: 'rgba(22, 26, 32, 0.6)',
-    hole: '#565d66',
-    metalness: 0.9,
-    roughness: 0.3,
+    ink: 'rgba(22, 26, 32, 0.62)',
+    hole: '#4e555e',
     swatch: '#b4bac2',
   },
   sand: {
     id: 'sand',
     label: 'Sand',
+    painted: true,
     frame: '#c9c5bb',
     upright: '#e2dfd7',
-    ink: 'rgba(48, 46, 40, 0.55)',
-    hole: '#807d74',
-    metalness: 0.55,
-    roughness: 0.52,
+    ink: 'rgba(48, 46, 40, 0.58)',
+    hole: '#787569',
     swatch: '#dcd8cf',
   },
   midnight: {
     id: 'midnight',
     label: 'Midnight',
-    frame: '#20283a',
-    upright: '#2b3549',
-    ink: 'rgba(186, 202, 235, 0.58)',
-    hole: '#101521',
-    metalness: 0.8,
-    roughness: 0.46,
+    painted: true,
+    frame: '#232b3d',
+    upright: '#2e384c',
+    ink: 'rgba(186, 202, 235, 0.6)',
+    hole: '#0d1119',
     swatch: '#2a3448',
   },
 };
