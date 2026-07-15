@@ -1,7 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InfoRow } from '../InfoRow';
-import { useRackStore } from '@/stores/rackStore';
+import { useOverlayStore } from '@/stores/overlayStore';
 import type { RackConfig } from '@/types';
 
 const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -11,7 +11,9 @@ const dateFormat = new Intl.DateTimeFormat('en-US', {
 });
 
 export function MetadataSection({ rack }: { rack: RackConfig }) {
-  const deleteRack = useRackStore((s) => s.deleteRack);
+  const openConfirmDelete = useOverlayStore(
+    (s) => s.setConfirmDeleteRackOpen,
+  );
 
   return (
     <CollapsibleSection title="Metadata" defaultOpen={false}>
@@ -29,11 +31,11 @@ export function MetadataSection({ rack }: { rack: RackConfig }) {
 
         <button
           type="button"
-          onClick={deleteRack}
+          onClick={() => openConfirmDelete(true)}
           className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-medium text-danger transition-colors hover:bg-danger/10"
         >
           <Trash2 className="size-3.5" strokeWidth={1.75} />
-          Delete rack
+          Delete rack…
         </button>
       </div>
     </CollapsibleSection>

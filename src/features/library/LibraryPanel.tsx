@@ -110,6 +110,7 @@ export function LibraryPanel() {
       <div className="space-y-2 px-3 pt-3 pb-2">
         <SearchInput
           ref={searchRef}
+          id="library-search"
           placeholder="Search devices…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

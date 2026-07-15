@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PanelHeader } from '@/components/ui/PanelHeader';
-import { useUIStore } from '@/stores/uiStore';
+import { ResizeHandle } from '@/components/ui/ResizeHandle';
+import { useUIStore, INSPECTOR_WIDTH } from '@/stores/uiStore';
 import { useRackStore } from '@/stores/rackStore';
 import { SceneInfoSection } from './sections/SceneInfoSection';
 import { CameraSection } from './sections/CameraSection';
@@ -15,7 +17,6 @@ import { AppearanceSection } from './rack/AppearanceSection';
 import { VisibilitySection } from './rack/VisibilitySection';
 import { MetadataSection } from './rack/MetadataSection';
 
-const INSPECTOR_WIDTH = 288;
 const EASE = [0.32, 0.72, 0, 1] as const;
 
 /**
@@ -25,6 +26,9 @@ const EASE = [0.32, 0.72, 0, 1] as const;
  */
 export function InspectorPanel() {
   const open = useUIStore((s) => s.inspectorOpen);
+  const width = useUIStore((s) => s.inspectorWidth);
+  const setWidth = useUIStore((s) => s.setInspectorWidth);
+  const [resizing, setResizing] = useState(false);
   const rack = useRackStore((s) => s.rack);
   const selected = useRackStore(
     (s) => s.rack !== null && s.selectedId === s.rack.id,
@@ -37,15 +41,28 @@ export function InspectorPanel() {
       {open && (
         <motion.aside
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: INSPECTOR_WIDTH, opacity: 1 }}
+          animate={{ width, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.18, ease: EASE }}
-          className="shrink-0 overflow-hidden border-l border-edge bg-surface"
+          transition={
+            resizing ? { duration: 0 } : { duration: 0.18, ease: EASE }
+          }
+          className="relative shrink-0 border-l border-edge bg-surface"
           aria-label="Inspector"
         >
+          <ResizeHandle
+            edge="left"
+            label="Resize inspector panel"
+            value={width}
+            min={INSPECTOR_WIDTH.min}
+            max={INSPECTOR_WIDTH.max}
+            defaultValue={INSPECTOR_WIDTH.default}
+            onChange={setWidth}
+            onResizeStart={() => setResizing(true)}
+            onResizeEnd={() => setResizing(false)}
+          />
           <div
-            className="flex h-full flex-col"
-            style={{ width: INSPECTOR_WIDTH }}
+            className="flex h-full flex-col overflow-hidden"
+            style={{ width }}
           >
             <PanelHeader title="Inspector">
               <span

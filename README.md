@@ -35,13 +35,16 @@ src/
 ├── components/
 │   ├── layout/           # App chrome: toolbar, sidebar, status bar
 │   └── ui/               # Reusable primitives: IconButton, Tooltip, Switch,
-│                         # Slider, CollapsibleSection, …
+│                         # Slider, Dialog, ContextMenuHost, ToastHost,
+│                         # ResizeHandle, CollapsibleSection, …
 ├── features/
+│   ├── commands/         # Command registry + ⌘K command palette
 │   ├── inspector/        # Right-hand inspector: scene sections + rack
 │   │                     # sections (shown when the rack is selected)
 │   ├── library/          # Device library: placeholder catalog, SVG
 │   │                     # faceplate thumbnails, cards, brand groups,
 │   │                     # search/filter overlays, preview panel
+│   ├── overlays/         # Settings, shortcuts, confirm dialogs
 │   ├── rack/             # Parametric EIA-310 rack model, finishes,
 │   │                     # canvas rail textures, selection, welcome flow
 │   └── viewport/         # All React Three Fiber code (canvas, scene,
@@ -95,7 +98,10 @@ src/
 | `]` | Toggle inspector      |
 | `G` | Toggle floor grid     |
 | `F` | Fit view              |
-| `Esc` | Clear selection     |
+| `⌘K` | Command palette      |
+| `⌘,` | Settings             |
+| `?` | Keyboard shortcuts    |
+| `Esc` | Dismiss / deselect  |
 
 ## Roadmap
 
@@ -107,6 +113,7 @@ inspector). M4: visual realism (L-profile steel construction,
 powder-coat materials, studio IBL, ambient occlusion, cinematic
 camera). M5: device library experience (manufacturer/category catalog
 browser, procedural faceplate thumbnails, preview panel, favourites &
-recents, search/filter design). Upcoming: drag & drop placement,
-validation, cable routing, pricing, PDF export, AI-generated layouts,
-collaboration.
+recents, search/filter design). M6: desktop polish (resizable panels,
+⌘K command palette, context menus, toasts, dialogs, settings &
+shortcuts windows). Upcoming: drag & drop placement, validation, cable
+routing, pricing, PDF export, AI-generated layouts, collaboration.

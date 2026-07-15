@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CAMERA, VIEW_SETTINGS_STORE_KEY } from '@/lib/constants';
 
+export type MeasurementUnits = 'metric' | 'imperial';
+
 interface ViewSettingsState {
   gridVisible: boolean;
   snapEnabled: boolean;
@@ -9,6 +11,7 @@ interface ViewSettingsState {
   /** Screen-space ambient occlusion (N8AO post pass). */
   aoEnabled: boolean;
   hintsVisible: boolean;
+  units: MeasurementUnits;
   fov: number;
   /** Key light intensity multiplier (0–2, 1 = default rig). */
   keyLightIntensity: number;
@@ -20,6 +23,7 @@ interface ViewSettingsState {
   toggleShadows: () => void;
   toggleAO: () => void;
   toggleHints: () => void;
+  setUnits: (units: MeasurementUnits) => void;
   setFov: (fov: number) => void;
   setKeyLightIntensity: (value: number) => void;
   setAmbientIntensity: (value: number) => void;
@@ -38,6 +42,7 @@ export const useViewSettingsStore = create<ViewSettingsState>()(
       shadowsEnabled: true,
       aoEnabled: true,
       hintsVisible: true,
+      units: 'metric',
       fov: CAMERA.fov,
       keyLightIntensity: 1,
       ambientIntensity: 1,
@@ -47,6 +52,7 @@ export const useViewSettingsStore = create<ViewSettingsState>()(
       toggleShadows: () => set((s) => ({ shadowsEnabled: !s.shadowsEnabled })),
       toggleAO: () => set((s) => ({ aoEnabled: !s.aoEnabled })),
       toggleHints: () => set((s) => ({ hintsVisible: !s.hintsVisible })),
+      setUnits: (units) => set({ units }),
       setFov: (fov) => set({ fov }),
       setKeyLightIntensity: (keyLightIntensity) => set({ keyLightIntensity }),
       setAmbientIntensity: (ambientIntensity) => set({ ambientIntensity }),

@@ -71,6 +71,7 @@ export function StatusBar() {
   const snapEnabled = useViewSettingsStore((s) => s.snapEnabled);
   const toggleGrid = useViewSettingsStore((s) => s.toggleGrid);
   const toggleSnap = useViewSettingsStore((s) => s.toggleSnap);
+  const units = useViewSettingsStore((s) => s.units);
 
   const selection = useRackStore((s) =>
     s.rack && s.selectedId === s.rack.id ? s.rack.name : 'None',
@@ -94,7 +95,9 @@ export function StatusBar() {
 
       {/* Right: workspace settings + render stats */}
       <div className="flex items-center gap-2 tabular-nums">
-        <Field label="Units">Metric</Field>
+        <Field label="Units">
+          <span className="capitalize">{units}</span>
+        </Field>
         <Divider />
         <ToggleChip
           label="Grid"

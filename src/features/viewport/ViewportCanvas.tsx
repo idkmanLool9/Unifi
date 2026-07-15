@@ -1,11 +1,24 @@
 import { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
+import {
+  Box,
+  Eye,
+  Focus,
+  Grid3x3,
+  MousePointer2,
+  RotateCcw,
+  Square,
+  Trash2,
+} from 'lucide-react';
 import { Scene } from './Scene';
 import { ViewportHint } from './ViewportHint';
 import { ViewportNavWidget } from './ViewportNavWidget';
 import { WelcomeOverlay } from '@/features/rack/WelcomeOverlay';
 import { useResolvedTheme } from '@/hooks/useResolvedTheme';
+import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
+import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import { CAMERA } from '@/lib/constants';
 
@@ -24,9 +37,93 @@ export function ViewportCanvas() {
   const hasRack = useRackStore((s) => s.rack !== null);
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
 
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rackState = useRackStore.getState();
+    const viewport = useViewportStore.getState();
+    const view = useViewSettingsStore.getState();
+    const overlays = useOverlayStore.getState();
+
+    const cameraEntries: MenuEntry[] = [
+      {
+        id: 'fit',
+        label: 'Fit view',
+        icon: Focus,
+        shortcut: 'F',
+        action: () => viewport.dispatchCamera({ type: 'fit' }),
+      },
+      {
+        id: 'reset',
+        label: 'Reset camera',
+        icon: RotateCcw,
+        action: () => viewport.dispatchCamera({ type: 'reset' }),
+      },
+      {
+        id: 'top',
+        label: 'Top view',
+        icon: Square,
+        action: () =>
+          viewport.dispatchCamera({ type: 'preset', view: 'top' }),
+      },
+      { separator: true },
+      {
+        id: 'grid',
+        label: view.gridVisible ? 'Hide floor grid' : 'Show floor grid',
+        icon: Grid3x3,
+        shortcut: 'G',
+        action: view.toggleGrid,
+      },
+      {
+        id: 'hints',
+        label: view.hintsVisible ? 'Hide viewport hints' : 'Show viewport hints',
+        icon: Eye,
+        action: view.toggleHints,
+      },
+    ];
+
+    const rackEntries: MenuEntry[] = rackState.rack
+      ? [
+          { separator: true },
+          {
+            id: 'select-rack',
+            label:
+              rackState.selectedId === rackState.rack.id
+                ? 'Deselect rack'
+                : 'Select rack',
+            icon: MousePointer2,
+            action: () =>
+              rackState.setSelected(
+                rackState.selectedId === rackState.rack?.id
+                  ? null
+                  : (rackState.rack?.id ?? null),
+              ),
+          },
+          {
+            id: 'frame-rack',
+            label: 'Frame rack',
+            icon: Box,
+            action: () => viewport.dispatchCamera({ type: 'fit' }),
+          },
+          {
+            id: 'delete-rack',
+            label: 'Delete rack…',
+            icon: Trash2,
+            danger: true,
+            action: () => overlays.setConfirmDeleteRackOpen(true),
+          },
+        ]
+      : [];
+
+    useMenuStore.getState().openMenu(e.clientX, e.clientY, [
+      ...cameraEntries,
+      ...rackEntries,
+    ]);
+  };
+
   return (
     <div
       className="viewport-backdrop relative min-w-0 flex-1"
+      onContextMenu={onContextMenu}
       onPointerDown={(e) => {
         pointerDownAt.current = { x: e.clientX, y: e.clientY };
       }}

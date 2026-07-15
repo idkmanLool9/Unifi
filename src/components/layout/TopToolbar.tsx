@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion';
 import {
   ChevronDown,
+  Command,
+  Copy,
   Download,
+  FolderOpen,
   Hand,
   Monitor,
   Moon,
@@ -9,16 +12,22 @@ import {
   Orbit,
   PanelLeft,
   PanelRight,
+  PencilLine,
   Redo2,
+  Settings,
   Sun,
+  Trash2,
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
 import { IconButton } from '@/components/ui/IconButton';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { useUIStore } from '@/stores/uiStore';
+import { useMenuStore } from '@/stores/menuStore';
+import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useUIStore } from '@/stores/uiStore';
+import { toast } from '@/stores/toastStore';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { EditorTool, ThemePreference } from '@/types';
@@ -101,6 +110,70 @@ export function TopToolbar() {
 
   const { icon: ThemeIcon, label: themeLabel } = THEME_META[theme];
   const documentName = useRackStore((s) => s.rack?.name ?? 'Untitled Project');
+  const openMenu = useMenuStore((s) => s.openMenu);
+  const setCommandPaletteOpen = useOverlayStore((s) => s.setCommandPaletteOpen);
+  const setSettingsOpen = useOverlayStore((s) => s.setSettingsOpen);
+  const setConfirmDeleteRackOpen = useOverlayStore(
+    (s) => s.setConfirmDeleteRackOpen,
+  );
+
+  const openProjectMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hasRack = useRackStore.getState().rack !== null;
+    openMenu(rect.left, rect.bottom + 6, [
+      {
+        id: 'rename',
+        label: 'Rename rack',
+        icon: PencilLine,
+        disabled: !hasRack,
+        action: () => {
+          const rack = useRackStore.getState().rack;
+          if (rack) useRackStore.getState().setSelected(rack.id);
+          if (!useUIStore.getState().inspectorOpen)
+            useUIStore.getState().toggleInspector();
+        },
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate rack',
+        icon: Copy,
+        disabled: true,
+      },
+      { separator: true },
+      {
+        id: 'open',
+        label: 'Open project…',
+        icon: FolderOpen,
+        action: () =>
+          toast({
+            variant: 'info',
+            title: 'Project browser coming soon',
+            description: 'Cloud projects arrive with the Supabase milestone.',
+          }),
+      },
+      {
+        id: 'export',
+        label: 'Export…',
+        icon: Download,
+        action: () =>
+          toast({
+            variant: 'info',
+            title: 'Export coming soon',
+            description:
+              'PDF and image export ship with the reporting milestone.',
+          }),
+      },
+      { separator: true },
+      {
+        id: 'delete',
+        label: 'Delete rack…',
+        icon: Trash2,
+        danger: true,
+        disabled: !hasRack,
+        action: () => setConfirmDeleteRackOpen(true),
+      },
+    ]);
+  };
 
   return (
     <header className="relative z-20 flex h-[52px] shrink-0 items-center justify-between border-b border-edge bg-linear-to-b from-surface-raised/50 to-surface px-2.5">
@@ -126,6 +199,8 @@ export function TopToolbar() {
         <Divider />
         <button
           type="button"
+          aria-haspopup="menu"
+          onClick={openProjectMenu}
           className="group flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-surface-hover"
         >
           <span className="truncate text-xs font-medium text-secondary transition-colors group-hover:text-primary">
@@ -152,12 +227,25 @@ export function TopToolbar() {
           </IconButton>
         </Tooltip>
         <Divider />
+        <Tooltip label="Command palette" shortcut="⌘K">
+          <IconButton
+            label="Command palette"
+            onClick={() => setCommandPaletteOpen(true)}
+          >
+            <Command className="size-4" strokeWidth={1.75} />
+          </IconButton>
+        </Tooltip>
         <Tooltip label={themeLabel}>
           <IconButton
             label={themeLabel}
             onClick={() => setTheme(THEME_CYCLE[theme])}
           >
             <ThemeIcon className="size-4" strokeWidth={1.75} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip label="Settings" shortcut="⌘,">
+          <IconButton label="Settings" onClick={() => setSettingsOpen(true)}>
+            <Settings className="size-4" strokeWidth={1.75} />
           </IconButton>
         </Tooltip>
         <Tooltip label="Toggle inspector" shortcut="]">
@@ -173,6 +261,14 @@ export function TopToolbar() {
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}
+          onClick={() =>
+            toast({
+              variant: 'info',
+              title: 'Export coming soon',
+              description:
+                'PDF and image export ship with the reporting milestone.',
+            })
+          }
           className="ml-0.5 flex h-7 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
         >
           <Download className="size-3.5" strokeWidth={2} />

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useMenuStore } from '@/stores/menuStore';
+import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
@@ -23,17 +25,33 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Global editor shortcuts: V/H/O switch tools, [ and ] toggle the side
- * panels, G toggles the floor grid, F fits the view, Escape clears the
- * selection. Ignored while typing in form fields.
+ * Global editor shortcuts. Single keys drive tools and views (V/H/O, G,
+ * F, [ ], ?, Escape); modifier chords drive app-level actions (⌘K
+ * command palette, ⌘, settings). Ignored while typing in form fields;
+ * single-key shortcuts pause while a modal overlay is open.
  */
 export function useEditorShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (isEditableTarget(event.target)) return;
-
       const key = event.key.toLowerCase();
+      const overlays = useOverlayStore.getState();
+
+      // Modifier chords work everywhere, including inside text fields.
+      if (event.metaKey || event.ctrlKey) {
+        if (key === 'k') {
+          event.preventDefault();
+          overlays.setCommandPaletteOpen(!overlays.commandPaletteOpen);
+        } else if (key === ',') {
+          event.preventDefault();
+          overlays.setSettingsOpen(true);
+        }
+        return;
+      }
+      if (event.altKey) return;
+      if (isEditableTarget(event.target)) return;
+      // Modal overlays own the keyboard while open (they handle Escape).
+      if (overlays.anyOpen()) return;
+
       const { setActiveTool, toggleSidebar, toggleInspector } =
         useUIStore.getState();
 
@@ -47,10 +65,15 @@ export function useEditorShortcuts(): void {
         useViewSettingsStore.getState().toggleGrid();
       } else if (key === 'f') {
         useViewportStore.getState().dispatchCamera({ type: 'fit' });
+      } else if (key === '?') {
+        overlays.setShortcutsOpen(true);
       } else if (key === 'escape') {
-        // Dismiss the topmost layer first: device preview, then selection.
+        // Dismiss the topmost layer: menu, device preview, then selection.
+        const menu = useMenuStore.getState();
         const library = useLibraryStore.getState();
-        if (library.selectedDeviceId) {
+        if (menu.menu) {
+          menu.closeMenu();
+        } else if (library.selectedDeviceId) {
           library.selectDevice(null);
         } else {
           useRackStore.getState().setSelected(null);

@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { Heart, Zap } from 'lucide-react';
+import { Eye, Heart, Plus, Zap } from 'lucide-react';
 import { DeviceThumbnail } from './DeviceThumbnail';
 import { brandById, CATEGORY_LABELS, type CatalogDevice } from './catalog';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useMenuStore } from '@/stores/menuStore';
 import { cn } from '@/lib/utils';
 
 function Chip({
@@ -49,6 +50,31 @@ export function DeviceCard({ device }: DeviceCardProps) {
         }
       }}
       aria-pressed={selected}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        useMenuStore.getState().openMenu(e.clientX, e.clientY, [
+          {
+            id: 'preview',
+            label: selected ? 'Close preview' : 'Preview device',
+            icon: Eye,
+            action: () => selectDevice(selected ? null : device.id),
+          },
+          {
+            id: 'favorite',
+            label: favorite ? 'Remove from favourites' : 'Add to favourites',
+            icon: Heart,
+            action: () => toggleFavorite(device.id),
+          },
+          { separator: true },
+          {
+            id: 'add',
+            label: 'Add to rack',
+            icon: Plus,
+            disabled: true,
+          },
+        ]);
+      }}
       className={cn(
         'group relative w-full cursor-pointer rounded-[10px] border p-2 text-left',
         'transition-colors duration-100',
