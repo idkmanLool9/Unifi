@@ -1,0 +1,169 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens                                                      */
+/*  Semantic variables are defined per theme below and mapped into     */
+/*  Tailwind utilities via @theme inline (bg-surface, text-primary…).  */
+/* ------------------------------------------------------------------ */
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono',
+    monospace;
+
+  --color-background: var(--rf-background);
+  --color-surface: var(--rf-surface);
+  --color-surface-raised: var(--rf-surface-raised);
+  --color-surface-hover: var(--rf-surface-hover);
+  --color-surface-active: var(--rf-surface-active);
+
+  --color-edge: var(--rf-edge);
+  --color-edge-strong: var(--rf-edge-strong);
+
+  --color-primary: var(--rf-text-primary);
+  --color-secondary: var(--rf-text-secondary);
+  --color-muted: var(--rf-text-muted);
+
+  --color-accent: var(--rf-accent);
+  --color-accent-hover: var(--rf-accent-hover);
+  --color-accent-soft: var(--rf-accent-soft);
+  --color-on-accent: var(--rf-on-accent);
+
+  --color-success: var(--rf-success);
+  --color-warning: var(--rf-warning);
+  --color-danger: var(--rf-danger);
+
+  --shadow-panel: var(--rf-shadow-panel);
+  --shadow-overlay: var(--rf-shadow-overlay);
+
+  --radius-panel: 0.75rem;
+}
+
+/* ---- Dark (default) ---------------------------------------------- */
+:root,
+:root[data-theme='dark'] {
+  --rf-background: #0c0d0f;
+  --rf-surface: #141518;
+  --rf-surface-raised: #1b1d21;
+  --rf-surface-hover: #212327;
+  --rf-surface-active: #26282d;
+
+  --rf-edge: rgb(255 255 255 / 0.07);
+  --rf-edge-strong: rgb(255 255 255 / 0.14);
+
+  --rf-text-primary: #f4f5f6;
+  --rf-text-secondary: #9ba1ab;
+  --rf-text-muted: #62676f;
+
+  --rf-accent: #4c82f7;
+  --rf-accent-hover: #6494f9;
+  --rf-accent-soft: rgb(76 130 247 / 0.14);
+  --rf-on-accent: #ffffff;
+
+  --rf-success: #3fb970;
+  --rf-warning: #e8a33d;
+  --rf-danger: #e5544b;
+
+  --rf-shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 8px 24px rgb(0 0 0 / 0.4);
+  --rf-shadow-overlay: 0 0 0 1px rgb(255 255 255 / 0.08),
+    0 16px 48px rgb(0 0 0 / 0.55);
+
+  --rf-canvas-top: #17191d;
+  --rf-canvas-bottom: #0c0d0f;
+  --rf-grid-cell: #2a2d33;
+  --rf-grid-section: #3d4149;
+
+  color-scheme: dark;
+}
+
+/* ---- Light -------------------------------------------------------- */
+:root[data-theme='light'] {
+  --rf-background: #eef0f3;
+  --rf-surface: #f9fafb;
+  --rf-surface-raised: #ffffff;
+  --rf-surface-hover: #eceef1;
+  --rf-surface-active: #e4e7eb;
+
+  --rf-edge: rgb(15 18 25 / 0.08);
+  --rf-edge-strong: rgb(15 18 25 / 0.16);
+
+  --rf-text-primary: #191b1f;
+  --rf-text-secondary: #5b626e;
+  --rf-text-muted: #9aa0aa;
+
+  --rf-accent: #2f6bef;
+  --rf-accent-hover: #245ad6;
+  --rf-accent-soft: rgb(47 107 239 / 0.1);
+  --rf-on-accent: #ffffff;
+
+  --rf-success: #1f9d55;
+  --rf-warning: #c07f1a;
+  --rf-danger: #d43d33;
+
+  --rf-shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.06),
+    0 8px 24px rgb(15 18 25 / 0.08);
+  --rf-shadow-overlay: 0 0 0 1px rgb(15 18 25 / 0.08),
+    0 16px 48px rgb(15 18 25 / 0.16);
+
+  --rf-canvas-top: #f2f4f7;
+  --rf-canvas-bottom: #dde1e7;
+  --rf-grid-cell: #c3c9d2;
+  --rf-grid-section: #9fa7b3;
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Base                                                               */
+/* ------------------------------------------------------------------ */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-background font-sans text-primary antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: var(--rf-accent-soft);
+}
+
+/* Slim, theme-aware scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rf-edge-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--rf-edge-strong);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Consistent keyboard focus ring */
+:focus-visible {
+  outline: 2px solid var(--rf-accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* Viewport backdrop gradient (behind the transparent WebGL canvas) */
+.viewport-backdrop {
+  background: radial-gradient(
+    120% 90% at 50% 0%,
+    var(--rf-canvas-top) 0%,
+    var(--rf-canvas-bottom) 100%
+  );
+}
