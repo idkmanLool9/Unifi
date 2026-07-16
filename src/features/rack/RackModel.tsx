@@ -10,7 +10,10 @@ import { DEBUG_DIMS_ENABLED, DebugDimensions } from './DebugDimensions';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
 import { MountedDevices } from '@/features/devices/MountedDevices';
+import { DragPlacementLayer } from '@/features/dragdrop/DragPlacementLayer';
+import { GhostDevice } from '@/features/dragdrop/GhostDevice';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
+import { shouldSuppressClick } from '@/stores/dragStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import type { RackConfig, ResolvedTheme } from '@/types';
@@ -136,6 +139,8 @@ export function RackModel({ rack, theme }: RackModelProps) {
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    // The click that ends a device drop must not re-select the rack.
+    if (shouldSuppressClick()) return;
     selectRack();
   };
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -375,6 +380,11 @@ export function RackModel({ rack, theme }: RackModelProps) {
 
       {/* Mounted devices (inherit the rack's animation and orientation) */}
       <MountedDevices theme={theme} geometry={geometry} />
+
+      {/* Drag placement: raycast surfaces + live ghost preview */}
+      <DragPlacementLayer rack={rack} geometry={geometry} />
+      <GhostDevice geometry={geometry} />
+
       {DEBUG_DIMS_ENABLED && <DebugDimensions geometry={geometry} />}
 
       {/* Selection / hover feedback */}

@@ -3,6 +3,8 @@ import { Eye, Heart, Plus, Zap } from 'lucide-react';
 import { DeviceThumbnail } from './DeviceThumbnail';
 import { brandById, CATEGORY_LABELS, type CatalogDevice } from './catalog';
 import { addDeviceToRack } from '@/features/devices/addDeviceAction';
+import { armDrag } from '@/features/dragdrop/DragController';
+import { shouldSuppressClick } from '@/stores/dragStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { useRackStore } from '@/stores/rackStore';
@@ -42,7 +44,20 @@ export function DeviceCard({ device }: DeviceCardProps) {
   return (
     <motion.div
       whileTap={{ scale: 0.99 }}
-      onClick={() => selectDevice(selected ? null : device.id)}
+      onClick={() => {
+        // The click that ends a drag gesture must not toggle the preview.
+        if (shouldSuppressClick()) return;
+        selectDevice(selected ? null : device.id);
+      }}
+      onPointerDown={(e) =>
+        // Real drag source: begins only past a movement threshold, so
+        // plain clicks (and library scrolling) behave exactly as before.
+        armDrag(e, () =>
+          useRackStore.getState().rack
+            ? { kind: 'library', definitionId: device.id }
+            : null,
+        )
+      }
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

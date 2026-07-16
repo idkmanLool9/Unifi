@@ -18,7 +18,11 @@ interface DeviceInstancesState {
   instances: PlacedDevice[];
 
   /** Places a device; picks the lowest free slot when startU is omitted. */
-  addDevice: (definitionId: string, startU?: number) => PlacementResult;
+  addDevice: (
+    definitionId: string,
+    startU?: number,
+    facing?: RackOrientation,
+  ) => PlacementResult;
   /** Moves an existing device to a new start unit. */
   moveDevice: (instanceId: string, startU: number) => PlacementResult;
   setFacing: (instanceId: string, facing: RackOrientation) => void;
@@ -51,7 +55,7 @@ export const useDeviceInstancesStore = create<DeviceInstancesState>()(
     (set, get) => ({
       instances: [],
 
-      addDevice: (definitionId, startU) => {
+      addDevice: (definitionId, startU, facing) => {
         const definition = getDevice(definitionId);
         if (!definition) {
           return {
@@ -86,7 +90,7 @@ export const useDeviceInstancesStore = create<DeviceInstancesState>()(
           id: crypto.randomUUID(),
           definitionId,
           startU: result.startU,
-          facing: definition.defaultFacing,
+          facing: facing ?? definition.defaultFacing,
           visible: true,
         };
         set((s) => ({ instances: [...s.instances, instance] }));

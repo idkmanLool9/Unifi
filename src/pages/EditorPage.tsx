@@ -2,6 +2,7 @@ import { LeftSidebar } from '@/components/layout/LeftSidebar';
 import { InspectorPanel } from '@/features/inspector/InspectorPanel';
 import { ViewportCanvas } from '@/features/viewport/ViewportCanvas';
 import { DevicePreviewPanel } from '@/features/library/DevicePreviewPanel';
+import { DragController } from '@/features/dragdrop/DragController';
 import { useEditorShortcuts } from '@/hooks/useEditorShortcuts';
 
 /** The rack editor: library panel, 3D viewport, and inspector. */
@@ -17,6 +18,8 @@ export function EditorPage() {
         <DevicePreviewPanel />
       </div>
       <InspectorPanel />
+      {/* Drag & drop gesture owner + HTML drag chip */}
+      <DragController />
     </div>
   );
 }

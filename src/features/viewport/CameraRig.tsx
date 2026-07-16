@@ -3,6 +3,7 @@ import { PerspectiveCamera, Sphere, Vector3 } from 'three';
 import { useThree } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
+import { useDragStore } from '@/stores/dragStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
@@ -84,6 +85,17 @@ export function CameraRig() {
   const command = useViewportStore((s) => s.command);
   const setActiveView = useViewportStore((s) => s.setActiveView);
   const fov = useViewSettingsStore((s) => s.fov);
+  const dragging = useDragStore(
+    (s) => s.phase === 'dragging' || s.orbitSuspended,
+  );
+
+  // A drag gesture owns the pointer: orbit pauses for exactly that
+  // gesture (including the pre-threshold press on a device) and resumes
+  // when the drag ends, cancels, or turns out to be a plain click.
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (controls) controls.enabled = !dragging;
+  }, [dragging]);
 
   // Keep the camera's FOV in sync with the inspector slider.
   useEffect(() => {

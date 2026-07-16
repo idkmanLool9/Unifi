@@ -15,6 +15,8 @@ import { DeviceModel, ModelErrorBoundary } from './DeviceModel';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { MountingHardware } from './MountingHardware';
 import { getDevice, useRegistryStore } from './deviceRegistry';
+import { armDrag } from '@/features/dragdrop/DragController';
+import { shouldSuppressClick } from '@/stores/dragStore';
 import { RackSelection } from '@/features/rack/RackSelection';
 import {
   devicePlacement,
@@ -132,7 +134,29 @@ function MountedDeviceView({
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (shouldSuppressClick()) return;
     selectDevice(instance.id);
+  };
+
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (e.nativeEvent.button !== 0) return;
+    e.stopPropagation();
+    // Direct manipulation: drag the device to another U (Alt duplicates).
+    // Transactional — the original stays until a valid drop commits.
+    const duplicate = e.nativeEvent.altKey;
+    armDrag(
+      e.nativeEvent,
+      () => {
+        selectDevice(instance.id);
+        return {
+          kind: 'instance',
+          instanceId: instance.id,
+          definitionId: instance.definitionId,
+          duplicate,
+        };
+      },
+      { suspendOrbit: true },
+    );
   };
 
   const onContextMenu = (e: ThreeEvent<MouseEvent>) => {
@@ -148,6 +172,7 @@ function MountedDeviceView({
       position={position}
       rotation={[0, rotationY, 0]}
       onClick={onClick}
+      onPointerDown={onPointerDown}
       onContextMenu={onContextMenu}
       onPointerOver={(e) => {
         e.stopPropagation();

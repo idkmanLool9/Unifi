@@ -8,6 +8,7 @@ import { useRackStore } from '@/stores/rackStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
 import { DeviceInspector } from './device/DeviceInspector';
+import { PlacementSection } from './PlacementSection';
 import { SceneInfoSection } from './sections/SceneInfoSection';
 import { CameraSection } from './sections/CameraSection';
 import { ViewSection } from './sections/ViewSection';
@@ -101,6 +102,8 @@ export function InspectorPanel() {
               </span>
             </PanelHeader>
             <div className="relative flex-1 overflow-x-hidden overflow-y-auto">
+              {/* Live placement readout while a drag is in progress */}
+              <PlacementSection />
               {/* Keyed remount with entrance-only animation (see M5 note) */}
               <motion.div
                 key={contentKey}
