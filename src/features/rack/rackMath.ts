@@ -159,19 +159,33 @@ export function rackGeometryFor(
 export const uSlotY = (startU: number, railBaseYM = railBaseY()): number =>
   railBaseYM + (startU - 1) * U_METERS;
 
-/** World-space center position for a mounted device. Devices mount to a
- *  single rail plane (front or rear) and extend inward from it — they are
- *  never stretched between the two planes. */
+/** Shelf surface thickness (steel plate + folded lip), meters. */
+export const SHELF_THICKNESS_M = 0.012;
+
+/** Non-rack devices rest on a shelf surface instead of bolting to rails. */
+export const isShelfMounted = (definition: DeviceDefinition): boolean =>
+  definition.mountingStandard !== 'eia-310';
+
+/** World-space center position for a mounted device. Rack devices mount
+ *  to a single rail plane (front or rear) and extend inward from it —
+ *  they are never stretched between the two planes. Shelf-mounted
+ *  devices sit on the shelf surface at their slot instead of hanging
+ *  from the rails. */
 export function devicePlacement(
   definition: DeviceDefinition,
   startU: number,
   facing: RackOrientation,
   geometry: RackGeometry,
 ): { position: [number, number, number]; rotationY: number } {
-  const y =
-    uSlotY(startU, geometry.railBaseYM) +
-    (definition.rackUnits * U_METERS) / 2 +
-    definition.mountingOffsetMm * MM_TO_M;
+  const onShelf = isShelfMounted(definition);
+  const y = onShelf
+    ? uSlotY(startU, geometry.railBaseYM) +
+      SHELF_THICKNESS_M +
+      (definition.heightMm * MM_TO_M) / 2 +
+      definition.mountingOffsetMm * MM_TO_M
+    : uSlotY(startU, geometry.railBaseYM) +
+      (definition.rackUnits * U_METERS) / 2 +
+      definition.mountingOffsetMm * MM_TO_M;
   const halfDepth = (definition.depthMm * MM_TO_M) / 2;
   const z =
     facing === 'front'
@@ -208,6 +222,8 @@ export interface PlacementContext {
   rackUnits: RackSize;
   /** Deepest device the rack's current rail configuration accepts. */
   usableDepthMm: number;
+  /** The rack profile accepts shelves for non-rack (mounting 'none') gear. */
+  shelfAvailable: boolean;
   instances: readonly PlacedDevice[];
   getDefinition: (id: string) => DeviceDefinition | undefined;
 }
@@ -277,11 +293,11 @@ export function validatePlacement(
   ctx: PlacementContext,
   ignoreInstanceId?: string,
 ): PlacementResult {
-  if (definition.mountingStandard !== 'eia-310') {
+  if (definition.mountingStandard !== 'eia-310' && !ctx.shelfAvailable) {
     return {
       ok: false,
       reason: 'unsupported-mounting',
-      message: `${definition.productName} does not use EIA-310 rack mounting.`,
+      message: `${definition.productName} needs a shelf, and this rack does not take shelves.`,
     };
   }
 

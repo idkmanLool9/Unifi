@@ -57,6 +57,7 @@ export function RackSection({ rack }: { rack: RackConfig }) {
     const highestUsed = maxOccupiedU({
       rackUnits: rack.units,
       usableDepthMm: usableMm,
+      shelfAvailable: next.shelfCompatible,
       instances,
       getDefinition: getDevice,
     });

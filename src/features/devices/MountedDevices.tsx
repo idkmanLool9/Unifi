@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DeviceModel, ModelErrorBoundary } from './DeviceModel';
 import { DevicePlaceholder } from './DevicePlaceholder';
+import { MountingHardware } from './MountingHardware';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { RackSelection } from '@/features/rack/RackSelection';
 import {
@@ -164,6 +165,8 @@ function MountedDeviceView({
           <DeviceModel definition={definition} />
         </ModelErrorBoundary>
       </group>
+      {/* Parametric mounting hardware (outside the measured model group) */}
+      <MountingHardware definition={definition} geometry={geometry} />
       {DEBUG_BOUNDS_ENABLED && (
         <DebugBounds
           target={modelRef}

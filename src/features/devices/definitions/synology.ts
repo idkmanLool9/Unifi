@@ -3,6 +3,35 @@ import type { DeviceDefinition } from '../deviceSchema';
 
 export const SYNOLOGY_DEVICES: DeviceDefinition[] = [
   defineDevice({
+    id: 'syn-ds923',
+    slug: 'diskstation-ds923-plus',
+    manufacturer: 'synology',
+    manufacturerName: 'Synology',
+    productName: 'DiskStation DS923+',
+    modelNumber: 'DS923+',
+    category: 'storage',
+    // Desktop tower on a cantilever shelf: 5U covers chassis + shelf.
+    rackUnits: 5,
+    widthMm: 199,
+    heightMm: 166,
+    depthMm: 223,
+    weightKg: 2.24,
+    mountingStandard: 'none',
+    powerConsumptionWatts: 35,
+    maximumPowerWatts: 100,
+    description:
+      'Desktop 4-bay NAS — shelf-mounted in racks via a cantilever shelf.',
+    tags: ['nas', 'desktop', 'shelf'],
+    mechanical: { mountStyle: 'shelf' },
+    ports: [{ id: 'lan', type: 'rj45', count: 2, label: 'LAN 1–2', location: 'rear' }],
+    presentation: {
+      faceplate: 'storage',
+      tone: 'dark',
+      portsLabel: '2 ports',
+      speedLabel: '1G',
+    },
+  }),
+  defineDevice({
     id: 'syn-rs1221',
     slug: 'rackstation-rs1221-plus',
     manufacturer: 'synology',

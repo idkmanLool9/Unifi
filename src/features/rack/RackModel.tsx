@@ -211,6 +211,18 @@ export function RackModel({ rack, theme }: RackModelProps) {
           />
         ))}
 
+      {/* Cabinet interior floor: the enclosure physically contains gear */}
+      {geometry.hasInnerRails && (
+        <RoundedBox
+          args={[W - 2 * uprightW, 0.008, D - 2 * uprightD]}
+          radius={0.002}
+          smoothness={2}
+          position={[0, railY0 - 0.005, 0]}
+          receiveShadow
+          material={materials.plinth}
+        />
+      )}
+
       {/* Rail label strips: unit numbers + cage-nut holes at each plane */}
       {rack.showUnitNumbers &&
         corners.map(({ sx, sz }) => (

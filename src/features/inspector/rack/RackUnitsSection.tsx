@@ -14,6 +14,7 @@ export function RackUnitsSection({ rack }: { rack: RackConfig }) {
   const occupied = occupiedUnits({
     rackUnits: rack.units,
     usableDepthMm: geometry.usableDepthM * 1000,
+    shelfAvailable: geometry.profile.shelfCompatible,
     instances,
     getDefinition: getDevice,
   });

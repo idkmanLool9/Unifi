@@ -64,6 +64,38 @@ shelf availability. Racks compute their own geometry; devices never
 modify themselves. In auto rail mode the rear rails position themselves
 against the deepest installed device.
 
+## Mechanical layer
+
+`src/features/rack/mechanics.ts` decides how every device is physically
+carried — one solver, zero device-specific code:
+
+- **Front ears** bolt to the front rail plane (suppressed when the GLB
+  models its own via `mechanical.integratedEars`).
+- **Rear brackets** carry the tail when it reaches the rear rails
+  (within ±25 mm — always true in auto rail mode).
+- **Side support rails** carry short chassis in deep racks when the
+  profile provides them (`supportRails`).
+- **Front-ear cantilever** is the honest fallback — exactly how a 1U
+  switch hangs in a real deep rack without rear support.
+- **Shelves**: devices with `mountingStandard: 'none'` seat on a shelf
+  surface (engine-rendered) when the profile is `shelfCompatible`.
+
+`MechanicalSpec` metadata (all optional, engine derives defaults from
+the dimensions): `mountStyle`, `frontMountPlaneMm`, `rearSupportPlaneMm`,
+`bottomSupportPlaneMm`, `earThicknessMm`, `earOffsetMm`,
+`integratedEars`, `centerOfMassMm`, `railType`. `accessoryKind`
+classifies rail accessories (blank/brush panels, shelves, cable
+managers, PDUs, patch panels, support brackets) for future tooling.
+
+`analyzeMechanics()` computes pure geometric facts per instance — rear
+brackets passing through the rear rail plane, shelves deeper than the
+rails, chassis exceeding rail spacing, overlapping chassis volumes. No
+warnings are raised; downstream layers decide what to surface.
+
+The visible hardware (`MountingHardware.tsx`) is parametric — a few
+boxes and bolt heads per device driven entirely by the solver, so every
+manufacturer benefits automatically.
+
 ## Capability metadata (declarative only)
 
 `DeviceDefinition` carries forward-looking metadata with **no runtime

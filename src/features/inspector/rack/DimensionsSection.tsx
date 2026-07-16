@@ -21,6 +21,7 @@ export function DimensionsSection({ rack }: { rack: RackConfig }) {
   const highestUsed = maxOccupiedU({
     rackUnits: rack.units,
     usableDepthMm: geometry.usableDepthM * 1000,
+    shelfAvailable: profile.shelfCompatible,
     instances,
     getDefinition: getDevice,
   });

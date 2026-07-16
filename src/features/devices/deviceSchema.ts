@@ -179,6 +179,74 @@ export interface DisplayCapabilities {
   positionMm?: [number, number, number];
 }
 
+/* ---- Mechanical metadata --------------------------------------------- */
+
+/**
+ * How a device physically attaches to a rack. Only geometry follows from
+ * this today — interactions (sliding, install animation) come later.
+ */
+export const MOUNT_STYLES = [
+  'rack-ears',
+  'sliding-rails',
+  'fixed-rails',
+  'shelf',
+  'rear-brackets',
+  'four-post',
+  'two-post',
+  'wall-mount',
+  'desktop',
+] as const;
+export type MountStyle = (typeof MOUNT_STYLES)[number];
+
+/** Future rail-kit classification. */
+export const RAIL_KIT_TYPES = ['none', 'fixed', 'sliding', 'shelf'] as const;
+export type RailKitType = (typeof RAIL_KIT_TYPES)[number];
+
+/**
+ * Mechanical contact points. All values are offsets from the chassis
+ * surfaces (mm), so an omitted field means "the plane is the surface
+ * itself" — the engine derives everything else from the dimensions.
+ * Purely declarative: the mounting solver and hardware renderer consume
+ * this; no device-specific code paths exist.
+ */
+export interface MechanicalSpec {
+  /** Attachment style. Defaults: 'rack-ears' (eia-310), 'shelf' (none). */
+  mountStyle?: MountStyle;
+  /** Front mounting plane, mm behind the faceplate (0 = flush). */
+  frontMountPlaneMm?: number;
+  /** Rear support plane, mm ahead of the chassis rear face (0 = flush). */
+  rearSupportPlaneMm?: number;
+  /** Bottom support plane, mm above the chassis underside (0 = flush). */
+  bottomSupportPlaneMm?: number;
+  /** Mounting-ear sheet thickness. */
+  earThicknessMm?: number;
+  /** Fore/aft offset of the ear plane from the faceplate. */
+  earOffsetMm?: number;
+  /** The GLB already models its ears — skip the parametric ones. */
+  integratedEars?: boolean;
+  /** Center of mass, mm from the chassis center (future weight planning). */
+  centerOfMassMm?: [number, number, number];
+  /** Rail kit the device ships with / requires (future). */
+  railType?: RailKitType;
+}
+
+/**
+ * Accessory classification for rail-mounted hardware (blank panels,
+ * shelves, cable managers, PDUs…). Declarative only — accessories are
+ * regular devices to the engine.
+ */
+export const ACCESSORY_KINDS = [
+  'blank-panel',
+  'brush-panel',
+  'cantilever-shelf',
+  'fixed-shelf',
+  'cable-manager',
+  'pdu',
+  'patch-panel',
+  'support-bracket',
+] as const;
+export type AccessoryKind = (typeof ACCESSORY_KINDS)[number];
+
 export interface DevicePresentation {
   faceplate: FaceplateStyle;
   tone: 'dark' | 'metal';
@@ -225,6 +293,10 @@ export interface DeviceDefinition {
   power?: PowerCapabilities;
   cooling?: CoolingCapabilities;
   display?: DisplayCapabilities;
+  /** Mechanical contact points and mounting style (see MechanicalSpec). */
+  mechanical?: MechanicalSpec;
+  /** Set when this device is a rail accessory (blank panel, PDU, …). */
+  accessoryKind?: AccessoryKind;
   presentation: DevicePresentation;
 }
 
@@ -626,6 +698,56 @@ function parseDisplay(
   return { lcd, touchscreen, positionMm };
 }
 
+function parseMechanical(
+  input: unknown,
+  checker: Checker,
+): MechanicalSpec | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('mechanical', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const mountStyle =
+    input.mountStyle === undefined
+      ? undefined
+      : sub.oneOf(input, 'mountStyle', MOUNT_STYLES);
+  const numberOr = (path: string, opts: { min?: number; max?: number } = {}) =>
+    (input as Record<string, unknown>)[path] === undefined
+      ? undefined
+      : sub.number(input, path, opts);
+  const frontMountPlaneMm = numberOr('frontMountPlaneMm', { min: 0, max: 100 });
+  const rearSupportPlaneMm = numberOr('rearSupportPlaneMm', { min: 0, max: 100 });
+  const bottomSupportPlaneMm = numberOr('bottomSupportPlaneMm', { min: 0, max: 50 });
+  const earThicknessMm = numberOr('earThicknessMm', { min: 0.5, max: 10 });
+  const earOffsetMm = numberOr('earOffsetMm', { min: -50, max: 50 });
+  const integratedEars = sub.optionalBoolean(input, 'integratedEars');
+  const centerOfMassMm =
+    input.centerOfMassMm === undefined
+      ? undefined
+      : isVec3(input.centerOfMassMm)
+        ? input.centerOfMassMm
+        : sub.fail('centerOfMassMm', 'must be [x, y, z] numbers');
+  const railType =
+    input.railType === undefined
+      ? undefined
+      : sub.oneOf(input, 'railType', RAIL_KIT_TYPES);
+  sub.issues.forEach(({ path, message }) =>
+    checker.fail(`mechanical.${path}`, message),
+  );
+  return {
+    mountStyle,
+    frontMountPlaneMm,
+    rearSupportPlaneMm,
+    bottomSupportPlaneMm,
+    earThicknessMm,
+    earOffsetMm,
+    integratedEars,
+    centerOfMassMm,
+    railType,
+  };
+}
+
 function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
   if (input === undefined) return [];
   if (!Array.isArray(input)) {
@@ -769,6 +891,11 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
   const power = parsePower(input.power, c);
   const cooling = parseCooling(input.cooling, c);
   const display = parseDisplay(input.display, c);
+  const mechanical = parseMechanical(input.mechanical, c);
+  const accessoryKind =
+    input.accessoryKind === undefined
+      ? undefined
+      : c.oneOf(input, 'accessoryKind', ACCESSORY_KINDS);
   const presentation = parsePresentation(input.presentation, c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
@@ -805,6 +932,8 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       power,
       cooling,
       display,
+      mechanical,
+      accessoryKind,
       presentation,
     },
   };

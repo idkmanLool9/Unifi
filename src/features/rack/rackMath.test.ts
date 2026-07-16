@@ -77,6 +77,7 @@ function ctx(instances: PlacedDevice[], rackUnits = 12): PlacementContext {
   return {
     rackUnits: rackUnits as PlacementContext['rackUnits'],
     usableDepthMm: GEO.usableDepthM * 1000,
+    shelfAvailable: GEO.profile.shelfCompatible,
     instances,
     getDefinition: (id) => DEFS.get(id),
   };
@@ -182,8 +183,16 @@ describe('validatePlacement', () => {
     });
   });
 
-  it('rejects unsupported mounting standards', () => {
-    expect(validatePlacement(shelfMount, 1, ctx([]))).toMatchObject({
+  it('accepts shelf-mounted gear when the profile takes shelves', () => {
+    expect(validatePlacement(shelfMount, 1, ctx([]))).toEqual({
+      ok: true,
+      startU: 1,
+    });
+  });
+
+  it('rejects shelf-mounted gear when the profile has no shelves', () => {
+    const noShelf = { ...ctx([]), shelfAvailable: false };
+    expect(validatePlacement(shelfMount, 1, noShelf)).toMatchObject({
       ok: false,
       reason: 'unsupported-mounting',
     });

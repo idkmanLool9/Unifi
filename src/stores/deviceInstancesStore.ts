@@ -40,6 +40,7 @@ export function placementContext(
   return {
     rackUnits: rack.units,
     usableDepthMm: geometry.usableDepthM / 0.001,
+    shelfAvailable: geometry.profile.shelfCompatible,
     instances,
     getDefinition: getDevice,
   };
