@@ -4,17 +4,19 @@ import { create } from 'zustand';
 export type Selection =
   | { kind: 'rack' }
   | { kind: 'device'; instanceId: string }
+  | { kind: 'cable'; cableId: string }
   | null;
 
 interface SelectionState {
   selection: Selection;
   selectRack: () => void;
   selectDevice: (instanceId: string) => void;
+  selectCable: (cableId: string) => void;
   clear: () => void;
 }
 
 /**
- * Unified editor selection (rack or a mounted device instance).
+ * Unified editor selection (rack, a mounted device, or a cable).
  * Transient — selection never persists across sessions.
  */
 export const useSelectionStore = create<SelectionState>()((set) => ({
@@ -22,6 +24,7 @@ export const useSelectionStore = create<SelectionState>()((set) => ({
   selectRack: () => set({ selection: { kind: 'rack' } }),
   selectDevice: (instanceId) =>
     set({ selection: { kind: 'device', instanceId } }),
+  selectCable: (cableId) => set({ selection: { kind: 'cable', cableId } }),
   clear: () => set({ selection: null }),
 }));
 

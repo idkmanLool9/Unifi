@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import {
+  Cable,
   ChevronDown,
   Command,
   Copy,
@@ -42,6 +43,7 @@ const TOOLS: ReadonlyArray<{
   { id: 'select', icon: MousePointer2, label: 'Select', shortcut: 'V' },
   { id: 'pan', icon: Hand, label: 'Pan', shortcut: 'H' },
   { id: 'orbit', icon: Orbit, label: 'Orbit', shortcut: 'O' },
+  { id: 'cable', icon: Cable, label: 'Cable Tool', shortcut: 'C' },
 ];
 
 const THEME_CYCLE: Record<ThemePreference, ThemePreference> = {

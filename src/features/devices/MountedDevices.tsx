@@ -16,6 +16,7 @@ import { DevicePlaceholder } from './DevicePlaceholder';
 import { MountingHardware } from './MountingHardware';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { armDrag } from '@/features/dragdrop/DragController';
+import { requestRemoveDevice } from './removeDeviceAction';
 import { shouldSuppressClick } from '@/stores/dragStore';
 import { RackSelection } from '@/features/rack/RackSelection';
 import {
@@ -32,7 +33,7 @@ import type { PlacedDevice } from '@/features/rack/rackMath';
 import type { ResolvedTheme } from '@/types';
 
 function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
-  const { moveDevice, setFacing, setVisible, removeDevice } =
+  const { moveDevice, setFacing, setVisible } =
     useDeviceInstancesStore.getState();
   const definition = getDevice(instance.definitionId);
   const name = definition?.productName ?? 'Device';
@@ -84,10 +85,8 @@ function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
       label: 'Remove from rack',
       icon: Trash2,
       danger: true,
-      action: () => {
-        removeDevice(instance.id);
-        toast({ variant: 'success', title: `${name} removed` });
-      },
+      // Cable-aware: confirms when the device has attached cables.
+      action: () => requestRemoveDevice(instance.id),
     },
   ]);
 }

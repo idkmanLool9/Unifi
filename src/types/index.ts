@@ -5,7 +5,7 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 
 /** Viewport interaction tools available in the top toolbar. */
-export type EditorTool = 'select' | 'pan' | 'orbit';
+export type EditorTool = 'select' | 'pan' | 'orbit' | 'cable';
 
 /** Live rendering statistics reported by the 3D viewport. */
 export interface ViewportStats {

@@ -3,11 +3,12 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
+import { ConnectionsSection } from './ConnectionsSection';
 import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
+import { requestRemoveDevice } from '@/features/devices/removeDeviceAction';
 import { CATEGORY_LABELS } from '@/features/library/catalog';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
-import { toast } from '@/stores/toastStore';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
 import type { PlacedDevice } from '@/features/rack/rackMath';
 import type { RackOrientation } from '@/types';
@@ -146,24 +147,17 @@ export function DeviceInspector({
   instance,
   definition,
 }: DeviceInspectorProps) {
-  const removeDevice = useDeviceInstancesStore((s) => s.removeDevice);
-
   return (
     <>
       <ProductSection definition={definition} />
       <PlacementSection instance={instance} definition={definition} />
+      <ConnectionsSection instanceId={instance.id} />
       <HardwareSection definition={definition} />
       <SpecsSection definition={definition} />
       <div className="px-3 py-3">
         <button
           type="button"
-          onClick={() => {
-            removeDevice(instance.id);
-            toast({
-              variant: 'success',
-              title: `${definition.productName} removed`,
-            });
-          }}
+          onClick={() => requestRemoveDevice(instance.id)}
           className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-medium text-danger transition-colors hover:bg-danger/10"
         >
           <Trash2 className="size-3.5" strokeWidth={1.75} />

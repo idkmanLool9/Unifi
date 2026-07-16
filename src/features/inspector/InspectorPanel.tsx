@@ -3,10 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { PanelHeader } from '@/components/ui/PanelHeader';
 import { ResizeHandle } from '@/components/ui/ResizeHandle';
 import { useUIStore, INSPECTOR_WIDTH } from '@/stores/uiStore';
+import { useCableStore } from '@/stores/cableStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
+import { CableInspector } from './cable/CableInspector';
 import { DeviceInspector } from './device/DeviceInspector';
 import { PlacementSection } from './PlacementSection';
 import { SceneInfoSection } from './sections/SceneInfoSection';
@@ -40,6 +42,8 @@ export function InspectorPanel() {
   const instances = useDeviceInstancesStore((s) => s.instances);
   useRegistryStore((s) => s.version);
 
+  const cables = useCableStore((s) => s.cables);
+
   const showRack = selection?.kind === 'rack' && rack !== null;
   const selectedInstance =
     selection?.kind === 'device'
@@ -50,17 +54,25 @@ export function InspectorPanel() {
     : undefined;
   const showDevice =
     selectedInstance !== undefined && selectedDefinition !== undefined;
+  const selectedCable =
+    selection?.kind === 'cable'
+      ? cables.find((c) => c.id === selection.cableId)
+      : undefined;
 
-  const headerChip = showDevice
-    ? selectedDefinition.productName
-    : showRack
-      ? `${rack.units}U Rack`
-      : 'No selection';
-  const contentKey = showDevice
-    ? `device-${selectedInstance.id}`
-    : showRack
-      ? 'rack'
-      : 'scene';
+  const headerChip = selectedCable
+    ? (selectedCable.label ?? 'Cable')
+    : showDevice
+      ? selectedDefinition.productName
+      : showRack
+        ? `${rack.units}U Rack`
+        : 'No selection';
+  const contentKey = selectedCable
+    ? `cable-${selectedCable.id}`
+    : showDevice
+      ? `device-${selectedInstance.id}`
+      : showRack
+        ? 'rack'
+        : 'scene';
 
   return (
     <AnimatePresence initial={false}>
@@ -93,7 +105,7 @@ export function InspectorPanel() {
             <PanelHeader title="Inspector">
               <span
                 className={
-                  showRack || showDevice
+                  showRack || showDevice || selectedCable
                     ? 'max-w-[140px] truncate rounded-md bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent'
                     : 'rounded-md bg-surface-active px-1.5 py-0.5 text-[10px] font-medium text-muted'
                 }
@@ -111,7 +123,9 @@ export function InspectorPanel() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.15, ease: EASE }}
               >
-                {showDevice ? (
+                {selectedCable ? (
+                  <CableInspector cable={selectedCable} />
+                ) : showDevice ? (
                   <DeviceInspector
                     instance={selectedInstance}
                     definition={selectedDefinition}

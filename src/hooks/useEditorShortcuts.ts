@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
-import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
+import { useCableStore } from '@/stores/cableStore';
+import { useCableToolStore } from '@/stores/cableToolStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
-import { getDevice } from '@/features/devices/deviceRegistry';
+import { requestRemoveDevice } from '@/features/devices/removeDeviceAction';
 import { toast } from '@/stores/toastStore';
 import type { EditorTool } from '@/types';
 
@@ -15,6 +16,7 @@ const TOOL_KEYS: Record<string, EditorTool> = {
   v: 'select',
   h: 'pan',
   o: 'orbit',
+  c: 'cable',
 };
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -71,24 +73,25 @@ export function useEditorShortcuts(): void {
       } else if (key === '?') {
         overlays.setShortcutsOpen(true);
       } else if (key === 'delete' || key === 'backspace') {
-        // Remove the selected mounted device.
         const selection = useSelectionStore.getState().selection;
-        if (selection?.kind === 'device') {
-          const store = useDeviceInstancesStore.getState();
-          const instance = store.instances.find(
-            (i) => i.id === selection.instanceId,
-          );
-          const name =
-            (instance && getDevice(instance.definitionId)?.productName) ??
-            'Device';
-          store.removeDevice(selection.instanceId);
-          toast({ variant: 'success', title: `${name} removed` });
+        if (selection?.kind === 'cable') {
+          // Remove the selected cable.
+          useCableStore.getState().removeCable(selection.cableId);
+          useSelectionStore.getState().clear();
+          toast({ variant: 'success', title: 'Cable removed' });
+        } else if (selection?.kind === 'device') {
+          // Remove the selected mounted device (confirming when cabled).
+          requestRemoveDevice(selection.instanceId);
         }
       } else if (key === 'escape') {
-        // Dismiss the topmost layer: menu, device preview, then selection.
+        // Dismiss the topmost layer: pending cable, menu, device
+        // preview, then selection.
         const menu = useMenuStore.getState();
         const library = useLibraryStore.getState();
-        if (menu.menu) {
+        const cableTool = useCableToolStore.getState();
+        if (cableTool.sourceEnd) {
+          cableTool.reset();
+        } else if (menu.menu) {
           menu.closeMenu();
         } else if (library.selectedDeviceId) {
           library.selectDevice(null);

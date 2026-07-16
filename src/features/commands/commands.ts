@@ -1,5 +1,6 @@
 import {
   Box,
+  Cable,
   Camera,
   Download,
   Eye,
@@ -100,6 +101,25 @@ export const COMMANDS: readonly Command[] = [
     keywords: 'remove clear',
     disabled: () => useRackStore.getState().rack === null,
     run: () => useOverlayStore.getState().setConfirmDeleteRackOpen(true),
+  },
+
+  // Cables
+  {
+    id: 'cables.connections',
+    label: 'Connection List',
+    group: 'Cables',
+    icon: Cable,
+    keywords: 'cables ports links wiring',
+    run: () => useOverlayStore.getState().setConnectionsOpen(true),
+  },
+  {
+    id: 'cables.tool',
+    label: 'Cable Tool',
+    group: 'Cables',
+    icon: Cable,
+    shortcut: 'C',
+    keywords: 'connect wire patch',
+    run: () => useUIStore.getState().setActiveTool('cable'),
   },
 
   // Camera

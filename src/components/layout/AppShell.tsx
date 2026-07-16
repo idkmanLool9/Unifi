@@ -7,6 +7,8 @@ import { CommandPalette } from '@/features/commands/CommandPalette';
 import { SettingsDialog } from '@/features/overlays/SettingsDialog';
 import { ShortcutsDialog } from '@/features/overlays/ShortcutsDialog';
 import { ConfirmDeleteRackDialog } from '@/features/overlays/ConfirmDeleteRackDialog';
+import { ConfirmDeleteDeviceDialog } from '@/features/overlays/ConfirmDeleteDeviceDialog';
+import { ConnectionsDialog } from '@/features/overlays/ConnectionsDialog';
 
 /**
  * Global application chrome: toolbar on top, status bar at the bottom,
@@ -26,6 +28,8 @@ export function AppShell() {
       <SettingsDialog />
       <ShortcutsDialog />
       <ConfirmDeleteRackDialog />
+      <ConfirmDeleteDeviceDialog />
+      <ConnectionsDialog />
       <ContextMenuHost />
       <ToastHost />
     </div>

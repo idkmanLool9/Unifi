@@ -15,7 +15,9 @@ import { ViewportHint } from './ViewportHint';
 import { ViewportNavWidget } from './ViewportNavWidget';
 import { WelcomeOverlay } from '@/features/rack/WelcomeOverlay';
 import { useResolvedTheme } from '@/hooks/useResolvedTheme';
+import { useCableToolStore } from '@/stores/cableToolStore';
 import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
+import { useUIStore } from '@/stores/uiStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useSelectionStore } from '@/stores/selectionStore';
@@ -36,6 +38,7 @@ export function ViewportCanvas() {
   const theme = useResolvedTheme();
   const hintsVisible = useViewSettingsStore((s) => s.hintsVisible);
   const hasRack = useRackStore((s) => s.rack !== null);
+  const cableTool = useUIStore((s) => s.activeTool === 'cable');
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
 
   const onContextMenu = (e: React.MouseEvent) => {
@@ -121,6 +124,7 @@ export function ViewportCanvas() {
   return (
     <div
       className="viewport-backdrop relative min-w-0 flex-1"
+      style={{ cursor: cableTool ? 'crosshair' : undefined }}
       onContextMenu={onContextMenu}
       onPointerDown={(e) => {
         pointerDownAt.current = { x: e.clientX, y: e.clientY };
@@ -149,7 +153,14 @@ export function ViewportCanvas() {
             down &&
             Math.hypot(e.clientX - down.x, e.clientY - down.y) >
               CLICK_DRAG_TOLERANCE;
-          if (!moved) useSelectionStore.getState().clear();
+          if (moved) return;
+          // A click on empty space first cancels a pending cable.
+          const cableTool = useCableToolStore.getState();
+          if (cableTool.sourceEnd) {
+            cableTool.reset();
+            return;
+          }
+          useSelectionStore.getState().clear();
         }}
       >
         <Scene theme={theme} />

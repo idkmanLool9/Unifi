@@ -10,6 +10,8 @@ import { DEBUG_DIMS_ENABLED, DebugDimensions } from './DebugDimensions';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
 import { MountedDevices } from '@/features/devices/MountedDevices';
+import { CableLayer } from '@/features/cables/CableLayer';
+import { CableToolLayer } from '@/features/cables/CableToolLayer';
 import { DragPlacementLayer } from '@/features/dragdrop/DragPlacementLayer';
 import { GhostDevice } from '@/features/dragdrop/GhostDevice';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
@@ -384,6 +386,10 @@ export function RackModel({ rack, theme }: RackModelProps) {
       {/* Drag placement: raycast surfaces + live ghost preview */}
       <DragPlacementLayer rack={rack} geometry={geometry} />
       <GhostDevice geometry={geometry} />
+
+      {/* Cables + Cable Tool (inherit rack orientation and animation) */}
+      <CableLayer rack={rack} geometry={geometry} />
+      <CableToolLayer geometry={geometry} />
 
       {DEBUG_DIMS_ENABLED && <DebugDimensions geometry={geometry} />}
 
