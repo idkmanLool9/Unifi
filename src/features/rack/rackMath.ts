@@ -6,7 +6,7 @@ import {
   type RackProfileId,
 } from './rackProfiles';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
-import type { RackOrientation, RackSize } from '@/types';
+import type { RackConfig, RackOrientation, RackSize } from '@/types';
 
 /** Millimeters to meters. */
 export const MM_TO_M = 0.001;
@@ -86,6 +86,69 @@ export const rackHeightFor = (
   units: RackSize,
   geometry: RackGeometry,
 ): number => geometry.railBaseYM + units * U_METERS + RACK_DIMS.topH;
+
+export type RailMode = 'auto' | 'manual';
+
+/** Deepest mounted device in millimeters, or null for an empty rack. */
+export function deepestDeviceDepthMm(
+  instances: readonly PlacedDevice[],
+  getDefinition: (id: string) => DeviceDefinition | undefined,
+): number | null {
+  let deepest = 0;
+  for (const instance of instances) {
+    const definition = getDefinition(instance.definitionId);
+    if (definition) deepest = Math.max(deepest, definition.depthMm);
+  }
+  return deepest > 0 ? deepest : null;
+}
+
+/**
+ * Resolves the effective rail spacing. In 'auto' the rack behaves like a
+ * real installation: the rear rails are set against the deepest installed
+ * device (clamped to the profile's range), so front AND rear mounting
+ * ears land on the rails. Empty racks rest at the profile default.
+ */
+export function resolveRailSpacingMm(
+  profile: RackProfile,
+  railMode: RailMode,
+  manualSpacingMm: number,
+  deepestDeviceMm: number | null,
+): number {
+  if (!profile.railSpacingRange) return profile.fixedRailSpacingMm;
+  if (railMode === 'manual') {
+    return clampRailSpacingMm(profile, manualSpacingMm);
+  }
+  if (deepestDeviceMm === null) return profile.railSpacingRange.defaultMm;
+  return clampRailSpacingMm(profile, Math.ceil(deepestDeviceMm));
+}
+
+/**
+ * Geometry for a rack instance, with auto rail resolution applied.
+ * In auto mode an adjustable open frame accepts anything up to its range
+ * maximum — the rails will move to meet the device — so usable depth
+ * reports the rack's capability rather than the current rail position.
+ */
+export function rackGeometryFor(
+  rack: Pick<RackConfig, 'profileId' | 'railMode' | 'railSpacingMm'>,
+  deepestDeviceMm: number | null,
+): RackGeometry {
+  const profile = getProfile(rack.profileId);
+  const spacing = resolveRailSpacingMm(
+    profile,
+    rack.railMode,
+    rack.railSpacingMm,
+    deepestDeviceMm,
+  );
+  const geometry = rackGeometry(rack.profileId, spacing);
+  if (
+    rack.railMode === 'auto' &&
+    profile.railSpacingRange &&
+    !geometry.hasInnerRails
+  ) {
+    geometry.usableDepthM = profile.railSpacingRange.maxMm * MM_TO_M;
+  }
+  return geometry;
+}
 
 /** World Y of the bottom of a U slot (U1 = 1, counted from the bottom). */
 export const uSlotY = (startU: number, railBaseYM = railBaseY()): number =>

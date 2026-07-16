@@ -3,11 +3,8 @@ import { InfoRow } from '../InfoRow';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
-import {
-  maxOccupiedU,
-  rackGeometry,
-  rackHeightFor,
-} from '@/features/rack/rackMath';
+import { maxOccupiedU, rackHeightFor } from '@/features/rack/rackMath';
+import { useRackGeometry } from '@/features/rack/useRackGeometry';
 import { RACK_SIZES } from '@/features/rack/rackConstants';
 import { getProfile } from '@/features/rack/rackProfiles';
 import { toast } from '@/stores/toastStore';
@@ -19,7 +16,7 @@ export function DimensionsSection({ rack }: { rack: RackConfig }) {
   const instances = useDeviceInstancesStore((s) => s.instances);
 
   const profile = getProfile(rack.profileId);
-  const geometry = rackGeometry(rack.profileId, rack.railSpacingMm);
+  const geometry = useRackGeometry(rack);
 
   const highestUsed = maxOccupiedU({
     rackUnits: rack.units,

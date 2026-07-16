@@ -27,6 +27,7 @@ export const useRackStore = create<RackState>()(
           id: crypto.randomUUID(),
           name: 'Untitled Rack',
           profileId: DEFAULT_PROFILE_ID,
+          railMode: 'auto',
           railSpacingMm: defaultRailSpacingMm(getProfile(DEFAULT_PROFILE_ID)),
           units,
           finish: 'graphite',
@@ -46,10 +47,11 @@ export const useRackStore = create<RackState>()(
     }),
     {
       name: RACK_STORE_KEY,
-      version: 2,
+      version: 3,
       partialize: (s) => ({ rack: s.rack }),
       // v1 racks predate rack profiles: adopt the default open frame at
-      // the legacy 700mm rail spacing.
+      // the legacy 700mm rail spacing. v2 racks predate rail modes: keep
+      // their spacing by staying manual.
       migrate: (persisted) => {
         const state = persisted as { rack?: RackConfig | null };
         if (state?.rack && state.rack.profileId === undefined) {
@@ -58,6 +60,9 @@ export const useRackStore = create<RackState>()(
             profileId: DEFAULT_PROFILE_ID,
             railSpacingMm: 700,
           };
+        }
+        if (state?.rack && state.rack.railMode === undefined) {
+          state.rack = { ...state.rack, railMode: 'manual' };
         }
         return state;
       },

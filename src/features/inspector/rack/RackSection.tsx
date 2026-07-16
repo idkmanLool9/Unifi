@@ -3,7 +3,11 @@ import { InfoRow } from '../InfoRow';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
-import { maxOccupiedU, rackGeometry } from '@/features/rack/rackMath';
+import {
+  deepestDeviceDepthMm,
+  maxOccupiedU,
+  rackGeometryFor,
+} from '@/features/rack/rackMath';
 import {
   defaultRailSpacingMm,
   getProfile,
@@ -17,6 +21,7 @@ const ENCLOSURE_LABELS = {
   'open-frame': 'Open frame',
   cabinet: 'Cabinet',
   'desktop-frame': 'Desktop frame',
+  'wall-mount': 'Wall-mount',
 } as const;
 
 export function RackSection({ rack }: { rack: RackConfig }) {
@@ -27,7 +32,10 @@ export function RackSection({ rack }: { rack: RackConfig }) {
   const switchProfile = (profileId: RackProfileId) => {
     const next = getProfile(profileId);
     const nextSpacing = defaultRailSpacingMm(next);
-    const nextGeometry = rackGeometry(profileId, nextSpacing);
+    const nextGeometry = rackGeometryFor(
+      { profileId, railMode: rack.railMode, railSpacingMm: nextSpacing },
+      deepestDeviceDepthMm(instances, getDevice),
+    );
     const usableMm = nextGeometry.usableDepthM * 1000;
 
     // Devices must survive the switch: depth fit and unit range.

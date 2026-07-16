@@ -50,7 +50,13 @@ export interface RackConfig {
   name: string;
   /** Physical rack profile (see features/rack/rackProfiles). */
   profileId: import('@/features/rack/rackProfiles').RackProfileId;
-  /** Current rail-to-rail spacing; clamped to the profile's range. */
+  /**
+   * Rail behavior: 'auto' positions the rear rails against the deepest
+   * installed device (like a real rack build); 'manual' uses
+   * railSpacingMm directly.
+   */
+  railMode: 'auto' | 'manual';
+  /** Manual rail-to-rail spacing; clamped to the profile's range. */
   railSpacingMm: number;
   units: RackSize;
   finish: RackFinishId;

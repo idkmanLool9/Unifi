@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOccupancy,
+  deepestDeviceDepthMm,
   devicePlacement,
   findFirstFreeSlot,
   maxOccupiedU,
   occupiedUnits,
   rackGeometry,
+  rackGeometryFor,
+  resolveRailSpacingMm,
   uSlotY,
   validatePlacement,
   type PlacedDevice,
   type PlacementContext,
 } from './rackMath';
+import { getProfile } from './rackProfiles';
 import { railBaseY, U_METERS } from './rackConstants';
 import { defineDevice } from '@/features/devices/definitions/defineDevice';
 
@@ -201,8 +205,8 @@ describe('rack profiles / geometry', () => {
     const g = rackGeometry('open-frame-700', 500);
     expect(g.externalDepthM).toBeCloseTo(0.5);
     expect(g.usableDepthM).toBeCloseTo(0.5);
-    // Below the range minimum clamps up to 400
-    expect(rackGeometry('open-frame-700', 100).railSpacingM).toBeCloseTo(0.4);
+    // Below the range minimum clamps up to 250
+    expect(rackGeometry('open-frame-700', 100).railSpacingM).toBeCloseTo(0.25);
   });
 
   it('cabinet: enclosure depth is independent of rail spacing', () => {
@@ -231,5 +235,86 @@ describe('rack profiles / geometry', () => {
     const g = rackGeometry('unifi-minirack');
     const { position } = devicePlacement(oneU, 1, 'front', g);
     expect(position[1]).toBeCloseTo(0.03 + U_METERS / 2);
+  });
+
+  it('wall rack: shallow adjustable frame with a compact base', () => {
+    const g = rackGeometry('wall-rack-9u');
+    expect(g.railSpacingM).toBeCloseTo(0.45);
+    expect(g.railBaseYM).toBeCloseTo(0.03);
+    expect(g.hasInnerRails).toBe(false);
+  });
+});
+
+describe('rail modes (auto-fit)', () => {
+  const getDef = (id: string) => DEFS.get(id);
+
+  it('reports the deepest mounted device, skipping unknown definitions', () => {
+    expect(deepestDeviceDepthMm([], getDef)).toBeNull();
+    expect(deepestDeviceDepthMm([instance('x', 'missing', 1)], getDef)).toBeNull();
+    expect(
+      deepestDeviceDepthMm(
+        [instance('a', 'test-1u', 1), instance('b', 'test-deep', 2)],
+        getDef,
+      ),
+    ).toBe(900);
+  });
+
+  it('auto mode sets the rails against the deepest device, within range', () => {
+    const profile = getProfile('open-frame-700');
+    expect(resolveRailSpacingMm(profile, 'auto', 700, 300)).toBe(300);
+    expect(resolveRailSpacingMm(profile, 'auto', 700, 120)).toBe(250); // min
+    expect(resolveRailSpacingMm(profile, 'auto', 700, 950)).toBe(700); // max
+  });
+
+  it('auto mode rests at the profile default when the rack is empty', () => {
+    const profile = getProfile('open-frame-700');
+    expect(resolveRailSpacingMm(profile, 'auto', 500, null)).toBe(700);
+  });
+
+  it('manual mode uses the stored spacing, clamped to the range', () => {
+    const profile = getProfile('open-frame-700');
+    expect(resolveRailSpacingMm(profile, 'manual', 520, 300)).toBe(520);
+    expect(resolveRailSpacingMm(profile, 'manual', 100, null)).toBe(250);
+  });
+
+  it('fixed-rail profiles ignore both modes', () => {
+    const profile = getProfile('unifi-minirack');
+    expect(resolveRailSpacingMm(profile, 'auto', 900, 300)).toBe(400);
+    expect(resolveRailSpacingMm(profile, 'manual', 900, 300)).toBe(400);
+  });
+
+  it('auto open frame: rails hug the device, usable depth stays the capability', () => {
+    const g = rackGeometryFor(
+      { profileId: 'open-frame-700', railMode: 'auto', railSpacingMm: 700 },
+      300,
+    );
+    expect(g.railSpacingM).toBeCloseTo(0.3);
+    expect(g.externalDepthM).toBeCloseTo(0.3);
+    // Front face flush with the front rail plane.
+    expect(g.frontRailZ).toBeCloseTo(g.externalDepthM / 2);
+    // Placement validation accepts anything the rails can move to hold.
+    expect(g.usableDepthM).toBeCloseTo(0.7);
+  });
+
+  it('a device mounts flush between the auto-fitted rails', () => {
+    const g = rackGeometryFor(
+      { profileId: 'open-frame-700', railMode: 'auto', railSpacingMm: 700 },
+      oneU.depthMm,
+    );
+    const { position } = devicePlacement(oneU, 1, 'front', g);
+    const halfDepth = (oneU.depthMm / 1000) / 2;
+    // Faceplate on the front rail, chassis tail on the rear rail.
+    expect(position[2] + halfDepth).toBeCloseTo(g.frontRailZ);
+    expect(position[2] - halfDepth).toBeCloseTo(g.rearRailZ);
+  });
+
+  it('cabinet auto mode moves the inner rails without changing the enclosure', () => {
+    const g = rackGeometryFor(
+      { profileId: 'cabinet-42u', railMode: 'auto', railSpacingMm: 750 },
+      450,
+    );
+    expect(g.railSpacingM).toBeCloseTo(0.45);
+    expect(g.externalDepthM).toBeCloseTo(1.0);
+    expect(g.usableDepthM).toBeCloseTo(0.85);
   });
 });

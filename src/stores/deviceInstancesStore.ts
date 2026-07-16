@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getDevice } from '@/features/devices/deviceRegistry';
 import {
+  deepestDeviceDepthMm,
   findFirstFreeSlot,
-  rackGeometry,
+  rackGeometryFor,
   validatePlacement,
   type PlacedDevice,
   type PlacementContext,
@@ -32,7 +33,10 @@ export function placementContext(
 ): PlacementContext | null {
   const rack = useRackStore.getState().rack;
   if (!rack) return null;
-  const geometry = rackGeometry(rack.profileId, rack.railSpacingMm);
+  const geometry = rackGeometryFor(
+    rack,
+    deepestDeviceDepthMm(instances, getDevice),
+  );
   return {
     rackUnits: rack.units,
     usableDepthMm: geometry.usableDepthM / 0.001,

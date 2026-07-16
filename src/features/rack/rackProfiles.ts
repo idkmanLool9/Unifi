@@ -18,10 +18,15 @@ export type RackProfileId =
   | 'open-frame-700'
   | 'open-frame-800'
   | 'cabinet-42u'
+  | 'wall-rack-9u'
   | 'unifi-minirack'
   | 'custom';
 
-export type EnclosureType = 'open-frame' | 'cabinet' | 'desktop-frame';
+export type EnclosureType =
+  | 'open-frame'
+  | 'cabinet'
+  | 'desktop-frame'
+  | 'wall-mount';
 export type RackBaseType = 'plinth-feet' | 'compact-feet';
 
 export interface RailSpacingRange {
@@ -62,7 +67,7 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     externalWidthMm: 574.8,
     externalDepthMm: 600,
     frontRailInsetMm: 0,
-    railSpacingRange: { minMm: 400, maxMm: 600, defaultMm: 600 },
+    railSpacingRange: { minMm: 250, maxMm: 600, defaultMm: 600 },
     fixedRailSpacingMm: 600,
     nominalUsableDepthMm: 600,
     loadRatingKg: 320,
@@ -77,7 +82,7 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     externalWidthMm: 574.8,
     externalDepthMm: 700,
     frontRailInsetMm: 0,
-    railSpacingRange: { minMm: 400, maxMm: 700, defaultMm: 700 },
+    railSpacingRange: { minMm: 250, maxMm: 700, defaultMm: 700 },
     fixedRailSpacingMm: 700,
     nominalUsableDepthMm: 700,
     loadRatingKg: 350,
@@ -92,7 +97,7 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     externalWidthMm: 574.8,
     externalDepthMm: 800,
     frontRailInsetMm: 0,
-    railSpacingRange: { minMm: 450, maxMm: 800, defaultMm: 800 },
+    railSpacingRange: { minMm: 300, maxMm: 800, defaultMm: 800 },
     fixedRailSpacingMm: 800,
     nominalUsableDepthMm: 800,
     loadRatingKg: 400,
@@ -107,12 +112,27 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     externalWidthMm: 600,
     externalDepthMm: 1000,
     frontRailInsetMm: 100,
-    railSpacingRange: { minMm: 550, maxMm: 850, defaultMm: 750 },
+    railSpacingRange: { minMm: 250, maxMm: 850, defaultMm: 750 },
     fixedRailSpacingMm: 750,
     nominalUsableDepthMm: 850,
     loadRatingKg: 1000,
     baseType: 'plinth-feet',
     description: 'Full-height enclosure with adjustable inner rails.',
+  },
+  'wall-rack-9u': {
+    id: 'wall-rack-9u',
+    name: 'Wall Rack 9U',
+    enclosure: 'wall-mount',
+    allowedUnits: [6, 9, 12],
+    externalWidthMm: 574.8,
+    externalDepthMm: 450,
+    frontRailInsetMm: 0,
+    railSpacingRange: { minMm: 250, maxMm: 450, defaultMm: 450 },
+    fixedRailSpacingMm: 450,
+    nominalUsableDepthMm: 450,
+    loadRatingKg: 60,
+    baseType: 'compact-feet',
+    description: 'Shallow wall-mount frame for comms closets.',
   },
   'unifi-minirack': {
     id: 'unifi-minirack',
@@ -137,7 +157,7 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     externalWidthMm: 574.8,
     externalDepthMm: 750,
     frontRailInsetMm: 0,
-    railSpacingRange: { minMm: 300, maxMm: 900, defaultMm: 750 },
+    railSpacingRange: { minMm: 250, maxMm: 900, defaultMm: 750 },
     fixedRailSpacingMm: 750,
     nominalUsableDepthMm: 750,
     loadRatingKg: 500,

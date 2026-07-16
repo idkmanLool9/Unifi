@@ -4,7 +4,8 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { RackSelection } from './RackSelection';
 import { RACK_DIMS, RACK_FINISHES, railHeight } from './rackConstants';
-import { rackGeometry, rackHeightFor } from './rackMath';
+import { rackHeightFor } from './rackMath';
+import { useRackGeometry } from './useRackGeometry';
 import { DEBUG_DIMS_ENABLED, DebugDimensions } from './DebugDimensions';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
@@ -42,10 +43,7 @@ export function RackModel({ rack, theme }: RackModelProps) {
   const finish = RACK_FINISHES[rack.finish];
   const accent = VIEWPORT_THEME[theme].accent;
 
-  const geometry = useMemo(
-    () => rackGeometry(rack.profileId, rack.railSpacingMm),
-    [rack.profileId, rack.railSpacingMm],
-  );
+  const geometry = useRackGeometry(rack);
 
   const W = geometry.externalWidthM;
   const D = geometry.externalDepthM;

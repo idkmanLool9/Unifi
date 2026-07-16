@@ -1,18 +1,19 @@
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InfoRow } from '../InfoRow';
 import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
-import { occupiedUnits, rackGeometry } from '@/features/rack/rackMath';
+import { occupiedUnits } from '@/features/rack/rackMath';
+import { useRackGeometry } from '@/features/rack/useRackGeometry';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import type { RackConfig } from '@/types';
 
 export function RackUnitsSection({ rack }: { rack: RackConfig }) {
   const instances = useDeviceInstancesStore((s) => s.instances);
   useRegistryStore((s) => s.version);
+  const geometry = useRackGeometry(rack);
 
   const occupied = occupiedUnits({
     rackUnits: rack.units,
-    usableDepthMm:
-      rackGeometry(rack.profileId, rack.railSpacingMm).usableDepthM * 1000,
+    usableDepthMm: geometry.usableDepthM * 1000,
     instances,
     getDefinition: getDevice,
   });
