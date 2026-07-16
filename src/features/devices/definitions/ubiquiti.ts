@@ -81,6 +81,9 @@ export const UBIQUITI_DEVICES: DeviceDefinition[] = [
     weightKg: 3.9,
     powerConsumptionWatts: 44,
     maximumPowerWatts: 444,
+    // GLB is authored width-along-X, front toward +Z, base at the origin:
+    // only the half-height drop is needed.
+    modelTransform: { offsetMm: [0, -21.85, 0] },
     description:
       'Etherlighting switch with 16 GbE and 8 2.5 GbE PoE ports, dual 10G SFP+ uplinks and a 400 W PoE budget.',
     tags: ['poe', 'etherlighting', '2.5g', '10g', 'new'],

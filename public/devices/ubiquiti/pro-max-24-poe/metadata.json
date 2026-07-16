@@ -15,12 +15,26 @@
   "defaultFacing": "front",
   "powerConsumptionWatts": 44,
   "maximumPowerWatts": 444,
-  "tags": ["poe", "etherlighting", "2.5g", "10g", "new"],
+  "tags": [
+    "poe",
+    "etherlighting",
+    "2.5g",
+    "10g",
+    "new"
+  ],
   "description": "Etherlighting switch with 16 GbE and 8 2.5 GbE PoE ports, dual 10G SFP+ uplinks and a 400 W PoE budget.",
   "modelTransform": {
     "scale": 1,
-    "rotationDeg": [0, 0, 0],
-    "offsetMm": [0, 0, 0]
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "offsetMm": [
+      0,
+      -21.85,
+      0
+    ]
   },
   "mountingOffsetMm": 0,
   "ports": [
@@ -28,8 +42,12 @@
       "id": "gbe",
       "type": "rj45",
       "count": 16,
-      "label": "1 GbE PoE 1–16",
-      "positionMm": [-140, 0, 162.5],
+      "label": "1 GbE PoE 1\u201316",
+      "positionMm": [
+        -140,
+        0,
+        162.5
+      ],
       "pitchMm": 17.9,
       "speedGbps": 1,
       "poe": true,
@@ -39,8 +57,12 @@
       "id": "2p5gbe",
       "type": "rj45",
       "count": 8,
-      "label": "2.5 GbE PoE 17–24",
-      "positionMm": [4, 0, 162.5],
+      "label": "2.5 GbE PoE 17\u201324",
+      "positionMm": [
+        4,
+        0,
+        162.5
+      ],
       "pitchMm": 17.9,
       "speedGbps": 2.5,
       "poe": true,
@@ -50,8 +72,12 @@
       "id": "sfp",
       "type": "sfp+",
       "count": 2,
-      "label": "SFP+ 25–26",
-      "positionMm": [160, 0, 162.5],
+      "label": "SFP+ 25\u201326",
+      "positionMm": [
+        160,
+        0,
+        162.5
+      ],
       "pitchMm": 18.5,
       "speedGbps": 10
     }
@@ -62,17 +88,35 @@
       "label": "System status",
       "kind": "status",
       "color": "#4c82f7",
-      "positionMm": [205, 8, 162.5]
+      "positionMm": [
+        205,
+        8,
+        162.5
+      ]
     }
   ],
   "lighting": {
     "etherlighting": true,
     "perPortLink": true,
     "poeIndicator": true,
-    "speedColors": { "1g": "#9aa3ad", "2.5g": "#22c1a4", "10g": "#7c5cff" },
+    "speedColors": {
+      "1g": "#9aa3ad",
+      "2.5g": "#22c1a4",
+      "10g": "#7c5cff"
+    },
     "portHighlightColor": "#4c82f7",
-    "statusLed": { "color": "#4c82f7", "positionMm": [205, 8, 162.5] },
-    "effects": ["breathe", "rainbow"]
+    "statusLed": {
+      "color": "#4c82f7",
+      "positionMm": [
+        205,
+        8,
+        162.5
+      ]
+    },
+    "effects": [
+      "breathe",
+      "rainbow"
+    ]
   },
   "presentation": {
     "faceplate": "network",
