@@ -38,10 +38,31 @@
   "mountingOffsetMm": 0,
   "ports": [
     {
-      "id": "lan",
+      "id": "lan-top",
       "type": "rj45",
-      "count": 8,
-      "label": "LAN 1–8",
+      "count": 4,
+      "label": "LAN 1–4",
+      "positionMm": [
+        93,
+        7,
+        143
+      ],
+      "pitchMm": 18.3,
+      "row": 0,
+      "speedGbps": 1
+    },
+    {
+      "id": "lan-bottom",
+      "type": "rj45",
+      "count": 4,
+      "label": "LAN 5–8",
+      "positionMm": [
+        93,
+        -7,
+        143
+      ],
+      "pitchMm": 18.3,
+      "row": 1,
       "speedGbps": 1
     },
     {
@@ -49,6 +70,11 @@
       "type": "rj45",
       "count": 1,
       "label": "WAN",
+      "positionMm": [
+        176,
+        -7,
+        143
+      ],
       "speedGbps": 1
     },
     {
@@ -56,6 +82,11 @@
       "type": "sfp+",
       "count": 1,
       "label": "SFP+ LAN",
+      "positionMm": [
+        195.5,
+        7,
+        143
+      ],
       "speedGbps": 10
     },
     {
@@ -63,6 +94,11 @@
       "type": "sfp+",
       "count": 1,
       "label": "SFP+ WAN",
+      "positionMm": [
+        195.5,
+        -7,
+        143
+      ],
       "speedGbps": 10
     }
   ],
@@ -83,7 +119,7 @@
   "display": {
     "lcd": true,
     "positionMm": [
-      178,
+      -206,
       0,
       143
     ],

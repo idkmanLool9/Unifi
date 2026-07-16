@@ -9,6 +9,10 @@ import type { Group } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Instance, Instances } from '@react-three/drei';
 import {
+  calibratedPort,
+  useCalibrationStore,
+} from './connectorCalibration';
+import {
   resolveLeds,
   resolvePhysicalPorts,
   resolvePowerConnectors,
@@ -184,6 +188,8 @@ function LedsRenderer({ definition }: { definition: DeviceDefinition }) {
 function EtherlightingRenderer({ definition }: { definition: DeviceDefinition }) {
   const groupRef = useRef<Group>(null);
   const lighting = definition.lighting;
+  // Re-derive once the GLB's real connector geometry is calibrated.
+  const calibrationVersion = useCalibrationStore((s) => s.version);
 
   const strips = useMemo(() => {
     if (!lighting?.etherlighting) return [];
@@ -200,9 +206,12 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
           p.speedGbps !== undefined && p.speedGbps % 1 !== 0
             ? `${p.speedGbps}g`
             : speedKey(p.speedGbps);
+        const calibrated = calibratedPort(definition.id, p.ref);
         return {
           ref: p.ref,
-          positionMm: p.positionMm,
+          positionMm: calibrated?.positionMm ?? p.positionMm,
+          widthMm: calibrated?.widthMm ?? CONNECTOR_SIZES.rj45.widthMm,
+          heightMm: calibrated?.heightMm ?? CONNECTOR_SIZES.rj45.heightMm,
           location: p.location,
           color:
             lighting.speedColors[key] ??
@@ -210,7 +219,8 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
             '#4c82f7',
         };
       });
-  }, [definition, lighting]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [definition, lighting, calibrationVersion]);
 
   const mode = lighting?.defaultMode ?? 'static';
   const brightness = lighting?.brightness ?? 1;
@@ -232,7 +242,6 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
   });
 
   if (strips.length === 0 || mode === 'off') return null;
-  const { widthMm } = CONNECTOR_SIZES.rj45;
 
   return (
     <group ref={groupRef}>
@@ -247,11 +256,11 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
             key={strip.ref}
             position={mm([
               strip.positionMm[0],
-              strip.positionMm[1] - CONNECTOR_SIZES.rj45.heightMm / 2 - 1.6,
+              strip.positionMm[1] - strip.heightMm / 2 - 1.6,
               strip.positionMm[2] +
                 (strip.location === 'front' ? 1.2 : -1.2),
             ])}
-            scale={[widthMm * MM_TO_M, 0.0022, 0.0008]}
+            scale={[strip.widthMm * MM_TO_M, 0.0022, 0.0008]}
             color={strip.color}
           />
         ))}

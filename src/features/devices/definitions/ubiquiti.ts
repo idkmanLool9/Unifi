@@ -22,16 +22,60 @@ export const UBIQUITI_DEVICES: DeviceDefinition[] = [
     // base; rotate -90° about Y and drop by half the height (see
     // public/devices/ubiquiti/dream-machine-pro/metadata.json).
     modelTransform: { rotationDeg: [0, -90, 0], offsetMm: [0, -22.5, 0] },
+    // Port positions measured against the GLB's baked-in connectors
+    // (single-mesh model — no per-connector geometry to auto-calibrate):
+    // 8 LAN RJ45 in a 2×4 grid right of center, WAN beside it, and a
+    // stacked SFP+ pair at the right edge.
     ports: [
-      { id: 'lan', type: 'rj45', count: 8, label: 'LAN 1–8', speedGbps: 1 },
-      { id: 'wan', type: 'rj45', count: 1, label: 'WAN', speedGbps: 1 },
-      { id: 'sfp-lan', type: 'sfp+', count: 1, label: 'SFP+ LAN', speedGbps: 10 },
-      { id: 'sfp-wan', type: 'sfp+', count: 1, label: 'SFP+ WAN', speedGbps: 10 },
+      {
+        id: 'lan-top',
+        type: 'rj45',
+        count: 4,
+        label: 'LAN 1–4',
+        positionMm: [93, 7, 143],
+        pitchMm: 18.3,
+        row: 0,
+        speedGbps: 1,
+      },
+      {
+        id: 'lan-bottom',
+        type: 'rj45',
+        count: 4,
+        label: 'LAN 5–8',
+        positionMm: [93, -7, 143],
+        pitchMm: 18.3,
+        row: 1,
+        speedGbps: 1,
+      },
+      {
+        id: 'wan',
+        type: 'rj45',
+        count: 1,
+        label: 'WAN',
+        positionMm: [176, -7, 143],
+        speedGbps: 1,
+      },
+      {
+        id: 'sfp-lan',
+        type: 'sfp+',
+        count: 1,
+        label: 'SFP+ LAN',
+        positionMm: [195.5, 7, 143],
+        speedGbps: 10,
+      },
+      {
+        id: 'sfp-wan',
+        type: 'sfp+',
+        count: 1,
+        label: 'SFP+ WAN',
+        positionMm: [195.5, -7, 143],
+        speedGbps: 10,
+      },
     ],
     leds: [{ id: 'status', label: 'Status ring', color: '#4c82f7' }],
     display: {
       lcd: true,
-      positionMm: [178, 0, 143],
+      positionMm: [-206, 0, 143],
       widthMm: 33,
       heightMm: 33,
       resolution: [240, 240],

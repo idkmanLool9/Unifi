@@ -140,9 +140,11 @@ function MountedDeviceView({
 
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    // Focus the device: glide the camera to its faceplate.
+    // Focus the clicked panel: double-clicking the front frames the
+    // faceplate, double-clicking the rear frames the rear ports.
     selectDevice(instance.id);
-    focusDevice(instance.id);
+    const local = modelRef.current?.worldToLocal(e.point.clone());
+    focusDevice(instance.id, false, local && local.z < 0 ? 'rear' : 'front');
   };
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {

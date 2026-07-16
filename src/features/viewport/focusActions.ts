@@ -53,8 +53,12 @@ function dispatch(pose: CameraPose): void {
 const fitRack = (): void =>
   useViewportStore.getState().dispatchCamera({ type: 'fit' });
 
-/** Focus a mounted device from its faceplate side. */
-export function focusDevice(instanceId: string, closeUp = false): void {
+/** Focus a mounted device from one of its panel faces. */
+export function focusDevice(
+  instanceId: string,
+  closeUp = false,
+  side: 'front' | 'rear' = 'front',
+): void {
   const ctx = currentContext();
   if (!ctx) return;
   const instance = ctx.instances.find((i) => i.id === instanceId);
@@ -66,6 +70,7 @@ export function focusDevice(instanceId: string, closeUp = false): void {
     ctx.geometry,
     ctx.rack.orientation,
     ctx.fov,
+    side,
   );
   if (closeUp) {
     // Halve the standoff along the view direction.

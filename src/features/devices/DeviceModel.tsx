@@ -3,6 +3,7 @@ import { MathUtils } from 'three';
 import { useGLTF } from '@react-three/drei';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { HardwareLayer } from './hardware/HardwareLayer';
+import { calibrateFromModel } from './hardware/connectorCalibration';
 import { deviceModelUrl } from './deviceRegistry';
 import { buildImportReport } from './import/modelImport';
 import { useImportReportStore } from './import/importReportStore';
@@ -58,6 +59,12 @@ function LoadedModel({
   useEffect(() => {
     if (report) register(report);
   }, [report, register]);
+
+  // Connector calibration: align metadata ports onto the model's real
+  // connector geometry (runs once per definition; cached).
+  useEffect(() => {
+    if (report) calibrateFromModel(definition, cloned, report.transform);
+  }, [report, definition, cloned]);
 
   const transform = report?.transform ?? definition.modelTransform;
   const rotation = useMemo(

@@ -55,13 +55,15 @@ export function rackLocalToWorld(
   return [-point[0], point[1], -point[2]];
 }
 
-/** Frames a mounted device from its faceplate side. */
+/** Frames a mounted device from one of its panel faces (default: the
+ *  faceplate; 'rear' approaches the power/uplink side). */
 export function deviceFocusPose(
   definition: DeviceDefinition,
   instance: { startU: number; facing: RackOrientation },
   geometry: RackGeometry,
   orientation: RackOrientation,
   fovDeg: number,
+  side: 'front' | 'rear' = 'front',
 ): CameraPose {
   const { position, rotationY } = devicePlacement(
     definition,
@@ -69,7 +71,7 @@ export function deviceFocusPose(
     instance.facing,
     geometry,
   );
-  const outward = rotationY === 0 ? 1 : -1;
+  const outward = (rotationY === 0 ? 1 : -1) * (side === 'front' ? 1 : -1);
   const span = Math.max(definition.widthMm, definition.heightMm * 4) * MM_TO_M;
   const standoff = standoffForSpan(span, fovDeg, 1.15);
   const halfDepth = (definition.depthMm * MM_TO_M) / 2;

@@ -1,52 +1,109 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BoxGeometry,
   BufferAttribute,
   BufferGeometry,
+  EdgesGeometry,
   Group,
   Line as ThreeLine,
   LineBasicMaterial,
-  Plane,
-  SphereGeometry,
   MeshBasicMaterial,
+  Plane,
+  PlaneGeometry,
   Vector3,
 } from 'three';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { allPhysicalPorts, resolveEndpoint, type Vec3 } from './anchors';
+import {
+  allPhysicalPorts,
+  portFace,
+  resolveEndpoint,
+  type Vec3,
+} from './anchors';
+import { useCalibrationStore } from '@/features/devices/hardware/connectorCalibration';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
 import { useCableStore, type CableEnd } from '@/stores/cableStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useUIStore } from '@/stores/uiStore';
+import { MM_TO_M, type RackGeometry } from '@/features/rack/rackMath';
 import type { PhysicalPort } from '@/features/devices/hardware/physicalPorts';
-import type { RackGeometry } from '@/features/rack/rackMath';
 
 /**
- * Cable Tool viewport layer, inside the rack group. Active only while
- * the tool is selected; renders one small hit target per physical port
- * (shared geometry, four shared materials), a hover card, and a live
- * preview curve from the pending source to the pointer. All
- * compatibility answers come from the pure engine — this layer never
- * decides validity itself.
+ * Cable Tool viewport layer. The connectors themselves are the
+ * interaction surface: every physical port gets an invisible hit box
+ * (slightly larger than the connector for forgiving picking) and a
+ * visible highlight that exactly covers the connector opening —
+ * GLB-calibrated where the model carries real connector geometry,
+ * catalog-sized on procedural hardware. No detached markers.
+ *
+ * Visual language: a faint breathing fill on connectable openings while
+ * the tool idles, steady green fills on compatible destinations once a
+ * source is armed, a solid fill + thin outline on the source and the
+ * hovered port. Incompatible ports stay untouched (hover still explains
+ * why). All geometry and materials are module-shared.
  */
 
-const HIT_GEOMETRY = new SphereGeometry(0.006, 12, 10);
-const MAT_NEUTRAL = new MeshBasicMaterial({ color: '#7f8ea8', toneMapped: false });
-const MAT_SOURCE = new MeshBasicMaterial({ color: '#4c82f7', toneMapped: false });
-const MAT_COMPATIBLE = new MeshBasicMaterial({ color: '#3fb970', toneMapped: false });
-const MAT_MUTED = new MeshBasicMaterial({
-  color: '#3a3f46',
+const UNIT_PLANE = new PlaneGeometry(1, 1);
+const UNIT_BOX = new BoxGeometry(1, 1, 1);
+const UNIT_EDGES = new EdgesGeometry(UNIT_PLANE);
+
+const HIT_MATERIAL = new MeshBasicMaterial({
+  colorWrite: false,
+  depthWrite: false,
+  side: 2,
+});
+const MAT_IDLE = new MeshBasicMaterial({
+  color: '#4c82f7',
+  transparent: true,
+  opacity: 0.12,
+  toneMapped: false,
+  depthWrite: false,
+  side: 2,
+});
+const MAT_COMPAT = new MeshBasicMaterial({
+  color: '#3fb970',
+  transparent: true,
+  opacity: 0.26,
+  toneMapped: false,
+  depthWrite: false,
+  side: 2,
+});
+const MAT_SOURCE = new MeshBasicMaterial({
+  color: '#4c82f7',
   transparent: true,
   opacity: 0.5,
   toneMapped: false,
+  depthWrite: false,
+  side: 2,
+});
+const MAT_HOVER = new MeshBasicMaterial({
+  color: '#7ea6ff',
+  transparent: true,
+  opacity: 0.5,
+  toneMapped: false,
+  depthWrite: false,
+  side: 2,
+});
+const OUTLINE_MATERIAL = new LineBasicMaterial({
+  color: '#9dbcff',
+  transparent: true,
+  opacity: 0.95,
 });
 
 interface PortTarget {
   end: CableEnd;
   port: PhysicalPort;
+  /** Connector face center, rack-local meters. */
   position: Vec3;
+  /** Cable anchor, rack-local meters. */
   anchor: Vec3;
+  /** Visible opening size, meters. */
+  widthM: number;
+  heightM: number;
+  /** Outward normal sign of the panel in rack-local space. */
+  out: 1 | -1;
   deviceName: string;
 }
 
@@ -66,11 +123,17 @@ export function CableToolLayer({ geometry }: { geometry: RackGeometry }) {
 function PortTargets({ geometry }: { geometry: RackGeometry }) {
   const instances = useDeviceInstancesStore((s) => s.instances);
   const cables = useCableStore((s) => s.cables);
+  const calibrationVersion = useCalibrationStore((s) => s.version);
   const sourceEnd = useCableToolStore((s) => s.sourceEnd);
   const setSource = useCableToolStore((s) => s.setSource);
   const setHover = useCableToolStore((s) => s.setHover);
   const completeTo = useCableToolStore((s) => s.completeTo);
   const [hovered, setHovered] = useState<PortTarget | null>(null);
+
+  // Breathe the idle fill: one shared material, one uniform per frame.
+  useFrame(({ clock }) => {
+    MAT_IDLE.opacity = 0.09 + 0.06 * Math.sin(clock.elapsedTime * 2.2) ** 2;
+  });
 
   const targets = useMemo(() => {
     const list: PortTarget[] = [];
@@ -82,17 +145,24 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
         if (!port.visible) continue;
         const resolved = resolveEndpoint(definition, instance, geometry, port.ref);
         if (!resolved) continue;
+        const face = portFace(definition, port);
+        const outwardLocal = port.location === 'front' ? 1 : -1;
+        const flip = instance.facing === 'front' ? 1 : -1;
         list.push({
           end: { deviceInstanceId: instance.id, portRef: port.ref },
           port,
           position: resolved.surface,
           anchor: resolved.anchor,
+          widthM: face.widthMm * MM_TO_M,
+          heightM: face.heightMm * MM_TO_M,
+          out: (outwardLocal * flip) as 1 | -1,
           deviceName: definition.productName,
         });
       }
     }
     return list;
-  }, [instances, geometry]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instances, geometry, calibrationVersion]);
 
   // Compatibility of every port against the pending source (memoized —
   // recomputed only when the source or the cable set changes).
@@ -118,18 +188,9 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targets, sourceEnd, cables]);
 
-  const materialFor = (target: PortTarget) => {
-    switch (levels.get(`${target.end.deviceInstanceId}:${target.end.portRef}`)) {
-      case 'source':
-        return MAT_SOURCE;
-      case 'valid':
-        return MAT_COMPATIBLE;
-      case 'invalid':
-        return MAT_MUTED;
-      default:
-        return MAT_NEUTRAL;
-    }
-  };
+  const stateOf = (target: PortTarget) =>
+    levels.get(`${target.end.deviceInstanceId}:${target.end.portRef}`) ??
+    'neutral';
 
   const onClick = (target: PortTarget) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -170,33 +231,86 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
 
   return (
     <group>
-      {targets.map((target) => (
-        <mesh
-          key={`${target.end.deviceInstanceId}:${target.end.portRef}`}
-          geometry={HIT_GEOMETRY}
-          material={materialFor(target)}
-          position={target.anchor}
-          onClick={onClick(target)}
-          onDoubleClick={onDoubleClick(target)}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHovered(target);
-            setHover(target.end);
-          }}
-          onPointerOut={() => {
-            setHovered((current) => (current === target ? null : current));
-            setHover(null);
-          }}
-        />
-      ))}
+      {targets.map((target) => {
+        const state = stateOf(target);
+        const isHovered = hovered === target;
+        const highlightMaterial =
+          isHovered && state !== 'invalid'
+            ? MAT_HOVER
+            : state === 'source'
+              ? MAT_SOURCE
+              : state === 'valid'
+                ? MAT_COMPAT
+                : state === 'neutral'
+                  ? MAT_IDLE
+                  : null;
+        const rotationY = target.out === 1 ? 0 : Math.PI;
+        const surfaceZ = target.position[2] + target.out * 0.0012;
+        const key = `${target.end.deviceInstanceId}:${target.end.portRef}`;
+
+        return (
+          <group key={key}>
+            {/* Forgiving invisible hit box, sized just past the opening */}
+            <mesh
+              geometry={UNIT_BOX}
+              material={HIT_MATERIAL}
+              position={[
+                target.position[0],
+                target.position[1],
+                target.position[2] + target.out * 0.003,
+              ]}
+              scale={[
+                target.widthM + 0.004,
+                target.heightM + 0.004,
+                0.008,
+              ]}
+              onClick={onClick(target)}
+              onDoubleClick={onDoubleClick(target)}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                setHovered(target);
+                setHover(target.end);
+              }}
+              onPointerOut={() => {
+                setHovered((current) => (current === target ? null : current));
+                setHover(null);
+              }}
+            />
+            {/* Highlight exactly covering the connector opening */}
+            {highlightMaterial && (
+              <mesh
+                geometry={UNIT_PLANE}
+                material={highlightMaterial}
+                position={[target.position[0], target.position[1], surfaceZ]}
+                rotation={[0, rotationY, 0]}
+                scale={[target.widthM, target.heightM, 1]}
+              />
+            )}
+            {/* Thin outline on the armed source and the hovered opening */}
+            {(state === 'source' || (isHovered && state !== 'invalid')) && (
+              <lineSegments
+                geometry={UNIT_EDGES}
+                material={OUTLINE_MATERIAL}
+                position={[
+                  target.position[0],
+                  target.position[1],
+                  surfaceZ + target.out * 0.0006,
+                ]}
+                rotation={[0, rotationY, 0]}
+                scale={[target.widthM + 0.0015, target.heightM + 0.0015, 1]}
+              />
+            )}
+          </group>
+        );
+      })}
 
       {/* Hover card: device, port, type, speed, PoE + compatibility */}
       {hovered && (
         <Html
           position={[
-            hovered.anchor[0],
-            hovered.anchor[1] + 0.03,
-            hovered.anchor[2],
+            hovered.position[0],
+            hovered.position[1] + hovered.heightM / 2 + 0.02,
+            hovered.position[2] + hovered.out * 0.004,
           ]}
           center
           style={{ pointerEvents: 'none', whiteSpace: 'nowrap' }}
@@ -323,8 +437,7 @@ function PreviewCurve({
     for (let i = 0; i < PREVIEW_POINTS; i++) {
       const t = i / (PREVIEW_POINTS - 1);
       const x = start.x + (end.x - start.x) * t;
-      const y =
-        start.y + (end.y - start.y) * t - sag * 4 * t * (1 - t);
+      const y = start.y + (end.y - start.y) * t - sag * 4 * t * (1 - t);
       const z = start.z + (end.z - start.z) * t;
       positions.setXYZ(i, x, y, z);
     }
