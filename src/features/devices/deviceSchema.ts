@@ -44,11 +44,16 @@ export const PORT_TYPES = [
 ] as const;
 export type PortType = (typeof PORT_TYPES)[number];
 
+export const PORT_LOCATIONS = ['front', 'rear'] as const;
+export type PortLocation = (typeof PORT_LOCATIONS)[number];
+
 /** Future cable-routing hook: a physical port on the device faceplate. */
 export interface PortDefinition {
   id: string;
   type: PortType;
   label?: string;
+  /** Which panel the group lives on (front when omitted). */
+  location?: PortLocation;
   /** Count of identical ports in this group. */
   count: number;
   /** Optional position of the group's first port, mm from faceplate center. */
@@ -109,6 +114,71 @@ export interface ModelTransform {
   offsetMm: [number, number, number];
 }
 
+/* ---- Capability metadata (declarative only — no behavior yet) ------- */
+
+export const POWER_CONNECTOR_TYPES = [
+  'c14',
+  'c20',
+  'iec-lock',
+  'nema',
+  'dc',
+  'poe-in',
+  'external-adapter',
+  'other',
+] as const;
+export type PowerConnectorType = (typeof POWER_CONNECTOR_TYPES)[number];
+
+/** A power inlet/outlet on the chassis (future power-planning hook). */
+export interface PowerConnector {
+  id: string;
+  type: PowerConnectorType;
+  count: number;
+  location?: PortLocation;
+  label?: string;
+}
+
+/** Power topology metadata (future power planning / install reports). */
+export interface PowerCapabilities {
+  connectors: PowerConnector[];
+  /** Redundant supplies (N+1 or better). */
+  redundant?: boolean;
+  hotSwappable?: boolean;
+}
+
+export const AIRFLOW_DIRECTIONS = [
+  'front-to-rear',
+  'rear-to-front',
+  'side-to-side',
+  'passive',
+] as const;
+export type AirflowDirection = (typeof AIRFLOW_DIRECTIONS)[number];
+
+export const VENT_LOCATIONS = [
+  'front',
+  'rear',
+  'left',
+  'right',
+  'top',
+  'bottom',
+] as const;
+export type VentLocation = (typeof VENT_LOCATIONS)[number];
+
+/** Thermal metadata (future cooling simulation hook). */
+export interface CoolingCapabilities {
+  fanCount?: number;
+  airflow?: AirflowDirection;
+  ventilation?: VentLocation[];
+  hotSwappableFans?: boolean;
+}
+
+/** Front-panel display metadata (future status-visualization hook). */
+export interface DisplayCapabilities {
+  lcd?: boolean;
+  touchscreen?: boolean;
+  /** Display center, mm from faceplate center. */
+  positionMm?: [number, number, number];
+}
+
 export interface DevicePresentation {
   faceplate: FaceplateStyle;
   tone: 'dark' | 'metal';
@@ -141,12 +211,20 @@ export interface DeviceDefinition {
   maximumPowerWatts: number;
   tags: string[];
   description: string;
-  modelTransform: ModelTransform;
+  /**
+   * Explicit GLB correction. When absent, the universal importer derives
+   * a deterministic default transform from the measured geometry (origin
+   * normalization + axis matching). When present, it wins verbatim.
+   */
+  modelTransform?: ModelTransform;
   /** Vertical trim from the U boundary, in millimeters. */
   mountingOffsetMm: number;
   ports: PortDefinition[];
   leds: LedDefinition[];
   lighting?: LightingCapabilities;
+  power?: PowerCapabilities;
+  cooling?: CoolingCapabilities;
+  display?: DisplayCapabilities;
   presentation: DevicePresentation;
 }
 
@@ -256,13 +334,14 @@ class Checker {
 function parseModelTransform(
   input: unknown,
   checker: Checker,
-): ModelTransform {
+): ModelTransform | undefined {
+  // Absent means "derive automatically from measured geometry".
+  if (input === undefined) return undefined;
   const fallback: ModelTransform = {
     scale: 1,
     rotationDeg: [0, 0, 0],
     offsetMm: [0, 0, 0],
   };
-  if (input === undefined) return fallback;
   if (!isRecord(input)) {
     checker.fail('modelTransform', 'must be an object');
     return fallback;
@@ -318,6 +397,10 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
     const type = sub.oneOf(entry, 'type', PORT_TYPES);
     const count = sub.number(entry, 'count', { min: 1, integer: true });
     const label = sub.optionalString(entry, 'label');
+    const location =
+      entry.location === undefined
+        ? undefined
+        : sub.oneOf(entry, 'location', PORT_LOCATIONS);
     const positionMm =
       entry.positionMm === undefined
         ? undefined
@@ -347,6 +430,7 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         type,
         count,
         label,
+        location,
         positionMm,
         pitchMm,
         row,
@@ -430,6 +514,116 @@ function parseLighting(
     statusLed,
     effects,
   };
+}
+
+function parsePower(
+  input: unknown,
+  checker: Checker,
+): PowerCapabilities | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('power', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const connectors: PowerConnector[] = [];
+  if (input.connectors !== undefined) {
+    if (Array.isArray(input.connectors)) {
+      input.connectors.forEach((entry, i) => {
+        if (!isRecord(entry)) {
+          sub.fail(`connectors[${i}]`, 'must be an object');
+          return;
+        }
+        const conn = new Checker();
+        const id = conn.string(entry, 'id');
+        const type = conn.oneOf(entry, 'type', POWER_CONNECTOR_TYPES);
+        const count = conn.number(entry, 'count', { min: 1, integer: true });
+        const location =
+          entry.location === undefined
+            ? undefined
+            : conn.oneOf(entry, 'location', PORT_LOCATIONS);
+        const label = conn.optionalString(entry, 'label');
+        conn.issues.forEach(({ path, message }) =>
+          sub.fail(`connectors[${i}].${path}`, message),
+        );
+        if (id && type && count !== undefined) {
+          connectors.push({ id, type, count, location, label });
+        }
+      });
+    } else {
+      sub.fail('connectors', 'must be an array');
+    }
+  }
+  const redundant = sub.optionalBoolean(input, 'redundant');
+  const hotSwappable = sub.optionalBoolean(input, 'hotSwappable');
+  sub.issues.forEach(({ path, message }) =>
+    checker.fail(`power.${path}`, message),
+  );
+  return { connectors, redundant, hotSwappable };
+}
+
+function parseCooling(
+  input: unknown,
+  checker: Checker,
+): CoolingCapabilities | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('cooling', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const fanCount =
+    input.fanCount === undefined
+      ? undefined
+      : sub.number(input, 'fanCount', { min: 0, integer: true });
+  const airflow =
+    input.airflow === undefined
+      ? undefined
+      : sub.oneOf(input, 'airflow', AIRFLOW_DIRECTIONS);
+  let ventilation: VentLocation[] | undefined;
+  if (input.ventilation !== undefined) {
+    if (
+      Array.isArray(input.ventilation) &&
+      input.ventilation.every(
+        (v): v is VentLocation =>
+          typeof v === 'string' &&
+          (VENT_LOCATIONS as readonly string[]).includes(v),
+      )
+    ) {
+      ventilation = input.ventilation;
+    } else {
+      sub.fail('ventilation', `entries must be one of: ${VENT_LOCATIONS.join(', ')}`);
+    }
+  }
+  const hotSwappableFans = sub.optionalBoolean(input, 'hotSwappableFans');
+  sub.issues.forEach(({ path, message }) =>
+    checker.fail(`cooling.${path}`, message),
+  );
+  return { fanCount, airflow, ventilation, hotSwappableFans };
+}
+
+function parseDisplay(
+  input: unknown,
+  checker: Checker,
+): DisplayCapabilities | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('display', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const lcd = sub.optionalBoolean(input, 'lcd');
+  const touchscreen = sub.optionalBoolean(input, 'touchscreen');
+  const positionMm =
+    input.positionMm === undefined
+      ? undefined
+      : isVec3(input.positionMm)
+        ? input.positionMm
+        : sub.fail('positionMm', 'must be [x, y, z] numbers');
+  sub.issues.forEach(({ path, message }) =>
+    checker.fail(`display.${path}`, message),
+  );
+  return { lcd, touchscreen, positionMm };
 }
 
 function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
@@ -572,6 +766,9 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
   const ports = parsePorts(input.ports, c);
   const leds = parseLeds(input.leds, c);
   const lighting = parseLighting(input.lighting, c);
+  const power = parsePower(input.power, c);
+  const cooling = parseCooling(input.cooling, c);
+  const display = parseDisplay(input.display, c);
   const presentation = parsePresentation(input.presentation, c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
@@ -605,6 +802,9 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       ports,
       leds,
       lighting,
+      power,
+      cooling,
+      display,
       presentation,
     },
   };

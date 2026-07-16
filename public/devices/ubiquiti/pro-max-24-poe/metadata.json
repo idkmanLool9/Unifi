@@ -23,19 +23,6 @@
     "new"
   ],
   "description": "Etherlighting switch with 16 GbE and 8 2.5 GbE PoE ports, dual 10G SFP+ uplinks and a 400 W PoE budget.",
-  "modelTransform": {
-    "scale": 1,
-    "rotationDeg": [
-      0,
-      0,
-      0
-    ],
-    "offsetMm": [
-      0,
-      -21.85,
-      0
-    ]
-  },
   "mountingOffsetMm": 0,
   "ports": [
     {

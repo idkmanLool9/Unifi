@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "description": "Professional 3D rack design application",
   "scripts": {
+    "predev": "node scripts/generate-device-manifest.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/generate-device-manifest.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "manifest": "node scripts/generate-device-manifest.mjs"
   },
   "repository": {
     "type": "git",

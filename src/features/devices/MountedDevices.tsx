@@ -169,6 +169,7 @@ function MountedDeviceView({
           target={modelRef}
           expectedMm={[definition.widthMm, definition.heightMm, definition.depthMm]}
           label={`${definition.productName} @ U${instance.startU}`}
+          definitionId={definition.id}
         />
       )}
       {(selected || hovered) && (

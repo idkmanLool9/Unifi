@@ -51,6 +51,16 @@ export interface RackProfile {
   fixedRailSpacingMm: number;
   /** Deepest mountable device at the default rail configuration. */
   nominalUsableDepthMm: number;
+  /** Hard cap on device depth, regardless of rail position. */
+  maxDeviceDepthMm: number;
+  /** Reserved space behind the rear rail plane (inside the enclosure). */
+  rearClearanceMm: number;
+  /** Advisory space for cable routing at the rear (future hook). */
+  cableClearanceMm: number;
+  /** Profile offers rear support rails for heavy chassis. */
+  supportRails: boolean;
+  /** Profile accepts fixed shelves for non-rack gear. */
+  shelfCompatible: boolean;
   loadRatingKg: number;
   baseType: RackBaseType;
   description: string;
@@ -70,6 +80,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 250, maxMm: 600, defaultMm: 600 },
     fixedRailSpacingMm: 600,
     nominalUsableDepthMm: 600,
+    maxDeviceDepthMm: 600,
+    rearClearanceMm: 0,
+    cableClearanceMm: 60,
+    supportRails: false,
+    shelfCompatible: true,
     loadRatingKg: 320,
     baseType: 'plinth-feet',
     description: 'Short-depth 4-post frame for network gear.',
@@ -85,6 +100,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 250, maxMm: 700, defaultMm: 700 },
     fixedRailSpacingMm: 700,
     nominalUsableDepthMm: 700,
+    maxDeviceDepthMm: 700,
+    rearClearanceMm: 0,
+    cableClearanceMm: 80,
+    supportRails: false,
+    shelfCompatible: true,
     loadRatingKg: 350,
     baseType: 'plinth-feet',
     description: 'General-purpose 4-post open frame.',
@@ -100,6 +120,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 300, maxMm: 800, defaultMm: 800 },
     fixedRailSpacingMm: 800,
     nominalUsableDepthMm: 800,
+    maxDeviceDepthMm: 800,
+    rearClearanceMm: 0,
+    cableClearanceMm: 100,
+    supportRails: true,
+    shelfCompatible: true,
     loadRatingKg: 400,
     baseType: 'plinth-feet',
     description: 'Deep 4-post frame for full-depth servers.',
@@ -115,6 +140,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 250, maxMm: 850, defaultMm: 750 },
     fixedRailSpacingMm: 750,
     nominalUsableDepthMm: 850,
+    maxDeviceDepthMm: 850,
+    rearClearanceMm: 50,
+    cableClearanceMm: 100,
+    supportRails: true,
+    shelfCompatible: true,
     loadRatingKg: 1000,
     baseType: 'plinth-feet',
     description: 'Full-height enclosure with adjustable inner rails.',
@@ -130,6 +160,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 250, maxMm: 450, defaultMm: 450 },
     fixedRailSpacingMm: 450,
     nominalUsableDepthMm: 450,
+    maxDeviceDepthMm: 450,
+    rearClearanceMm: 0,
+    cableClearanceMm: 40,
+    supportRails: false,
+    shelfCompatible: false,
     loadRatingKg: 60,
     baseType: 'compact-feet',
     description: 'Shallow wall-mount frame for comms closets.',
@@ -145,6 +180,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: null,
     fixedRailSpacingMm: 400,
     nominalUsableDepthMm: 400,
+    maxDeviceDepthMm: 400,
+    rearClearanceMm: 0,
+    cableClearanceMm: 30,
+    supportRails: false,
+    shelfCompatible: true,
     loadRatingKg: 25,
     baseType: 'compact-feet',
     description: 'Desk-friendly 6U frame with fixed toolless rails.',
@@ -160,6 +200,11 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     railSpacingRange: { minMm: 250, maxMm: 900, defaultMm: 750 },
     fixedRailSpacingMm: 750,
     nominalUsableDepthMm: 750,
+    maxDeviceDepthMm: 900,
+    rearClearanceMm: 0,
+    cableClearanceMm: 80,
+    supportRails: true,
+    shelfCompatible: true,
     loadRatingKg: 500,
     baseType: 'plinth-feet',
     description: 'Fully adjustable frame for special builds.',

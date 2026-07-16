@@ -1,10 +1,13 @@
 import type {
+  CoolingCapabilities,
   DeviceDefinition,
   DevicePresentation,
+  DisplayCapabilities,
   LedDefinition,
   LightingCapabilities,
   ModelTransform,
   PortDefinition,
+  PowerCapabilities,
 } from '../deviceSchema';
 import type { RackOrientation } from '@/types';
 
@@ -34,6 +37,9 @@ export interface DeviceSeed {
   ports?: PortDefinition[];
   leds?: LedDefinition[];
   lighting?: LightingCapabilities;
+  power?: PowerCapabilities;
+  cooling?: CoolingCapabilities;
+  display?: DisplayCapabilities;
 }
 
 /** Standard 19in faceplate body width (fits the 450.8mm EIA opening). */
@@ -49,11 +55,16 @@ export function defineDevice(seed: DeviceSeed): DeviceDefinition {
     mountingStandard: seed.mountingStandard ?? 'eia-310',
     defaultFacing: seed.defaultFacing ?? 'front',
     tags: seed.tags ?? [],
-    modelTransform: {
-      scale: seed.modelTransform?.scale ?? 1,
-      rotationDeg: seed.modelTransform?.rotationDeg ?? [0, 0, 0],
-      offsetMm: seed.modelTransform?.offsetMm ?? [0, 0, 0],
-    },
+    // Absent means "derive automatically from the measured geometry" —
+    // the universal importer owns the default; explicit metadata wins.
+    modelTransform:
+      seed.modelTransform === undefined
+        ? undefined
+        : {
+            scale: seed.modelTransform.scale ?? 1,
+            rotationDeg: seed.modelTransform.rotationDeg ?? [0, 0, 0],
+            offsetMm: seed.modelTransform.offsetMm ?? [0, 0, 0],
+          },
     mountingOffsetMm: seed.mountingOffsetMm ?? 0,
     ports: seed.ports ?? [],
     leds: seed.leds ?? [],

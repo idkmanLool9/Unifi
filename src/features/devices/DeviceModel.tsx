@@ -3,6 +3,8 @@ import { MathUtils } from 'three';
 import { useGLTF } from '@react-three/drei';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { deviceModelUrl } from './deviceRegistry';
+import { buildImportReport } from './import/modelImport';
+import { useImportReportStore } from './import/importReportStore';
 import { MM_TO_M } from '@/features/rack/rackMath';
 import { assetUrl } from '@/lib/assetUrl';
 import { useAssetAvailability } from '@/stores/assetStore';
@@ -16,22 +18,67 @@ import type { DeviceDefinition } from './deviceSchema';
 const DRACO_DECODER_PATH = assetUrl('draco/');
 
 /**
- * Renders a device's real GLB. The loaded scene is cached by drei/useGLTF
- * and shared across instances; each instance renders a clone so per-node
- * state never leaks between instances. The clone shares geometry and
- * material resources with the cached original, so it is intentionally NOT
+ * Renders a device's real GLB through the universal import pipeline.
+ * The loaded scene is cached by drei/useGLTF and shared across
+ * instances; each instance renders a clone so per-node state never
+ * leaks between instances. The clone shares geometry and material
+ * resources with the cached original, so it is intentionally NOT
  * disposed on unmount — the cache owns those resources.
+ *
+ * The clone is measured once and the import pipeline resolves the final
+ * transform: explicit metadata wins verbatim, otherwise a deterministic
+ * default (origin normalization + spec axis matching) applies. The
+ * model itself is never scaled or modified — dimension deviations are
+ * reported as warnings.
  */
-function LoadedModel({ url }: { url: string }) {
+function LoadedModel({
+  url,
+  definition,
+}: {
+  url: string;
+  definition: DeviceDefinition;
+}) {
   const { scene } = useGLTF(url, DRACO_DECODER_PATH);
   const cloned = useMemo(() => scene.clone(true), [scene]);
+  const register = useImportReportStore((s) => s.register);
+
+  const report = useMemo(
+    () => buildImportReport(definition, cloned),
+    [definition, cloned],
+  );
+
   useEffect(() => {
     cloned.traverse((node) => {
       node.castShadow = true;
       node.receiveShadow = true;
     });
   }, [cloned]);
-  return <primitive object={cloned} />;
+
+  useEffect(() => {
+    if (report) register(report);
+  }, [report, register]);
+
+  const transform = report?.transform ?? definition.modelTransform;
+  const rotation = useMemo(
+    () =>
+      (transform
+        ? transform.rotationDeg.map((deg) => MathUtils.degToRad(deg))
+        : [0, 0, 0]) as [number, number, number],
+    [transform],
+  );
+  const offset = useMemo(
+    () =>
+      (transform
+        ? transform.offsetMm.map((mm) => mm * MM_TO_M)
+        : [0, 0, 0]) as [number, number, number],
+    [transform],
+  );
+
+  return (
+    <group scale={transform?.scale ?? 1} rotation={rotation} position={offset}>
+      <primitive object={cloned} />
+    </group>
+  );
 }
 
 interface ModelBoundaryProps {
@@ -74,50 +121,27 @@ interface DeviceModelProps {
  * The visual body of a device, in device-local space (origin at the
  * chassis center, front face toward +Z). Loads the conventional GLB when
  * present on disk; otherwise renders the parametric placeholder. The
- * definition's modelTransform (metadata as source of truth) corrects
- * scale, rotation, and origin of the GLB — the source asset is never
- * modified or resized arbitrarily.
+ * universal import pipeline corrects orientation and origin of the GLB —
+ * the source asset is never modified or resized arbitrarily.
  */
 export function DeviceModel({ definition }: DeviceModelProps) {
   const url = deviceModelUrl(definition);
   const availability = useAssetAvailability(url);
-
-  const t = definition.modelTransform;
-  const rotation = useMemo(
-    () =>
-      [
-        MathUtils.degToRad(t.rotationDeg[0]),
-        MathUtils.degToRad(t.rotationDeg[1]),
-        MathUtils.degToRad(t.rotationDeg[2]),
-      ] as [number, number, number],
-    [t],
-  );
-  const offset = useMemo(
-    () =>
-      [
-        t.offsetMm[0] * MM_TO_M,
-        t.offsetMm[1] * MM_TO_M,
-        t.offsetMm[2] * MM_TO_M,
-      ] as [number, number, number],
-    [t],
-  );
 
   if (availability !== 'available') {
     return <DevicePlaceholder definition={definition} />;
   }
 
   return (
-    <group scale={t.scale} rotation={rotation} position={offset}>
-      <ModelErrorBoundary
-        key={url}
-        label={`model ${url}`}
-        fallback={<DevicePlaceholder definition={definition} />}
-      >
-        <Suspense fallback={<DevicePlaceholder definition={definition} />}>
-          <LoadedModel url={url} />
-        </Suspense>
-      </ModelErrorBoundary>
-    </group>
+    <ModelErrorBoundary
+      key={url}
+      label={`model ${url}`}
+      fallback={<DevicePlaceholder definition={definition} />}
+    >
+      <Suspense fallback={<DevicePlaceholder definition={definition} />}>
+        <LoadedModel url={url} definition={definition} />
+      </Suspense>
+    </ModelErrorBoundary>
   );
 }
 

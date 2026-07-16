@@ -26,11 +26,8 @@ describe('validateDeviceDefinition', () => {
     if (!result.ok) return;
     expect(result.value.mountingStandard).toBe('eia-310');
     expect(result.value.defaultFacing).toBe('front');
-    expect(result.value.modelTransform).toEqual({
-      scale: 1,
-      rotationDeg: [0, 0, 0],
-      offsetMm: [0, 0, 0],
-    });
+    // Absent means "let the universal importer derive it".
+    expect(result.value.modelTransform).toBeUndefined();
     expect(result.value.mountingOffsetMm).toBe(0);
     expect(result.value.tags).toEqual([]);
     expect(result.value.ports).toEqual([]);
@@ -45,9 +42,9 @@ describe('validateDeviceDefinition', () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.modelTransform.scale).toBe(0.5);
-    expect(result.value.modelTransform.rotationDeg).toEqual([0, 90, 0]);
-    expect(result.value.modelTransform.offsetMm).toEqual([0, 0, 0]);
+    expect(result.value.modelTransform?.scale).toBe(0.5);
+    expect(result.value.modelTransform?.rotationDeg).toEqual([0, 90, 0]);
+    expect(result.value.modelTransform?.offsetMm).toEqual([0, 0, 0]);
     expect(result.value.ports).toHaveLength(1);
     expect(result.value.ports[0].count).toBe(24);
   });
@@ -160,7 +157,7 @@ describe('validateDeviceDefinition', () => {
       modelTransform: { scale: [0.001, 0.001, 0.002] },
     });
     expect(ok.ok).toBe(true);
-    if (ok.ok) expect(ok.value.modelTransform.scale).toEqual([0.001, 0.001, 0.002]);
+    if (ok.ok) expect(ok.value.modelTransform?.scale).toEqual([0.001, 0.001, 0.002]);
 
     for (const bad of [[1, 1], [1, 0, 1], ['1', 1, 1]]) {
       const result = validateDeviceDefinition({

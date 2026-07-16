@@ -37,8 +37,6 @@ export interface RackGeometry {
   railBaseYM: number;
 }
 
-/** Clearance kept behind a cabinet's interior for cabling. */
-const CABINET_REAR_GAP_M = 0.05;
 /** Compact (desktop) base height, feet included. */
 const COMPACT_BASE_Y = 0.03;
 
@@ -61,9 +59,14 @@ export function rackGeometry(
 
   const frontRailZ = externalDepthM / 2 - insetM;
   const rearRailZ = frontRailZ - spacingM;
-  const usableDepthM = hasInnerRails
-    ? externalDepthM - insetM - CABINET_REAR_GAP_M
-    : spacingM;
+  // Enclosed profiles reserve the profile's rear clearance behind the
+  // rails; every profile caps device depth at its own hard maximum.
+  const usableDepthM = Math.min(
+    hasInnerRails
+      ? externalDepthM - insetM - profile.rearClearanceMm * MM_TO_M
+      : spacingM,
+    profile.maxDeviceDepthMm * MM_TO_M,
+  );
 
   return {
     profile,
@@ -145,7 +148,9 @@ export function rackGeometryFor(
     profile.railSpacingRange &&
     !geometry.hasInnerRails
   ) {
-    geometry.usableDepthM = profile.railSpacingRange.maxMm * MM_TO_M;
+    geometry.usableDepthM =
+      Math.min(profile.railSpacingRange.maxMm, profile.maxDeviceDepthMm) *
+      MM_TO_M;
   }
   return geometry;
 }
