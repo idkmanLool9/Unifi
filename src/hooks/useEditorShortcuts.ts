@@ -6,9 +6,9 @@ import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useSelectionStore } from '@/stores/selectionStore';
-import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import { requestRemoveDevice } from '@/features/devices/removeDeviceAction';
+import { frameSelection } from '@/features/viewport/focusActions';
 import { toast } from '@/stores/toastStore';
 import type { EditorTool } from '@/types';
 
@@ -69,7 +69,8 @@ export function useEditorShortcuts(): void {
       } else if (key === 'g') {
         useViewSettingsStore.getState().toggleGrid();
       } else if (key === 'f') {
-        useViewportStore.getState().dispatchCamera({ type: 'fit' });
+        // Frame the selection (device/cable/pending port), else the rack.
+        frameSelection();
       } else if (key === '?') {
         overlays.setShortcutsOpen(true);
       } else if (key === 'delete' || key === 'backspace') {

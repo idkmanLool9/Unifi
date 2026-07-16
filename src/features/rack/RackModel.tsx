@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Group, MathUtils } from 'three';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
+import { ObstructionFader } from './ObstructionFader';
 import { RackSelection } from './RackSelection';
 import { RACK_DIMS, RACK_FINISHES, railHeight } from './rackConstants';
 import { rackHeightFor } from './rackMath';
@@ -390,6 +391,17 @@ export function RackModel({ rack, theme }: RackModelProps) {
       {/* Cables + Cable Tool (inherit rack orientation and animation) */}
       <CableLayer rack={rack} geometry={geometry} />
       <CableToolLayer geometry={geometry} />
+
+      {/* Close-up visibility: fade structure blocking the focused view */}
+      <ObstructionFader
+        groupRef={groupRef}
+        materials={[
+          materials.upright,
+          materials.frame,
+          materials.plinth,
+          materials.hardware,
+        ]}
+      />
 
       {DEBUG_DIMS_ENABLED && <DebugDimensions geometry={geometry} />}
 

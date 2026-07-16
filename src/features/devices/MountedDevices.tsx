@@ -16,6 +16,7 @@ import { DevicePlaceholder } from './DevicePlaceholder';
 import { MountingHardware } from './MountingHardware';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { armDrag } from '@/features/dragdrop/DragController';
+import { focusDevice } from '@/features/viewport/focusActions';
 import { requestRemoveDevice } from './removeDeviceAction';
 import { shouldSuppressClick } from '@/stores/dragStore';
 import { RackSelection } from '@/features/rack/RackSelection';
@@ -137,6 +138,13 @@ function MountedDeviceView({
     selectDevice(instance.id);
   };
 
+  const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    // Focus the device: glide the camera to its faceplate.
+    selectDevice(instance.id);
+    focusDevice(instance.id);
+  };
+
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (e.nativeEvent.button !== 0) return;
     e.stopPropagation();
@@ -171,6 +179,7 @@ function MountedDeviceView({
       position={position}
       rotation={[0, rotationY, 0]}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       onPointerDown={onPointerDown}
       onContextMenu={onContextMenu}
       onPointerOver={(e) => {

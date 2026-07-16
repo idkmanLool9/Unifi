@@ -22,7 +22,8 @@ export const CAMERA = {
   maxFov: 90,
   near: 0.1,
   far: 200,
-  minDistance: 2,
+  /** Deep zoom: close enough to fill the viewport with one connector. */
+  minDistance: 0.06,
   maxDistance: 60,
 } as const;
 

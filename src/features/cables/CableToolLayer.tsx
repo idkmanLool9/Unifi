@@ -13,6 +13,7 @@ import {
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { allPhysicalPorts, resolveEndpoint, type Vec3 } from './anchors';
+import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
 import { useCableStore, type CableEnd } from '@/stores/cableStore';
@@ -132,11 +133,20 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
 
   const onClick = (target: PortTarget) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    // Orbit gestures ending on a port, and the clicks inside a
+    // double-click, must not arm or complete a connection.
+    if (e.delta > 4 || e.nativeEvent.detail > 1) return;
     if (!sourceEnd) {
       setSource(target.end);
     } else {
       completeTo(target.end);
     }
+  };
+
+  const onDoubleClick = (target: PortTarget) => (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    // Focus the port without disturbing the pending cable state.
+    focusPort(target.end);
   };
 
   const hoverInfo = hovered && {
@@ -167,6 +177,7 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
           material={materialFor(target)}
           position={target.anchor}
           onClick={onClick(target)}
+          onDoubleClick={onDoubleClick(target)}
           onPointerOver={(e) => {
             e.stopPropagation();
             setHovered(target);

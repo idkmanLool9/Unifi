@@ -15,6 +15,7 @@ import {
   recommendLengthMm,
 } from './routing';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { focusCable } from '@/features/viewport/focusActions';
 import { railHeight, U_METERS } from '@/features/rack/rackConstants';
 import { MM_TO_M, type PlacedDevice, type RackGeometry } from '@/features/rack/rackMath';
 import { useCableStore, type CableInstance } from '@/stores/cableStore';
@@ -268,8 +269,15 @@ function CableMesh({
     // event pass through to hit targets behind the tube.
     if (useUIStore.getState().activeTool === 'cable') return;
     e.stopPropagation();
-    if (shouldSuppressClick()) return;
+    if (shouldSuppressClick() || e.delta > 4) return;
     selectCable(cable.id);
+  };
+
+  const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
+    if (useUIStore.getState().activeTool === 'cable') return;
+    e.stopPropagation();
+    selectCable(cable.id);
+    focusCable(cable.id);
   };
 
   const plugSize = spec.diameterMm * MM_TO_M * 1.9;
@@ -281,6 +289,7 @@ function CableMesh({
         material={sheathMaterial(cable.color, spec.roughness)}
         castShadow
         onClick={onClick}
+        onDoubleClick={onDoubleClick}
       />
       {/* Subtle CAD-style selection sleeve */}
       {selected && (

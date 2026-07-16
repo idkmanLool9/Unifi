@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { PerspectiveCamera, Sphere, Vector3 } from 'three';
-import { useThree } from '@react-three/fiber';
+import { PerspectiveCamera, Raycaster, Sphere, Vector2, Vector3 } from 'three';
+import { useFrame, useThree } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
+import { nearPlaneFor, nearPlaneNeedsUpdate } from './cameraFocus';
 import { useDragStore } from '@/stores/dragStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
@@ -105,6 +106,64 @@ export function CameraRig() {
     }
   }, [camera, fov]);
 
+  // Camera feel preferences: CAD-style dolly-to-cursor plus speed and
+  // inversion multipliers, applied to the controls in place.
+  const zoomSpeed = useViewSettingsStore((s) => s.zoomSpeed);
+  const orbitSpeed = useViewSettingsStore((s) => s.orbitSpeed);
+  const panSpeed = useViewSettingsStore((s) => s.panSpeed);
+  const invertZoom = useViewSettingsStore((s) => s.invertZoom);
+  const zoomToPointer = useViewSettingsStore((s) => s.zoomToPointer);
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.dollyToCursor = zoomToPointer;
+    controls.dollySpeed = zoomSpeed * (invertZoom ? -1 : 1);
+    controls.azimuthRotateSpeed = orbitSpeed;
+    controls.polarRotateSpeed = orbitSpeed;
+    controls.truckSpeed = 2 * panSpeed;
+  }, [zoomSpeed, orbitSpeed, panSpeed, invertZoom, zoomToPointer]);
+
+  // Dynamic near plane: millimeter-scale near for connector close-ups,
+  // conservative depth precision at rack range. The projection matrix
+  // only updates when the value moves meaningfully.
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls || !(camera instanceof PerspectiveCamera)) return;
+    const next = nearPlaneFor(controls.distance);
+    if (nearPlaneNeedsUpdate(camera.near, next)) {
+      camera.near = next;
+      camera.updateProjectionMatrix();
+    }
+  });
+
+  // Middle-click sets the orbit pivot on whatever is under the pointer.
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    const element = gl.domElement;
+    const raycaster = new Raycaster();
+    const ndc = new Vector2();
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 1) return;
+      event.preventDefault();
+      const controls = controlsRef.current;
+      if (!controls) return;
+      const rect = element.getBoundingClientRect();
+      ndc.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndc, camera);
+      const hit = raycaster.intersectObjects(scene.children, true)[0];
+      if (hit) {
+        controls.setOrbitPoint(hit.point.x, hit.point.y, hit.point.z);
+        setActiveView('custom');
+      }
+    };
+    element.addEventListener('pointerdown', onPointerDown);
+    return () => element.removeEventListener('pointerdown', onPointerDown);
+  }, [gl, camera, scene, setActiveView]);
+
   // A persisted rack should be presented from the hero angle on load.
   const framedOnce = useRef(false);
   useEffect(() => {
@@ -153,6 +212,14 @@ export function CameraRig() {
         break;
       case 'fit':
         glide(() => controls.fitToSphere(getFitSphere(), true));
+        setActiveView('custom');
+        break;
+      case 'focus':
+        // Deterministic pose computed by the focus actions.
+        glide(() =>
+          controls.setLookAt(...command.position, ...command.target, true),
+        );
+        setActiveView('custom');
         break;
     }
   }, [command, setActiveView]);

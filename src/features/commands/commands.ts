@@ -22,6 +22,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
+import { faceDetail, frameSelection } from '@/features/viewport/focusActions';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -124,12 +125,44 @@ export const COMMANDS: readonly Command[] = [
 
   // Camera
   {
-    id: 'camera.fit',
-    label: 'Fit View',
+    id: 'camera.frame-selection',
+    label: 'Frame Selection',
     group: 'Camera',
     icon: Box,
     shortcut: 'F',
-    keywords: 'frame selection zoom',
+    keywords: 'focus zoom selected device port cable',
+    run: () => frameSelection(),
+  },
+  {
+    id: 'camera.close-up',
+    label: 'Close-Up on Selection',
+    group: 'Camera',
+    icon: Search,
+    keywords: 'zoom detail inspect macro',
+    run: () => frameSelection(true),
+  },
+  {
+    id: 'camera.front-detail',
+    label: 'Front Detail View',
+    group: 'Camera',
+    icon: Square,
+    keywords: 'faceplate ports rails close',
+    run: () => faceDetail('front'),
+  },
+  {
+    id: 'camera.rear-detail',
+    label: 'Rear Detail View',
+    group: 'Camera',
+    icon: Square,
+    keywords: 'back power psu close',
+    run: () => faceDetail('rear'),
+  },
+  {
+    id: 'camera.fit',
+    label: 'Frame Rack',
+    group: 'Camera',
+    icon: Box,
+    keywords: 'fit frame whole zoom out',
     run: () => useViewportStore.getState().dispatchCamera({ type: 'fit' }),
   },
   {

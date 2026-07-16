@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Scene } from './Scene';
+import { frameSelection } from './focusActions';
 import { ViewportHint } from './ViewportHint';
 import { ViewportNavWidget } from './ViewportNavWidget';
 import { WelcomeOverlay } from '@/features/rack/WelcomeOverlay';
@@ -50,10 +51,16 @@ export function ViewportCanvas() {
 
     const cameraEntries: MenuEntry[] = [
       {
+        id: 'focus-selection',
+        label: 'Focus selection',
+        icon: Focus,
+        shortcut: 'F',
+        action: () => frameSelection(),
+      },
+      {
         id: 'fit',
         label: 'Fit view',
         icon: Focus,
-        shortcut: 'F',
         action: () => viewport.dispatchCamera({ type: 'fit' }),
       },
       {

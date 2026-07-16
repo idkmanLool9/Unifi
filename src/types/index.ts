@@ -30,7 +30,13 @@ export type CameraView = ViewPreset | 'custom';
 export type CameraCommandInput =
   | { type: 'preset'; view: ViewPreset }
   | { type: 'fit' }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  /** Glide to an exact pose (focus on a device, port, or cable). */
+  | {
+      type: 'focus';
+      position: [number, number, number];
+      target: [number, number, number];
+    };
 
 /** A dispatched command, stamped with a nonce so repeats re-trigger. */
 export type CameraCommand = CameraCommandInput & { id: number };
