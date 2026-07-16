@@ -35,6 +35,7 @@ export interface DeviceSeed {
   defaultFacing?: RackOrientation;
   tags?: string[];
   modelTransform?: Partial<ModelTransform>;
+  modelDetail?: DeviceDefinition['modelDetail'];
   mountingOffsetMm?: number;
   ports?: PortDefinition[];
   leds?: LedDefinition[];

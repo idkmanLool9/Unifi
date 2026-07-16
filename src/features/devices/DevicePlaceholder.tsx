@@ -64,9 +64,13 @@ export function DevicePlaceholder({
   useEffect(() => () => labelTexture.dispose(), [labelTexture]);
 
   const faceD = 0.004;
-  // 4:1 label plate, never taller than 55% of the chassis face.
-  const labelH = Math.min(Math.min(w * 0.45, 0.2) / 4, h * 0.55);
+  // 4:1 label plate, never taller than 40% of the chassis face; devices
+  // with rendered connectors get the label tucked to the top edge so the
+  // hardware layer owns the middle of the faceplate.
+  const hasPorts = definition.ports.length > 0;
+  const labelH = Math.min(Math.min(w * 0.45, 0.2) / 4, h * (hasPorts ? 0.32 : 0.55));
   const labelW = labelH * 4;
+  const labelY = hasPorts ? h / 2 - labelH / 2 - h * 0.08 : 0;
 
   return (
     <group>
@@ -90,7 +94,7 @@ export function DevicePlaceholder({
         material={materials.face}
       />
       {/* Silkscreen model label */}
-      <mesh position={[-w / 2 + labelW / 2 + 0.012, 0, d / 2 + 0.0006]}>
+      <mesh position={[-w / 2 + labelW / 2 + 0.012, labelY, d / 2 + 0.0006]}>
         <planeGeometry args={[labelW, labelH]} />
         <meshBasicMaterial
           map={labelTexture}
@@ -99,11 +103,13 @@ export function DevicePlaceholder({
           depthWrite={false}
         />
       </mesh>
-      {/* Status LED */}
-      <mesh position={[w / 2 - 0.016, 0, d / 2 + 0.0008]}>
-        <boxGeometry args={[0.004, 0.004, 0.001]} />
-        <primitive object={materials.led} attach="material" />
-      </mesh>
+      {/* Status LED (metadata LEDs render via the hardware layer) */}
+      {definition.leds.length === 0 && (
+        <mesh position={[w / 2 - 0.016, 0, d / 2 + 0.0008]}>
+          <boxGeometry args={[0.004, 0.004, 0.001]} />
+          <primitive object={materials.led} attach="material" />
+        </mesh>
+      )}
     </group>
   );
 }

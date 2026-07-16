@@ -21,10 +21,11 @@ export const NETGEAR_DEVICES: DeviceDefinition[] = [
       'Stackable 10-Gigabit aggregation switch with 24 10GBASE-T ports and shared SFP+ uplinks.',
     tags: ['switch', '10g', 'stackable'],
     ports: [
-      { id: 'tengbaset', type: 'rj45', count: 24, label: '10GBASE-T 1–24', speedGbps: 10 },
-      { id: 'sfp', type: 'sfp+', count: 4, label: 'SFP+ shared 21–24', speedGbps: 10 },
-      { id: 'console', type: 'console', count: 1, label: 'Console' },
-      { id: 'usb', type: 'usb', count: 1, label: 'USB storage' },
+      { id: 'tengbaset-top', type: 'rj45', count: 12, label: '10GBASE-T (top row)', row: 0, speedGbps: 10 },
+      { id: 'tengbaset-bottom', type: 'rj45', count: 12, label: '10GBASE-T (bottom row)', row: 1, speedGbps: 10 },
+      { id: 'sfp', type: 'sfp+', count: 4, label: 'SFP+ shared 21–24', row: 0, speedGbps: 10 },
+      { id: 'console', type: 'console', count: 1, label: 'Console', row: 1 },
+      { id: 'usb', type: 'usb-a', count: 1, label: 'USB storage', row: 1 },
     ],
     power: {
       connectors: [{ id: 'ac', type: 'c14', count: 1, location: 'rear' }],
@@ -56,12 +57,15 @@ export const NETGEAR_DEVICES: DeviceDefinition[] = [
       'AV-line PoE+ access switch with 24 Gigabit PoE+ ports and four 10G fiber uplinks.',
     tags: ['switch', 'poe', 'av'],
     ports: [
-      { id: 'poe', type: 'rj45', count: 24, label: 'GbE PoE+ 1–24', speedGbps: 1, poe: true },
-      { id: 'gbe', type: 'rj45', count: 2, label: 'GbE 25–26', speedGbps: 1 },
-      { id: 'sfp', type: 'sfp+', count: 4, label: 'SFP+ uplinks', speedGbps: 10 },
+      { id: 'poe-top', type: 'rj45', count: 12, label: 'GbE PoE+ (top row)', row: 0, speedGbps: 1, poe: true },
+      { id: 'poe-bottom', type: 'rj45', count: 12, label: 'GbE PoE+ (bottom row)', row: 1, speedGbps: 1, poe: true },
+      { id: 'gbe', type: 'rj45', count: 2, label: 'GbE 25–26', row: 0, speedGbps: 1 },
+      { id: 'sfp', type: 'sfp+', count: 4, label: 'SFP+ uplinks', row: 1, speedGbps: 10 },
     ],
     power: {
       connectors: [{ id: 'ac', type: 'c14', count: 1, location: 'rear' }],
+      poeBudgetW: 236,
+      sources: ['ac'],
     },
     cooling: { fanCount: 2, airflow: 'side-to-side' },
     presentation: {

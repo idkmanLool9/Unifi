@@ -32,14 +32,21 @@ export type FaceplateStyle = (typeof FACEPLATE_STYLES)[number];
 
 export const PORT_TYPES = [
   'rj45',
+  'keystone',
   'sfp',
   'sfp+',
   'sfp28',
   'qsfp+',
   'qsfp28',
-  'power',
   'usb',
+  'usb-a',
+  'usb-c',
   'console',
+  'serial',
+  'power',
+  'dc',
+  'c14',
+  'c20',
   'other',
 ] as const;
 export type PortType = (typeof PORT_TYPES)[number];
@@ -47,7 +54,11 @@ export type PortType = (typeof PORT_TYPES)[number];
 export const PORT_LOCATIONS = ['front', 'rear'] as const;
 export type PortLocation = (typeof PORT_LOCATIONS)[number];
 
-/** Future cable-routing hook: a physical port on the device faceplate. */
+/**
+ * A group of identical physical ports. Groups are expanded by
+ * resolvePhysicalPorts() into individual addressable connectors with
+ * stable ids — the anchor points future cable routing terminates on.
+ */
 export interface PortDefinition {
   id: string;
   type: PortType;
@@ -62,31 +73,71 @@ export interface PortDefinition {
   pitchMm?: number;
   /** Front-panel row index (0 = top) for multi-row port blocks. */
   row?: number;
+  /** Extra rotation of the connector around its face normal, degrees. */
+  rotationDeg?: [number, number, number];
+  /** Rendered (true when omitted); hidden ports stay addressable. */
+  visible?: boolean;
   /** Negotiated-link speed class of this group, in Gbps. */
   speedGbps?: number;
   /** Group supplies PoE. */
   poe?: boolean;
+  /** PoE power budget shared by this group, watts. */
+  poeBudgetW?: number;
   /** Ports in this group carry an Etherlighting RGB ring. */
   etherlighting?: boolean;
+  /** Cable anchor offset from the port center, mm (future routing). */
+  anchorMm?: [number, number, number];
 }
 
-export const LED_KINDS = ['status', 'link', 'activity', 'poe', 'other'] as const;
+export const LED_KINDS = [
+  'power',
+  'status',
+  'link',
+  'activity',
+  'poe',
+  'fan',
+  'temperature',
+  'warning',
+  'fault',
+  'ha',
+  'cloud',
+  'other',
+] as const;
 export type LedKind = (typeof LED_KINDS)[number];
 
-/** Future status-visualization hook. */
+export const LED_STATES = ['on', 'off'] as const;
+export type LedState = (typeof LED_STATES)[number];
+
+/** A physical indicator LED (rendered emissive; never a real light). */
 export interface LedDefinition {
   id: string;
   label: string;
   kind?: LedKind;
   color?: string;
   positionMm?: [number, number, number];
+  /** Lens diameter, mm (default 2). */
+  diameterMm?: number;
+  /** Emissive intensity multiplier (default 1). */
+  intensity?: number;
+  /** Rendered state (default on). Future animation hooks build on this. */
+  state?: LedState;
 }
 
+export const LIGHTING_MODES = [
+  'off',
+  'static',
+  'pulse',
+  'blink',
+  'activity',
+  'wave',
+] as const;
+export type LightingMode = (typeof LIGHTING_MODES)[number];
+
 /**
- * Device lighting capabilities — future-facing metadata the renderer will
- * consume to drive Etherlighting rings, per-port link LEDs, speed colors,
- * PoE indication, selection highlights and animated effects. Purely
- * declarative: no runtime behavior is attached yet.
+ * Device lighting capabilities — drives the Etherlighting renderer:
+ * per-port illumination rings, speed-class colors, PoE indication and
+ * animation modes. Data only; the renderer interprets it, and future
+ * link-state simulation plugs in without schema changes.
  */
 export interface LightingCapabilities {
   /** RGB illumination ring around every Etherlighting-flagged RJ45 port. */
@@ -101,6 +152,10 @@ export interface LightingCapabilities {
   portHighlightColor?: string;
   /** Primary device status LED. */
   statusLed?: { color: string; positionMm?: [number, number, number] };
+  /** Rendered animation mode ('static' when omitted; 'off' disables). */
+  defaultMode?: LightingMode;
+  /** Overall brightness multiplier 0–1 (default 1). */
+  brightness?: number;
   /** Identifiers of future animated effects (not implemented yet). */
   effects: string[];
 }
@@ -135,7 +190,14 @@ export interface PowerConnector {
   count: number;
   location?: PortLocation;
   label?: string;
+  /** Position of the first connector, mm from panel center. */
+  positionMm?: [number, number, number];
+  /** Center-to-center spacing when count > 1, mm. */
+  pitchMm?: number;
 }
+
+export const POWER_SOURCES = ['ac', 'dc', 'poe', 'battery'] as const;
+export type PowerSource = (typeof POWER_SOURCES)[number];
 
 /** Power topology metadata (future power planning / install reports). */
 export interface PowerCapabilities {
@@ -143,6 +205,12 @@ export interface PowerCapabilities {
   /** Redundant supplies (N+1 or better). */
   redundant?: boolean;
   hotSwappable?: boolean;
+  /** Number of power supplies (derived from connectors when omitted). */
+  psuCount?: number;
+  /** PoE budget the device can deliver downstream, watts. */
+  poeBudgetW?: number;
+  /** How the device itself is powered. */
+  sources?: PowerSource[];
 }
 
 export const AIRFLOW_DIRECTIONS = [
@@ -163,20 +231,40 @@ export const VENT_LOCATIONS = [
 ] as const;
 export type VentLocation = (typeof VENT_LOCATIONS)[number];
 
-/** Thermal metadata (future cooling simulation hook). */
+/** Thermal metadata (future cooling simulation hook). Geometry only. */
 export interface CoolingCapabilities {
   fanCount?: number;
   airflow?: AirflowDirection;
   ventilation?: VentLocation[];
   hotSwappableFans?: boolean;
+  /** Fan rotor diameter, mm (default 40). */
+  fanDiameterMm?: number;
+  /** Fan centers, mm from chassis center (renders grilles when present). */
+  fanPositionsMm?: [number, number, number][];
+  /** Where air enters / leaves the chassis. */
+  intake?: VentLocation[];
+  exhaust?: VentLocation[];
 }
 
-/** Front-panel display metadata (future status-visualization hook). */
+export const DISPLAY_STATES = ['off', 'placeholder'] as const;
+export type DisplayState = (typeof DISPLAY_STATES)[number];
+
+/** Front-panel display metadata. Rendered as powered-off glass (or a
+ *  faint placeholder); live UI textures are a future hook. */
 export interface DisplayCapabilities {
   lcd?: boolean;
   touchscreen?: boolean;
   /** Display center, mm from faceplate center. */
   positionMm?: [number, number, number];
+  /** Visible glass area, mm. */
+  widthMm?: number;
+  heightMm?: number;
+  /** Native panel resolution, px. */
+  resolution?: [number, number];
+  /** Bezel border around the glass, mm (default 2). */
+  bezelMm?: number;
+  /** Rendered state (default 'off'). */
+  state?: DisplayState;
 }
 
 /* ---- Mechanical metadata --------------------------------------------- */
@@ -285,6 +373,14 @@ export interface DeviceDefinition {
    * normalization + axis matching). When present, it wins verbatim.
    */
   modelTransform?: ModelTransform;
+  /**
+   * How much hardware the GLB itself models. 'full' (default): the model
+   * includes connectors/LEDs/displays, so only overlays (Etherlighting)
+   * render procedurally. 'chassis': the model is a bare chassis and the
+   * hardware layer renders every connector from metadata. Placeholder
+   * devices always render the full hardware layer.
+   */
+  modelDetail?: 'full' | 'chassis';
   /** Vertical trim from the U boundary, in millimeters. */
   mountingOffsetMm: number;
   ports: PortDefinition[];
@@ -492,7 +588,24 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         ? undefined
         : sub.number(entry, 'speedGbps', { min: 0.01 });
     const poe = sub.optionalBoolean(entry, 'poe');
+    const poeBudgetW =
+      entry.poeBudgetW === undefined
+        ? undefined
+        : sub.number(entry, 'poeBudgetW', { min: 0 });
     const etherlighting = sub.optionalBoolean(entry, 'etherlighting');
+    const visible = sub.optionalBoolean(entry, 'visible');
+    const rotationDeg =
+      entry.rotationDeg === undefined
+        ? undefined
+        : isVec3(entry.rotationDeg)
+          ? entry.rotationDeg
+          : sub.fail('rotationDeg', 'must be [x, y, z] numbers');
+    const anchorMm =
+      entry.anchorMm === undefined
+        ? undefined
+        : isVec3(entry.anchorMm)
+          ? entry.anchorMm
+          : sub.fail('anchorMm', 'must be [x, y, z] numbers');
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -506,9 +619,13 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         positionMm,
         pitchMm,
         row,
+        rotationDeg,
+        visible,
         speedGbps,
         poe,
+        poeBudgetW,
         etherlighting,
+        anchorMm,
       });
     }
   });
@@ -574,6 +691,15 @@ function parseLighting(
     }
   }
 
+  const defaultMode =
+    input.defaultMode === undefined
+      ? undefined
+      : sub.oneOf(input, 'defaultMode', LIGHTING_MODES);
+  const brightness =
+    input.brightness === undefined
+      ? undefined
+      : sub.number(input, 'brightness', { min: 0, max: 1 });
+
   sub.issues.forEach(({ path, message }) =>
     checker.fail(`lighting.${path}`, message),
   );
@@ -584,6 +710,8 @@ function parseLighting(
     speedColors,
     portHighlightColor,
     statusLed,
+    defaultMode,
+    brightness,
     effects,
   };
 }
@@ -615,11 +743,21 @@ function parsePower(
             ? undefined
             : conn.oneOf(entry, 'location', PORT_LOCATIONS);
         const label = conn.optionalString(entry, 'label');
+        const positionMm =
+          entry.positionMm === undefined
+            ? undefined
+            : isVec3(entry.positionMm)
+              ? entry.positionMm
+              : conn.fail('positionMm', 'must be [x, y, z] numbers');
+        const pitchMm =
+          entry.pitchMm === undefined
+            ? undefined
+            : conn.number(entry, 'pitchMm', { min: 0.1 });
         conn.issues.forEach(({ path, message }) =>
           sub.fail(`connectors[${i}].${path}`, message),
         );
         if (id && type && count !== undefined) {
-          connectors.push({ id, type, count, location, label });
+          connectors.push({ id, type, count, location, label, positionMm, pitchMm });
         }
       });
     } else {
@@ -628,10 +766,33 @@ function parsePower(
   }
   const redundant = sub.optionalBoolean(input, 'redundant');
   const hotSwappable = sub.optionalBoolean(input, 'hotSwappable');
+  const psuCount =
+    input.psuCount === undefined
+      ? undefined
+      : sub.number(input, 'psuCount', { min: 0, integer: true });
+  const poeBudgetW =
+    input.poeBudgetW === undefined
+      ? undefined
+      : sub.number(input, 'poeBudgetW', { min: 0 });
+  let sources: PowerSource[] | undefined;
+  if (input.sources !== undefined) {
+    if (
+      Array.isArray(input.sources) &&
+      input.sources.every(
+        (s): s is PowerSource =>
+          typeof s === 'string' &&
+          (POWER_SOURCES as readonly string[]).includes(s),
+      )
+    ) {
+      sources = input.sources;
+    } else {
+      sub.fail('sources', `entries must be one of: ${POWER_SOURCES.join(', ')}`);
+    }
+  }
   sub.issues.forEach(({ path, message }) =>
     checker.fail(`power.${path}`, message),
   );
-  return { connectors, redundant, hotSwappable };
+  return { connectors, redundant, hotSwappable, psuCount, poeBudgetW, sources };
 }
 
 function parseCooling(
@@ -668,10 +829,49 @@ function parseCooling(
     }
   }
   const hotSwappableFans = sub.optionalBoolean(input, 'hotSwappableFans');
+  const fanDiameterMm =
+    input.fanDiameterMm === undefined
+      ? undefined
+      : sub.number(input, 'fanDiameterMm', { min: 10, max: 200 });
+  let fanPositionsMm: [number, number, number][] | undefined;
+  if (input.fanPositionsMm !== undefined) {
+    if (Array.isArray(input.fanPositionsMm) && input.fanPositionsMm.every(isVec3)) {
+      fanPositionsMm = input.fanPositionsMm;
+    } else {
+      sub.fail('fanPositionsMm', 'must be an array of [x, y, z] positions');
+    }
+  }
+  const ventList = (path: 'intake' | 'exhaust'): VentLocation[] | undefined => {
+    const value = input[path];
+    if (value === undefined) return undefined;
+    if (
+      Array.isArray(value) &&
+      value.every(
+        (v): v is VentLocation =>
+          typeof v === 'string' &&
+          (VENT_LOCATIONS as readonly string[]).includes(v),
+      )
+    ) {
+      return value;
+    }
+    sub.fail(path, `entries must be one of: ${VENT_LOCATIONS.join(', ')}`);
+    return undefined;
+  };
+  const intake = ventList('intake');
+  const exhaust = ventList('exhaust');
   sub.issues.forEach(({ path, message }) =>
     checker.fail(`cooling.${path}`, message),
   );
-  return { fanCount, airflow, ventilation, hotSwappableFans };
+  return {
+    fanCount,
+    airflow,
+    ventilation,
+    hotSwappableFans,
+    fanDiameterMm,
+    fanPositionsMm,
+    intake,
+    exhaust,
+  };
 }
 
 function parseDisplay(
@@ -692,10 +892,47 @@ function parseDisplay(
       : isVec3(input.positionMm)
         ? input.positionMm
         : sub.fail('positionMm', 'must be [x, y, z] numbers');
+  const widthMm =
+    input.widthMm === undefined
+      ? undefined
+      : sub.number(input, 'widthMm', { min: 1 });
+  const heightMm =
+    input.heightMm === undefined
+      ? undefined
+      : sub.number(input, 'heightMm', { min: 1 });
+  const bezelMm =
+    input.bezelMm === undefined
+      ? undefined
+      : sub.number(input, 'bezelMm', { min: 0, max: 20 });
+  let resolution: [number, number] | undefined;
+  if (input.resolution !== undefined) {
+    if (
+      Array.isArray(input.resolution) &&
+      input.resolution.length === 2 &&
+      input.resolution.every((n) => typeof n === 'number' && n > 0)
+    ) {
+      resolution = input.resolution as [number, number];
+    } else {
+      sub.fail('resolution', 'must be [width, height] pixels');
+    }
+  }
+  const state =
+    input.state === undefined
+      ? undefined
+      : sub.oneOf(input, 'state', DISPLAY_STATES);
   sub.issues.forEach(({ path, message }) =>
     checker.fail(`display.${path}`, message),
   );
-  return { lcd, touchscreen, positionMm };
+  return {
+    lcd,
+    touchscreen,
+    positionMm,
+    widthMm,
+    heightMm,
+    resolution,
+    bezelMm,
+    state,
+  };
 }
 
 function parseMechanical(
@@ -772,10 +1009,24 @@ function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
         : isVec3(entry.positionMm)
           ? entry.positionMm
           : sub.fail('positionMm', 'must be [x, y, z] numbers');
+    const diameterMm =
+      entry.diameterMm === undefined
+        ? undefined
+        : sub.number(entry, 'diameterMm', { min: 0.5, max: 30 });
+    const intensity =
+      entry.intensity === undefined
+        ? undefined
+        : sub.number(entry, 'intensity', { min: 0, max: 10 });
+    const state =
+      entry.state === undefined
+        ? undefined
+        : sub.oneOf(entry, 'state', LED_STATES);
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`leds[${i}].${path}`, message),
     );
-    if (id && label) leds.push({ id, label, kind, color, positionMm });
+    if (id && label) {
+      leds.push({ id, label, kind, color, positionMm, diameterMm, intensity, state });
+    }
   });
   return leds;
 }
@@ -885,6 +1136,10 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
   }
 
   const modelTransform = parseModelTransform(input.modelTransform, c);
+  const modelDetail =
+    input.modelDetail === undefined
+      ? undefined
+      : c.oneOf(input, 'modelDetail', ['full', 'chassis'] as const);
   const ports = parsePorts(input.ports, c);
   const leds = parseLeds(input.leds, c);
   const lighting = parseLighting(input.lighting, c);
@@ -925,6 +1180,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       tags,
       description: description!,
       modelTransform,
+      modelDetail,
       mountingOffsetMm,
       ports,
       leds,

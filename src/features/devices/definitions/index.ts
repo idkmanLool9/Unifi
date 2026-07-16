@@ -7,6 +7,7 @@ import { MIKROTIK_DEVICES } from './mikrotik';
 import { SUPERMICRO_DEVICES } from './supermicro';
 import { HPE_DEVICES } from './hpe';
 import { NETGEAR_DEVICES } from './netgear';
+import { GENERIC_DEVICES } from './generic';
 import type { DeviceDefinition } from '../deviceSchema';
 
 /** All bundled device definitions, grouped for registry seeding. */
@@ -20,4 +21,5 @@ export const BUILTIN_DEFINITIONS: readonly DeviceDefinition[] = [
   ...SUPERMICRO_DEVICES,
   ...HPE_DEVICES,
   ...NETGEAR_DEVICES,
+  ...GENERIC_DEVICES,
 ];

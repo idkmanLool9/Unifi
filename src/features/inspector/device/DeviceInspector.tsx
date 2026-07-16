@@ -3,6 +3,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
+import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
 import { CATEGORY_LABELS } from '@/features/library/catalog';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
@@ -151,6 +152,7 @@ export function DeviceInspector({
     <>
       <ProductSection definition={definition} />
       <PlacementSection instance={instance} definition={definition} />
+      <HardwareSection definition={definition} />
       <SpecsSection definition={definition} />
       <div className="px-3 py-3">
         <button

@@ -2,6 +2,7 @@ import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { MathUtils } from 'three';
 import { useGLTF } from '@react-three/drei';
 import { DevicePlaceholder } from './DevicePlaceholder';
+import { HardwareLayer } from './hardware/HardwareLayer';
 import { deviceModelUrl } from './deviceRegistry';
 import { buildImportReport } from './import/modelImport';
 import { useImportReportStore } from './import/importReportStore';
@@ -129,19 +130,33 @@ export function DeviceModel({ definition }: DeviceModelProps) {
   const availability = useAssetAvailability(url);
 
   if (availability !== 'available') {
-    return <DevicePlaceholder definition={definition} />;
+    // Placeholder chassis + the full metadata-driven hardware layer.
+    return (
+      <>
+        <DevicePlaceholder definition={definition} />
+        <HardwareLayer definition={definition} mode="full" />
+      </>
+    );
   }
 
+  // GLBs marked 'chassis' get the full hardware layer; detailed models
+  // ('full', the default) only receive additive overlays (Etherlighting).
   return (
-    <ModelErrorBoundary
-      key={url}
-      label={`model ${url}`}
-      fallback={<DevicePlaceholder definition={definition} />}
-    >
-      <Suspense fallback={<DevicePlaceholder definition={definition} />}>
-        <LoadedModel url={url} definition={definition} />
-      </Suspense>
-    </ModelErrorBoundary>
+    <>
+      <ModelErrorBoundary
+        key={url}
+        label={`model ${url}`}
+        fallback={<DevicePlaceholder definition={definition} />}
+      >
+        <Suspense fallback={<DevicePlaceholder definition={definition} />}>
+          <LoadedModel url={url} definition={definition} />
+        </Suspense>
+      </ModelErrorBoundary>
+      <HardwareLayer
+        definition={definition}
+        mode={definition.modelDetail === 'chassis' ? 'full' : 'overlay'}
+      />
+    </>
   );
 }
 
