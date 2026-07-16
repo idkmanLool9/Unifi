@@ -15,7 +15,11 @@ import { DeviceModel, ModelErrorBoundary } from './DeviceModel';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { RackSelection } from '@/features/rack/RackSelection';
-import { devicePlacement, MM_TO_M } from '@/features/rack/rackMath';
+import {
+  devicePlacement,
+  MM_TO_M,
+  type RackGeometry,
+} from '@/features/rack/rackMath';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useMenuStore } from '@/stores/menuStore';
@@ -88,9 +92,11 @@ function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
 function MountedDeviceView({
   instance,
   theme,
+  geometry,
 }: {
   instance: PlacedDevice;
   theme: ResolvedTheme;
+  geometry: RackGeometry;
 }) {
   const [hovered, setHovered] = useState(false);
   const modelRef = useRef<Group>(null);
@@ -117,6 +123,7 @@ function MountedDeviceView({
     definition,
     instance.startU,
     instance.facing,
+    geometry,
   );
   const w = definition.widthMm * MM_TO_M;
   const h = definition.heightMm * MM_TO_M;
@@ -184,7 +191,13 @@ function MountedDeviceView({
  * All devices mounted in the rack. Rendered inside the rack's animated
  * group, so devices inherit its entrance and front/rear orientation.
  */
-export function MountedDevices({ theme }: { theme: ResolvedTheme }) {
+export function MountedDevices({
+  theme,
+  geometry,
+}: {
+  theme: ResolvedTheme;
+  geometry: RackGeometry;
+}) {
   const instances = useDeviceInstancesStore((s) => s.instances);
   // Re-render when external definitions finish loading.
   useRegistryStore((s) => s.version);
@@ -196,6 +209,7 @@ export function MountedDevices({ theme }: { theme: ResolvedTheme }) {
           key={instance.id}
           instance={instance}
           theme={theme}
+          geometry={geometry}
         />
       ))}
     </>

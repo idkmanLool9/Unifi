@@ -6,9 +6,13 @@ import type CameraControlsImpl from 'camera-controls';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
-import { rackHeight } from '@/features/rack/rackConstants';
+import { rackGeometry, rackHeightFor } from '@/features/rack/rackMath';
 import { CAMERA, VIEW_POSES } from '@/lib/constants';
-import type { ViewPreset } from '@/types';
+import type { RackConfig, ViewPreset } from '@/types';
+
+/** Overall height of the current rack, profile-aware. */
+const currentRackHeight = (rack: RackConfig): number =>
+  rackHeightFor(rack.units, rackGeometry(rack.profileId, rack.railSpacingMm));
 
 /** Damping used while the user drives the camera. */
 const INTERACTIVE_SMOOTH = 0.18;
@@ -32,7 +36,7 @@ function poseForView(view: ViewPreset): CameraPose {
     return { position: [...p.position], target: [...p.target] };
   }
 
-  const h = rackHeight(rack.units);
+  const h = currentRackHeight(rack);
   const cy = h * 0.5;
   const d = Math.max(1.9, h * 1.3);
   const face = Math.max(2.4, h * 1.7);
@@ -63,7 +67,7 @@ function poseForView(view: ViewPreset): CameraPose {
 function getFitSphere(): Sphere {
   const rack = useRackStore.getState().rack;
   if (!rack) return new Sphere(new Vector3(0, 1, 0), 4.5);
-  const h = rackHeight(rack.units);
+  const h = currentRackHeight(rack);
   const radius = Math.max(h * 0.62, 0.85);
   return new Sphere(new Vector3(0, h / 2, 0), radius);
 }

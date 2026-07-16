@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { RACK_STORE_KEY } from '@/lib/constants';
+import {
+  DEFAULT_PROFILE_ID,
+  defaultRailSpacingMm,
+  getProfile,
+} from '@/features/rack/rackProfiles';
 import type { RackConfig, RackSize } from '@/types';
 
 interface RackState {
@@ -21,6 +26,8 @@ export const useRackStore = create<RackState>()(
         const rack: RackConfig = {
           id: crypto.randomUUID(),
           name: 'Untitled Rack',
+          profileId: DEFAULT_PROFILE_ID,
+          railSpacingMm: defaultRailSpacingMm(getProfile(DEFAULT_PROFILE_ID)),
           units,
           finish: 'graphite',
           orientation: 'front',
@@ -39,7 +46,21 @@ export const useRackStore = create<RackState>()(
     }),
     {
       name: RACK_STORE_KEY,
+      version: 2,
       partialize: (s) => ({ rack: s.rack }),
+      // v1 racks predate rack profiles: adopt the default open frame at
+      // the legacy 700mm rail spacing.
+      migrate: (persisted) => {
+        const state = persisted as { rack?: RackConfig | null };
+        if (state?.rack && state.rack.profileId === undefined) {
+          state.rack = {
+            ...state.rack,
+            profileId: DEFAULT_PROFILE_ID,
+            railSpacingMm: 700,
+          };
+        }
+        return state;
+      },
     },
   ),
 );

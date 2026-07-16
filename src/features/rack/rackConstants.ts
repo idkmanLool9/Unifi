@@ -19,8 +19,6 @@ export const RACK_DIMS = {
   webT: 0.012,
   /** How far the web extends behind the flange. */
   webD: 0.06,
-  /** Front-to-rear upright spacing, center to center. */
-  depth: 0.7,
   /** Height of the base plinth. */
   baseH: 0.075,
   /** Leveling feet height. */
@@ -32,10 +30,6 @@ export const RACK_DIMS = {
 /** Overall frame width (opening + two uprights). */
 export const rackOuterWidth = (): number =>
   RACK_DIMS.opening + 2 * RACK_DIMS.uprightW;
-
-/** Overall footprint depth including upright columns. */
-export const rackOuterDepth = (): number =>
-  RACK_DIMS.depth + RACK_DIMS.uprightD;
 
 /** Y position where the rails (U1) begin. */
 export const railBaseY = (): number => RACK_DIMS.feetH + RACK_DIMS.baseH;

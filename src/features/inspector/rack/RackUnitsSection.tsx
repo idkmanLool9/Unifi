@@ -1,7 +1,7 @@
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InfoRow } from '../InfoRow';
 import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
-import { occupiedUnits } from '@/features/rack/rackMath';
+import { occupiedUnits, rackGeometry } from '@/features/rack/rackMath';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import type { RackConfig } from '@/types';
 
@@ -11,6 +11,8 @@ export function RackUnitsSection({ rack }: { rack: RackConfig }) {
 
   const occupied = occupiedUnits({
     rackUnits: rack.units,
+    usableDepthMm:
+      rackGeometry(rack.profileId, rack.railSpacingMm).usableDepthM * 1000,
     instances,
     getDefinition: getDevice,
   });

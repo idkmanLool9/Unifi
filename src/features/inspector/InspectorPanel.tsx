@@ -16,6 +16,7 @@ import { QuickActionsSection } from './sections/QuickActionsSection';
 import { ActivitySection } from './sections/ActivitySection';
 import { RackSection } from './rack/RackSection';
 import { DimensionsSection } from './rack/DimensionsSection';
+import { RailsSection } from './rack/RailsSection';
 import { RackUnitsSection } from './rack/RackUnitsSection';
 import { AppearanceSection } from './rack/AppearanceSection';
 import { VisibilitySection } from './rack/VisibilitySection';
@@ -116,6 +117,7 @@ export function InspectorPanel() {
                   <>
                     <RackSection rack={rack} />
                     <DimensionsSection rack={rack} />
+                    <RailsSection rack={rack} />
                     <RackUnitsSection rack={rack} />
                     <AppearanceSection rack={rack} />
                     <VisibilitySection rack={rack} />

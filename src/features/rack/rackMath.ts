@@ -1,38 +1,114 @@
 import { RACK_DIMS, U_METERS, railBaseY } from './rackConstants';
+import {
+  clampRailSpacingMm,
+  getProfile,
+  type RackProfile,
+  type RackProfileId,
+} from './rackProfiles';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
 import type { RackOrientation, RackSize } from '@/types';
 
 /** Millimeters to meters. */
 export const MM_TO_M = 0.001;
 
-/** Z of the front mounting plane (outer face of the front rails). */
-export const frontRailPlaneZ = (): number =>
-  RACK_DIMS.depth / 2 + RACK_DIMS.uprightD / 2;
-
 /**
- * Usable mounting depth in millimeters: front rail plane to the rear rail
- * plane. Devices deeper than this cannot be mounted in the open frame.
+ * Resolved physical geometry for a rack instance. Distinguishes the
+ * quantities the engine previously conflated: enclosure (external) depth,
+ * the two rail mounting planes, rail spacing and usable device depth.
+ * All values in meters, world-space (rack centered at x = z = 0).
  */
-export const usableDepthMm = (): number =>
-  (RACK_DIMS.depth + RACK_DIMS.uprightD) / MM_TO_M;
+export interface RackGeometry {
+  profile: RackProfile;
+  externalDepthM: number;
+  externalWidthM: number;
+  /** Front mounting plane (devices' faceplates sit flush here). */
+  frontRailZ: number;
+  /** Rear mounting plane (rear-facing devices sit flush here). */
+  rearRailZ: number;
+  railSpacingM: number;
+  /** Deepest mountable device. */
+  usableDepthM: number;
+  /** Center z of the front / rear corner posts. */
+  postFrontZ: number;
+  postRearZ: number;
+  /** True when rails are separate from the corner posts (cabinet). */
+  hasInnerRails: boolean;
+  /** Y where U1 begins (compact bases sit lower). */
+  railBaseYM: number;
+}
+
+/** Clearance kept behind a cabinet's interior for cabling. */
+const CABINET_REAR_GAP_M = 0.05;
+/** Compact (desktop) base height, feet included. */
+const COMPACT_BASE_Y = 0.03;
+
+export function rackGeometry(
+  profileId: RackProfileId,
+  railSpacingMm?: number,
+): RackGeometry {
+  const profile = getProfile(profileId);
+  const spacingM =
+    clampRailSpacingMm(profile, railSpacingMm ?? profile.fixedRailSpacingMm) *
+    MM_TO_M;
+  const insetM = profile.frontRailInsetMm * MM_TO_M;
+  const hasInnerRails = insetM > 0;
+
+  // Open frames adjust depth by moving the rear posts: the enclosure IS
+  // the rail spacing. Cabinets have a fixed enclosure with rails inside.
+  const externalDepthM = hasInnerRails
+    ? profile.externalDepthMm * MM_TO_M
+    : spacingM;
+
+  const frontRailZ = externalDepthM / 2 - insetM;
+  const rearRailZ = frontRailZ - spacingM;
+  const usableDepthM = hasInnerRails
+    ? externalDepthM - insetM - CABINET_REAR_GAP_M
+    : spacingM;
+
+  return {
+    profile,
+    externalDepthM,
+    externalWidthM: profile.externalWidthMm * MM_TO_M,
+    frontRailZ,
+    rearRailZ,
+    railSpacingM: spacingM,
+    usableDepthM,
+    postFrontZ: externalDepthM / 2 - RACK_DIMS.uprightD / 2,
+    postRearZ: -(externalDepthM / 2 - RACK_DIMS.uprightD / 2),
+    hasInnerRails,
+    railBaseYM:
+      profile.baseType === 'compact-feet' ? COMPACT_BASE_Y : railBaseY(),
+  };
+}
+
+/** Overall rack height for a profile, floor to top of frame. */
+export const rackHeightFor = (
+  units: RackSize,
+  geometry: RackGeometry,
+): number => geometry.railBaseYM + units * U_METERS + RACK_DIMS.topH;
 
 /** World Y of the bottom of a U slot (U1 = 1, counted from the bottom). */
-export const uSlotY = (startU: number): number =>
-  railBaseY() + (startU - 1) * U_METERS;
+export const uSlotY = (startU: number, railBaseYM = railBaseY()): number =>
+  railBaseYM + (startU - 1) * U_METERS;
 
-/** World-space center position for a mounted device. */
+/** World-space center position for a mounted device. Devices mount to a
+ *  single rail plane (front or rear) and extend inward from it — they are
+ *  never stretched between the two planes. */
 export function devicePlacement(
   definition: DeviceDefinition,
   startU: number,
   facing: RackOrientation,
+  geometry: RackGeometry,
 ): { position: [number, number, number]; rotationY: number } {
   const y =
-    uSlotY(startU) +
+    uSlotY(startU, geometry.railBaseYM) +
     (definition.rackUnits * U_METERS) / 2 +
     definition.mountingOffsetMm * MM_TO_M;
   const halfDepth = (definition.depthMm * MM_TO_M) / 2;
-  const plane = frontRailPlaneZ();
-  const z = facing === 'front' ? plane - halfDepth : -plane + halfDepth;
+  const z =
+    facing === 'front'
+      ? geometry.frontRailZ - halfDepth
+      : geometry.rearRailZ + halfDepth;
   return {
     position: [0, y, z],
     rotationY: facing === 'front' ? 0 : Math.PI,
@@ -62,6 +138,8 @@ export type PlacementResult =
 
 export interface PlacementContext {
   rackUnits: RackSize;
+  /** Deepest device the rack's current rail configuration accepts. */
+  usableDepthMm: number;
   instances: readonly PlacedDevice[];
   getDefinition: (id: string) => DeviceDefinition | undefined;
 }
@@ -139,11 +217,11 @@ export function validatePlacement(
     };
   }
 
-  if (definition.depthMm > usableDepthMm()) {
+  if (definition.depthMm > ctx.usableDepthMm) {
     return {
       ok: false,
       reason: 'too-deep',
-      message: `${definition.productName} is ${definition.depthMm} mm deep — deeper than this rack's ${Math.round(usableDepthMm())} mm mounting depth.`,
+      message: `${definition.productName} is ${definition.depthMm} mm deep — deeper than this rack's ${Math.round(ctx.usableDepthMm)} mm usable depth.`,
     };
   }
 

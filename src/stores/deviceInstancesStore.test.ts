@@ -8,6 +8,8 @@ function seedRack(units: 6 | 12 | 42 = 12) {
     rack: {
       id: 'rack-1',
       name: 'Test Rack',
+      profileId: 'open-frame-700',
+      railSpacingMm: 700,
       units,
       finish: 'graphite',
       orientation: 'front',

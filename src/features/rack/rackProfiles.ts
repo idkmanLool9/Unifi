@@ -1,0 +1,166 @@
+import type { RackSize } from '@/types';
+
+/**
+ * Production rack profiles. A profile separates the quantities that the
+ * previous single-constant rack conflated:
+ *
+ * - external (enclosure) depth — outermost front-to-back extent
+ * - front rail plane — mounting face position, inset from the front face
+ * - rear rail plane — front rail plane minus the rail spacing
+ * - rail spacing — distance between the two mounting planes
+ * - usable device depth — deepest device the rack accepts
+ *
+ * All values in millimeters.
+ */
+
+export type RackProfileId =
+  | 'open-frame-600'
+  | 'open-frame-700'
+  | 'open-frame-800'
+  | 'cabinet-42u'
+  | 'unifi-minirack'
+  | 'custom';
+
+export type EnclosureType = 'open-frame' | 'cabinet' | 'desktop-frame';
+export type RackBaseType = 'plinth-feet' | 'compact-feet';
+
+export interface RailSpacingRange {
+  minMm: number;
+  maxMm: number;
+  defaultMm: number;
+}
+
+export interface RackProfile {
+  id: RackProfileId;
+  name: string;
+  enclosure: EnclosureType;
+  /** Rack-unit heights this profile is manufactured in. */
+  allowedUnits: readonly RackSize[];
+  externalWidthMm: number;
+  externalDepthMm: number;
+  /** Front rail plane inset from the enclosure front face. */
+  frontRailInsetMm: number;
+  /** Adjustable rail-to-rail spacing, or null when the rails are fixed. */
+  railSpacingRange: RailSpacingRange | null;
+  /** Fixed rail spacing when railSpacingRange is null. */
+  fixedRailSpacingMm: number;
+  /** Deepest mountable device at the default rail configuration. */
+  nominalUsableDepthMm: number;
+  loadRatingKg: number;
+  baseType: RackBaseType;
+  description: string;
+}
+
+const ALL_UNITS: readonly RackSize[] = [6, 9, 12, 18, 24, 42];
+
+export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
+  'open-frame-600': {
+    id: 'open-frame-600',
+    name: 'Open Frame 600',
+    enclosure: 'open-frame',
+    allowedUnits: ALL_UNITS,
+    externalWidthMm: 574.8,
+    externalDepthMm: 600,
+    frontRailInsetMm: 0,
+    railSpacingRange: { minMm: 400, maxMm: 600, defaultMm: 600 },
+    fixedRailSpacingMm: 600,
+    nominalUsableDepthMm: 600,
+    loadRatingKg: 320,
+    baseType: 'plinth-feet',
+    description: 'Short-depth 4-post frame for network gear.',
+  },
+  'open-frame-700': {
+    id: 'open-frame-700',
+    name: 'Open Frame 700',
+    enclosure: 'open-frame',
+    allowedUnits: ALL_UNITS,
+    externalWidthMm: 574.8,
+    externalDepthMm: 700,
+    frontRailInsetMm: 0,
+    railSpacingRange: { minMm: 400, maxMm: 700, defaultMm: 700 },
+    fixedRailSpacingMm: 700,
+    nominalUsableDepthMm: 700,
+    loadRatingKg: 350,
+    baseType: 'plinth-feet',
+    description: 'General-purpose 4-post open frame.',
+  },
+  'open-frame-800': {
+    id: 'open-frame-800',
+    name: 'Open Frame 800',
+    enclosure: 'open-frame',
+    allowedUnits: ALL_UNITS,
+    externalWidthMm: 574.8,
+    externalDepthMm: 800,
+    frontRailInsetMm: 0,
+    railSpacingRange: { minMm: 450, maxMm: 800, defaultMm: 800 },
+    fixedRailSpacingMm: 800,
+    nominalUsableDepthMm: 800,
+    loadRatingKg: 400,
+    baseType: 'plinth-feet',
+    description: 'Deep 4-post frame for full-depth servers.',
+  },
+  'cabinet-42u': {
+    id: 'cabinet-42u',
+    name: '42U Cabinet',
+    enclosure: 'cabinet',
+    allowedUnits: [42],
+    externalWidthMm: 600,
+    externalDepthMm: 1000,
+    frontRailInsetMm: 100,
+    railSpacingRange: { minMm: 550, maxMm: 850, defaultMm: 750 },
+    fixedRailSpacingMm: 750,
+    nominalUsableDepthMm: 850,
+    loadRatingKg: 1000,
+    baseType: 'plinth-feet',
+    description: 'Full-height enclosure with adjustable inner rails.',
+  },
+  'unifi-minirack': {
+    id: 'unifi-minirack',
+    name: 'Toolless Mini Rack',
+    enclosure: 'desktop-frame',
+    allowedUnits: [6],
+    externalWidthMm: 574.8,
+    externalDepthMm: 400,
+    frontRailInsetMm: 0,
+    railSpacingRange: null,
+    fixedRailSpacingMm: 400,
+    nominalUsableDepthMm: 400,
+    loadRatingKg: 25,
+    baseType: 'compact-feet',
+    description: 'Desk-friendly 6U frame with fixed toolless rails.',
+  },
+  custom: {
+    id: 'custom',
+    name: 'Custom Rack',
+    enclosure: 'open-frame',
+    allowedUnits: ALL_UNITS,
+    externalWidthMm: 574.8,
+    externalDepthMm: 750,
+    frontRailInsetMm: 0,
+    railSpacingRange: { minMm: 300, maxMm: 900, defaultMm: 750 },
+    fixedRailSpacingMm: 750,
+    nominalUsableDepthMm: 750,
+    loadRatingKg: 500,
+    baseType: 'plinth-feet',
+    description: 'Fully adjustable frame for special builds.',
+  },
+};
+
+export const DEFAULT_PROFILE_ID: RackProfileId = 'open-frame-700';
+
+export const getProfile = (id: RackProfileId): RackProfile =>
+  RACK_PROFILES[id];
+
+/** Default rail spacing for a profile (range default or fixed value). */
+export const defaultRailSpacingMm = (profile: RackProfile): number =>
+  profile.railSpacingRange?.defaultMm ?? profile.fixedRailSpacingMm;
+
+/** Clamp a requested rail spacing to the profile's supported range. */
+export function clampRailSpacingMm(
+  profile: RackProfile,
+  spacingMm: number,
+): number {
+  const range = profile.railSpacingRange;
+  if (!range) return profile.fixedRailSpacingMm;
+  return Math.min(range.maxMm, Math.max(range.minMm, Math.round(spacingMm)));
+}

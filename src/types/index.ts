@@ -48,6 +48,10 @@ export type RackOrientation = 'front' | 'rear';
 export interface RackConfig {
   id: string;
   name: string;
+  /** Physical rack profile (see features/rack/rackProfiles). */
+  profileId: import('@/features/rack/rackProfiles').RackProfileId;
+  /** Current rail-to-rail spacing; clamped to the profile's range. */
+  railSpacingMm: number;
   units: RackSize;
   finish: RackFinishId;
   orientation: RackOrientation;
