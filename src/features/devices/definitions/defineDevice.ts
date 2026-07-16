@@ -2,6 +2,7 @@ import type {
   DeviceDefinition,
   DevicePresentation,
   LedDefinition,
+  LightingCapabilities,
   ModelTransform,
   PortDefinition,
 } from '../deviceSchema';
@@ -32,6 +33,7 @@ export interface DeviceSeed {
   mountingOffsetMm?: number;
   ports?: PortDefinition[];
   leds?: LedDefinition[];
+  lighting?: LightingCapabilities;
 }
 
 /** Standard 19in faceplate body width (fits the 450.8mm EIA opening). */

@@ -1,3 +1,6 @@
 {
-  "devices": ["ubiquiti/dream-machine-pro"]
+  "devices": [
+    "ubiquiti/dream-machine-pro",
+    "ubiquiti/pro-max-24-poe"
+  ]
 }

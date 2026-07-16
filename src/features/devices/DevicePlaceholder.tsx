@@ -64,7 +64,9 @@ export function DevicePlaceholder({
   useEffect(() => () => labelTexture.dispose(), [labelTexture]);
 
   const faceD = 0.004;
-  const labelW = Math.min(w * 0.45, 0.2);
+  // 4:1 label plate, never taller than 55% of the chassis face.
+  const labelH = Math.min(Math.min(w * 0.45, 0.2) / 4, h * 0.55);
+  const labelW = labelH * 4;
 
   return (
     <group>
@@ -89,7 +91,7 @@ export function DevicePlaceholder({
       />
       {/* Silkscreen model label */}
       <mesh position={[-w / 2 + labelW / 2 + 0.012, 0, d / 2 + 0.0006]}>
-        <planeGeometry args={[labelW, labelW / 4]} />
+        <planeGeometry args={[labelW, labelH]} />
         <meshBasicMaterial
           map={labelTexture}
           transparent

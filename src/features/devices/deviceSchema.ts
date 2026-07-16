@@ -53,14 +53,51 @@ export interface PortDefinition {
   count: number;
   /** Optional position of the group's first port, mm from faceplate center. */
   positionMm?: [number, number, number];
+  /** Center-to-center spacing between ports in this group, mm. */
+  pitchMm?: number;
+  /** Front-panel row index (0 = top) for multi-row port blocks. */
+  row?: number;
+  /** Negotiated-link speed class of this group, in Gbps. */
+  speedGbps?: number;
+  /** Group supplies PoE. */
+  poe?: boolean;
+  /** Ports in this group carry an Etherlighting RGB ring. */
+  etherlighting?: boolean;
 }
+
+export const LED_KINDS = ['status', 'link', 'activity', 'poe', 'other'] as const;
+export type LedKind = (typeof LED_KINDS)[number];
 
 /** Future status-visualization hook. */
 export interface LedDefinition {
   id: string;
   label: string;
+  kind?: LedKind;
   color?: string;
   positionMm?: [number, number, number];
+}
+
+/**
+ * Device lighting capabilities — future-facing metadata the renderer will
+ * consume to drive Etherlighting rings, per-port link LEDs, speed colors,
+ * PoE indication, selection highlights and animated effects. Purely
+ * declarative: no runtime behavior is attached yet.
+ */
+export interface LightingCapabilities {
+  /** RGB illumination ring around every Etherlighting-flagged RJ45 port. */
+  etherlighting: boolean;
+  /** Individual link/activity LED per port. */
+  perPortLink: boolean;
+  /** PoE delivery indication per powered port. */
+  poeIndicator: boolean;
+  /** Link-speed color mapping, keyed by speed class (e.g. '1g', '2.5g'). */
+  speedColors: Record<string, string>;
+  /** Accent used when a port is selected in the UI. */
+  portHighlightColor?: string;
+  /** Primary device status LED. */
+  statusLed?: { color: string; positionMm?: [number, number, number] };
+  /** Identifiers of future animated effects (not implemented yet). */
+  effects: string[];
 }
 
 /** Corrections applied to the loaded GLB — metadata is the source of truth. */
@@ -109,6 +146,7 @@ export interface DeviceDefinition {
   mountingOffsetMm: number;
   ports: PortDefinition[];
   leds: LedDefinition[];
+  lighting?: LightingCapabilities;
   presentation: DevicePresentation;
 }
 
@@ -163,6 +201,18 @@ class Checker {
     if (value === undefined) return undefined;
     if (typeof value !== 'string' || value.trim() === '') {
       return this.fail(path, 'must be a non-empty string when present');
+    }
+    return value;
+  }
+
+  optionalBoolean(
+    source: Record<string, unknown>,
+    path: string,
+  ): boolean | undefined {
+    const value = source[path];
+    if (value === undefined) return undefined;
+    if (typeof value !== 'boolean') {
+      return this.fail(path, 'must be a boolean when present');
     }
     return value;
   }
@@ -274,14 +324,112 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         : isVec3(entry.positionMm)
           ? entry.positionMm
           : sub.fail('positionMm', 'must be [x, y, z] numbers');
+    const pitchMm =
+      entry.pitchMm === undefined
+        ? undefined
+        : sub.number(entry, 'pitchMm', { min: 0.1 });
+    const row =
+      entry.row === undefined
+        ? undefined
+        : sub.number(entry, 'row', { min: 0, integer: true });
+    const speedGbps =
+      entry.speedGbps === undefined
+        ? undefined
+        : sub.number(entry, 'speedGbps', { min: 0.01 });
+    const poe = sub.optionalBoolean(entry, 'poe');
+    const etherlighting = sub.optionalBoolean(entry, 'etherlighting');
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
     if (id && type && count !== undefined) {
-      ports.push({ id, type, count, label, positionMm });
+      ports.push({
+        id,
+        type,
+        count,
+        label,
+        positionMm,
+        pitchMm,
+        row,
+        speedGbps,
+        poe,
+        etherlighting,
+      });
     }
   });
   return ports;
+}
+
+function parseLighting(
+  input: unknown,
+  checker: Checker,
+): LightingCapabilities | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('lighting', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const etherlighting = sub.optionalBoolean(input, 'etherlighting') ?? false;
+  const perPortLink = sub.optionalBoolean(input, 'perPortLink') ?? false;
+  const poeIndicator = sub.optionalBoolean(input, 'poeIndicator') ?? false;
+  const portHighlightColor = sub.optionalString(input, 'portHighlightColor');
+
+  let speedColors: Record<string, string> = {};
+  if (input.speedColors !== undefined) {
+    if (
+      isRecord(input.speedColors) &&
+      Object.values(input.speedColors).every((v) => typeof v === 'string')
+    ) {
+      speedColors = input.speedColors as Record<string, string>;
+    } else {
+      sub.fail('speedColors', 'must map speed classes to color strings');
+    }
+  }
+
+  let statusLed: LightingCapabilities['statusLed'];
+  if (input.statusLed !== undefined) {
+    if (isRecord(input.statusLed)) {
+      const ledSub = new Checker();
+      const color = ledSub.string(input.statusLed, 'color');
+      const positionMm =
+        input.statusLed.positionMm === undefined
+          ? undefined
+          : isVec3(input.statusLed.positionMm)
+            ? input.statusLed.positionMm
+            : ledSub.fail('positionMm', 'must be [x, y, z] numbers');
+      ledSub.issues.forEach(({ path, message }) =>
+        sub.fail(`statusLed.${path}`, message),
+      );
+      if (color) statusLed = { color, positionMm };
+    } else {
+      sub.fail('statusLed', 'must be an object');
+    }
+  }
+
+  let effects: string[] = [];
+  if (input.effects !== undefined) {
+    if (
+      Array.isArray(input.effects) &&
+      input.effects.every((e): e is string => typeof e === 'string')
+    ) {
+      effects = input.effects;
+    } else {
+      sub.fail('effects', 'must be an array of strings');
+    }
+  }
+
+  sub.issues.forEach(({ path, message }) =>
+    checker.fail(`lighting.${path}`, message),
+  );
+  return {
+    etherlighting,
+    perPortLink,
+    poeIndicator,
+    speedColors,
+    portHighlightColor,
+    statusLed,
+    effects,
+  };
 }
 
 function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
@@ -299,6 +447,8 @@ function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
     const sub = new Checker();
     const id = sub.string(entry, 'id');
     const label = sub.string(entry, 'label');
+    const kind =
+      entry.kind === undefined ? undefined : sub.oneOf(entry, 'kind', LED_KINDS);
     const color = sub.optionalString(entry, 'color');
     const positionMm =
       entry.positionMm === undefined
@@ -309,7 +459,7 @@ function parseLeds(input: unknown, checker: Checker): LedDefinition[] {
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`leds[${i}].${path}`, message),
     );
-    if (id && label) leds.push({ id, label, color, positionMm });
+    if (id && label) leds.push({ id, label, kind, color, positionMm });
   });
   return leds;
 }
@@ -421,6 +571,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
   const modelTransform = parseModelTransform(input.modelTransform, c);
   const ports = parsePorts(input.ports, c);
   const leds = parseLeds(input.leds, c);
+  const lighting = parseLighting(input.lighting, c);
   const presentation = parsePresentation(input.presentation, c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
@@ -453,6 +604,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       mountingOffsetMm,
       ports,
       leds,
+      lighting,
       presentation,
     },
   };

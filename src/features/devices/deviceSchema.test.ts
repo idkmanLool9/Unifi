@@ -94,6 +94,66 @@ describe('validateDeviceDefinition', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('parses extended port metadata (speed, PoE, Etherlighting, pitch)', () => {
+    const result = validateDeviceDefinition({
+      ...VALID_INPUT,
+      ports: [
+        {
+          id: 'gbe',
+          type: 'rj45',
+          count: 16,
+          pitchMm: 17.9,
+          speedGbps: 1,
+          poe: true,
+          etherlighting: true,
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.ports[0]).toMatchObject({
+      speedGbps: 1,
+      poe: true,
+      etherlighting: true,
+      pitchMm: 17.9,
+    });
+  });
+
+  it('parses lighting capabilities with defaults and rejects bad shapes', () => {
+    const ok = validateDeviceDefinition({
+      ...VALID_INPUT,
+      lighting: {
+        etherlighting: true,
+        perPortLink: true,
+        poeIndicator: true,
+        speedColors: { '1g': '#9aa3ad', '10g': '#7c5cff' },
+        statusLed: { color: '#4c82f7', positionMm: [205, 8, 162.5] },
+        effects: ['breathe'],
+      },
+    });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.value.lighting?.etherlighting).toBe(true);
+      expect(ok.value.lighting?.speedColors['10g']).toBe('#7c5cff');
+      expect(ok.value.lighting?.statusLed?.positionMm).toEqual([205, 8, 162.5]);
+    }
+
+    // Omitted lighting stays undefined (no capabilities claimed).
+    const none = validateDeviceDefinition(VALID_INPUT);
+    expect(none.ok && none.value.lighting).toBeUndefined();
+
+    const bad = validateDeviceDefinition({
+      ...VALID_INPUT,
+      lighting: { speedColors: { '1g': 42 }, effects: 'rainbow' },
+    });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) {
+      const paths = bad.issues.map((i) => i.path);
+      expect(paths).toContain('lighting.speedColors');
+      expect(paths).toContain('lighting.effects');
+    }
+  });
+
   it('accepts per-axis scale and rejects malformed axis scales', () => {
     const ok = validateDeviceDefinition({
       ...VALID_INPUT,
