@@ -65,7 +65,9 @@ export interface LedDefinition {
 
 /** Corrections applied to the loaded GLB — metadata is the source of truth. */
 export interface ModelTransform {
-  scale: number;
+  /** Uniform scale, or per-axis [x, y, z] when a source model's axes were
+   *  exported at inconsistent units. */
+  scale: number | [number, number, number];
   rotationDeg: [number, number, number];
   offsetMm: [number, number, number];
 }
@@ -215,14 +217,21 @@ function parseModelTransform(
     checker.fail('modelTransform', 'must be an object');
     return fallback;
   }
+  const isPositive = (n: unknown): n is number =>
+    typeof n === 'number' && Number.isFinite(n) && n > 0;
   const scale =
     input.scale === undefined
       ? 1
-      : typeof input.scale === 'number' &&
-          Number.isFinite(input.scale) &&
-          input.scale > 0
+      : isPositive(input.scale)
         ? input.scale
-        : checker.fail('modelTransform.scale', 'must be a positive number');
+        : Array.isArray(input.scale) &&
+            input.scale.length === 3 &&
+            input.scale.every(isPositive)
+          ? (input.scale as [number, number, number])
+          : checker.fail(
+              'modelTransform.scale',
+              'must be a positive number or [x, y, z] of positive numbers',
+            );
   const rotationDeg =
     input.rotationDeg === undefined
       ? ([0, 0, 0] as [number, number, number])

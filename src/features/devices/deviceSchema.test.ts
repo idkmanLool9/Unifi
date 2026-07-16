@@ -93,4 +93,21 @@ describe('validateDeviceDefinition', () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  it('accepts per-axis scale and rejects malformed axis scales', () => {
+    const ok = validateDeviceDefinition({
+      ...VALID_INPUT,
+      modelTransform: { scale: [0.001, 0.001, 0.002] },
+    });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.value.modelTransform.scale).toEqual([0.001, 0.001, 0.002]);
+
+    for (const bad of [[1, 1], [1, 0, 1], ['1', 1, 1]]) {
+      const result = validateDeviceDefinition({
+        ...VALID_INPUT,
+        modelTransform: { scale: bad },
+      });
+      expect(result.ok).toBe(false);
+    }
+  });
 });

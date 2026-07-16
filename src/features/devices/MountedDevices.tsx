@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Group } from 'three';
 import { type ThreeEvent } from '@react-three/fiber';
+import { DEBUG_BOUNDS_ENABLED, DebugBounds } from './DebugBounds';
 import {
   ArrowDown,
   ArrowUp,
@@ -91,6 +93,7 @@ function MountedDeviceView({
   theme: ResolvedTheme;
 }) {
   const [hovered, setHovered] = useState(false);
+  const modelRef = useRef<Group>(null);
   const selected = useSelectionStore(
     (s) =>
       s.selection?.kind === 'device' &&
@@ -145,13 +148,22 @@ function MountedDeviceView({
       onPointerOut={() => setHovered(false)}
     >
       {/* Nothing a single device does may blank the scene. */}
-      <ModelErrorBoundary
-        key={`${instance.id}-${instance.definitionId}`}
-        label={`device ${definition.productName}`}
-        fallback={<DevicePlaceholder definition={definition} />}
-      >
-        <DeviceModel definition={definition} />
-      </ModelErrorBoundary>
+      <group ref={modelRef}>
+        <ModelErrorBoundary
+          key={`${instance.id}-${instance.definitionId}`}
+          label={`device ${definition.productName}`}
+          fallback={<DevicePlaceholder definition={definition} />}
+        >
+          <DeviceModel definition={definition} />
+        </ModelErrorBoundary>
+      </group>
+      {DEBUG_BOUNDS_ENABLED && (
+        <DebugBounds
+          target={modelRef}
+          expectedMm={[definition.widthMm, definition.heightMm, definition.depthMm]}
+          label={`${definition.productName} @ U${instance.startU}`}
+        />
+      )}
       {(selected || hovered) && (
         <group position={[0, -h / 2, 0]}>
           <RackSelection
