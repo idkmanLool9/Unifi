@@ -11,6 +11,11 @@
       "@/*": ["./src/*"]
     },
 
+    // Node types are needed by tests that read shipped assets (e.g.
+    // external device metadata validation); app code must not rely on
+    // Node globals — the bundler build would fail anyway.
+    "types": ["vite/client", "node"],
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
