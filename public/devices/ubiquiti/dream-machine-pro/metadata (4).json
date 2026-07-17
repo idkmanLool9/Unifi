@@ -1,0 +1,265 @@
+{
+  "id": "ubnt-udm-pro",
+  "slug": "dream-machine-pro",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "Dream Machine Pro",
+  "modelNumber": "UDM-Pro",
+  "category": "routing",
+  "rackUnits": 1,
+  "widthMm": 442.4,
+  "heightMm": 43.7,
+  "depthMm": 285.6,
+  "weightKg": 3.9,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 33,
+  "maximumPowerWatts": 50,
+  "tags": [
+    "gateway",
+    "unifi",
+    "10g",
+    "popular"
+  ],
+  "description": "All-in-one enterprise gateway with integrated switching, protect NVR and 10G uplinks.",
+  "modelTransform": {
+    "scale": 1,
+    "rotationDeg": [
+      0,
+      -90,
+      0
+    ],
+    "offsetMm": [
+      0,
+      -22.5,
+      0
+    ]
+  },
+  "mountingOffsetMm": 0,
+  "portsAuthored": true,
+  "ports": [
+    {
+      "id": "lan-bottom-4-1",
+      "type": "rj45",
+      "count": 1,
+      "label": "LAN 5–8",
+      "location": "front",
+      "positionMm": [
+        142.28,
+        -7,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "wan-1-1",
+      "type": "rj45",
+      "count": 1,
+      "label": "WAN",
+      "location": "front",
+      "positionMm": [
+        173.62,
+        -6.06,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        16.68,
+        13.69
+      ]
+    },
+    {
+      "id": "sfp-lan-1-1",
+      "type": "sfp+",
+      "count": 1,
+      "label": "SFP+ LAN",
+      "location": "front",
+      "positionMm": [
+        192.01,
+        7.72,
+        143
+      ],
+      "speedGbps": 10
+    },
+    {
+      "id": "sfp-wan-1-1",
+      "type": "sfp+",
+      "count": 1,
+      "label": "SFP+ WAN",
+      "location": "front",
+      "positionMm": [
+        191.98,
+        -7.61,
+        143
+      ],
+      "speedGbps": 10,
+      "sizeMm": [
+        14.5,
+        11.63
+      ]
+    },
+    {
+      "id": "rj45-1-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        126.26,
+        -7,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-2-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        110.63,
+        -7,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-3-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        95.07,
+        -7,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-4-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        110.48,
+        6.86,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-5-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        126.27,
+        6.86,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-6-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        142.32,
+        6.86,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-7-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        94.9,
+        6.86,
+        143
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    }
+  ],
+  "leds": [
+    {
+      "id": "status",
+      "label": "Status ring",
+      "color": "#4c82f7"
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "ac",
+        "type": "c14",
+        "count": 1,
+        "location": "rear"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "cooling": {
+    "fanCount": 2,
+    "airflow": "front-to-rear",
+    "fanDiameterMm": 40
+  },
+  "display": {
+    "lcd": true,
+    "positionMm": [
+      -206,
+      0,
+      143
+    ],
+    "widthMm": 33,
+    "heightMm": 33,
+    "resolution": [
+      240,
+      240
+    ],
+    "bezelMm": 3
+  },
+  "presentation": {
+    "faceplate": "network",
+    "tone": "dark",
+    "badge": "popular",
+    "portsLabel": "10 ports",
+    "speedLabel": "10G SFP+"
+  }
+}
