@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
+import { CableManagementSection } from './CableManagementSection';
 import { ConnectionsSection } from './ConnectionsSection';
 import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
@@ -152,6 +153,9 @@ export function DeviceInspector({
     <>
       <ProductSection definition={definition} />
       <PlacementSection instance={instance} definition={definition} />
+      {definition.cableManagement && (
+        <CableManagementSection instance={instance} definition={definition} />
+      )}
       <ConnectionsSection instanceId={instance.id} />
       <HardwareSection definition={definition} />
       <SpecsSection definition={definition} />

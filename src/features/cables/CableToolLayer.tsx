@@ -13,6 +13,7 @@ import {
   MeshBasicMaterial,
   Plane,
   Raycaster,
+  SphereGeometry,
   Vector3,
 } from 'three';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
@@ -30,6 +31,12 @@ import {
 import { CABLE_CATALOG } from './cableCatalog';
 import { formatLength } from './compatibility';
 import { computeRoute, recommendLengthMm } from './routing';
+import {
+  buildRoutingGraph,
+  occupancyFromCables,
+  planManagedRoute,
+} from './engine/managedRouting';
+import { useRoutingRulesStore } from '@/stores/routingRulesStore';
 import { etherlightingColor } from '@/features/devices/hardware/physicalPorts';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
@@ -307,37 +314,66 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
         : null,
   };
 
-  // Live length estimate for the pending connection: the auto route
-  // between the armed source and the hovered port, plus the standard
-  // length that would be picked for it.
+  // Live prediction for the pending connection: the REAL route the
+  // engine would build — through management hardware when available —
+  // plus length, node markers and warnings, updating as the cursor
+  // moves between ports.
   const estimate = useMemo(() => {
     if (!source || !hovered || hovered === source) return null;
     if (!hoverInfo?.reason || hoverInfo.reason.level === 'invalid') return null;
-    const route = computeRoute({
-      source: {
-        surface: source.position,
-        anchor: source.anchor,
-        exitDir: [0, 0, source.out],
-      },
-      destination: {
-        surface: hovered.position,
-        anchor: hovered.anchor,
-        exitDir: [0, 0, hovered.out],
-      },
-      mode: 'auto',
-      slack: 'normal',
-      nominalLengthMm: 0,
-      minBendRadiusMm: 25,
-      geometry,
-    });
+    const src = {
+      surface: source.position,
+      anchor: source.anchor,
+      exitDir: [0, 0, source.out] as Vec3,
+    };
+    const dst = {
+      surface: hovered.position,
+      anchor: hovered.anchor,
+      exitDir: [0, 0, hovered.out] as Vec3,
+    };
     const typeId = hoverInfo.reason.suggestedTypes[0];
     const spec = typeId ? CABLE_CATALOG[typeId] : undefined;
+
+    const graph = buildRoutingGraph(instances, getDevice, geometry);
+    const plan = planManagedRoute(src, dst, graph, {
+      family: spec?.category ?? 'copper',
+      rules: useRoutingRulesStore.getState().rules,
+      occupancy: occupancyFromCables(useCableStore.getState().cables),
+    });
+    const useManaged = plan !== null && plan.nodeKeys.length > 0;
+
+    const route = computeRoute({
+      source: src,
+      destination: dst,
+      mode: useManaged ? 'managed' : 'auto',
+      slack: 'normal',
+      nominalLengthMm: 0,
+      minBendRadiusMm: spec?.minBendRadiusMm ?? 25,
+      geometry,
+      managedPoints: plan?.core,
+    });
     const recommended = spec
       ? recommendLengthMm(route.minLengthMm, spec.standardLengthsMm)
       : null;
-    return { minLengthMm: route.minLengthMm, recommended };
+    const nodeMarkers = useManaged
+      ? graph.filter((n) => plan.nodeKeys.includes(n.key)).map((n) => n.position)
+      : [];
+    const warnings = [
+      ...(plan?.warnings ?? []),
+      ...(route.bendRadiusOk
+        ? []
+        : ['Tight bends on this route — pick a longer path or cable.']),
+    ];
+    return {
+      minLengthMm: route.minLengthMm,
+      recommended,
+      points: route.points,
+      nodeMarkers,
+      warnings,
+      viaCount: useManaged ? plan.nodeKeys.length : 0,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, hovered, hoverInfo?.reason, geometry]);
+  }, [source, hovered, hoverInfo?.reason, geometry, instances]);
 
   return (
     <group>
@@ -429,17 +465,51 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
                 {estimate.recommended
                   ? ` · ${formatLength(estimate.recommended)} cable`
                   : ''}
+                {estimate.viaCount > 0
+                  ? ` · via ${estimate.viaCount} node${estimate.viaCount === 1 ? '' : 's'}`
+                  : ''}
               </div>
             )}
+            {estimate?.warnings.map((warning, i) => (
+              <div key={i} style={{ color: '#e0a23f', maxWidth: 260, whiteSpace: 'normal' }}>
+                {warning}
+              </div>
+            ))}
           </div>
         </Html>
       )}
 
+      {/* Predicted routing nodes on the hovered connection */}
+      {estimate?.nodeMarkers.map((position, i) => (
+        <mesh
+          key={`node-${i}`}
+          geometry={NODE_MARKER_GEOMETRY}
+          material={NODE_MARKER_MATERIAL}
+          position={position}
+          raycast={() => null}
+        />
+      ))}
+
       {/* Live preview from the pending source to the pointer */}
-      {source && <PreviewCurve source={source} geometry={geometry} />}
+      {source && (
+        <PreviewCurve
+          source={source}
+          geometry={geometry}
+          predicted={estimate?.points ?? null}
+        />
+      )}
     </group>
   );
 }
+
+const NODE_MARKER_GEOMETRY = new SphereGeometry(0.007, 14, 10);
+const NODE_MARKER_MATERIAL = new MeshBasicMaterial({
+  color: '#3fb970',
+  transparent: true,
+  opacity: 0.9,
+  toneMapped: false,
+  depthTest: false,
+});
 
 /** 32-point preview curve updated in place — zero allocation per frame. */
 const PREVIEW_POINTS = 32;
@@ -447,9 +517,12 @@ const PREVIEW_POINTS = 32;
 function PreviewCurve({
   source,
   geometry: rackGeometry,
+  predicted,
 }: {
   source: PortTarget;
   geometry: RackGeometry;
+  /** The engine's actual planned route while hovering a valid port. */
+  predicted: Vec3[] | null;
 }) {
   const groupRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);
@@ -495,6 +568,46 @@ function PreviewCurve({
 
     const hover = useCableToolStore.getState().hoverEnd;
     const start = new Vector3(...source.anchor);
+
+    // Hovering a valid target: draw the engine's actual planned route
+    // (resampled to the fixed buffer) instead of the pointer chase.
+    if (hover && predicted && predicted.length >= 2) {
+      const positions = line.geometry.getAttribute('position') as BufferAttribute;
+      let total = 0;
+      for (let i = 1; i < predicted.length; i++) {
+        total += Math.hypot(
+          predicted[i][0] - predicted[i - 1][0],
+          predicted[i][1] - predicted[i - 1][1],
+          predicted[i][2] - predicted[i - 1][2],
+        );
+      }
+      let segment = 1;
+      let travelled = 0;
+      for (let i = 0; i < PREVIEW_POINTS; i++) {
+        const target = (total * i) / (PREVIEW_POINTS - 1);
+        while (segment < predicted.length - 1) {
+          const a = predicted[segment - 1];
+          const b = predicted[segment];
+          const length = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+          if (travelled + length >= target) break;
+          travelled += length;
+          segment++;
+        }
+        const a = predicted[segment - 1];
+        const b = predicted[segment];
+        const length =
+          Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1;
+        const t = Math.min(1, Math.max(0, (target - travelled) / length));
+        positions.setXYZ(
+          i,
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+          a[2] + (b[2] - a[2]) * t,
+        );
+      }
+      positions.needsUpdate = true;
+      return;
+    }
 
     let end: Vector3;
     if (hover) {

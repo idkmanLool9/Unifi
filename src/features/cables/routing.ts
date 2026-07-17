@@ -1,5 +1,6 @@
 import { chassisAabb, type Aabb } from '@/features/rack/mechanics';
 import { MM_TO_M, type PlacedDevice, type RackGeometry } from '@/features/rack/rackMath';
+import { minFilletRadiusM } from './engine/spline';
 import type { Vec3 } from './anchors';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
 
@@ -15,6 +16,7 @@ export const ROUTING_MODES = [
   'direct',
   'natural',
   'professional',
+  'managed',
   'left',
   'right',
   'top',
@@ -47,6 +49,8 @@ export interface RouteRequest {
   geometry: RackGeometry;
   /** Manual mode: user waypoints in rack-local meters. */
   waypoints?: Vec3[];
+  /** Managed mode: node-graph core computed by the managed router. */
+  managedPoints?: Vec3[];
   /** Faceplate centers of mounted cable managers (rack-local meters). */
   cableManagerPoints?: Vec3[];
   /** Y of the rail span's top, for 'top' routes (rack-local meters). */
@@ -197,6 +201,10 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
       }
       break;
     }
+    case 'managed': {
+      core.push(...(request.managedPoints ?? []));
+      break;
+    }
     case 'manual': {
       core.push(...(request.waypoints ?? []));
       break;
@@ -218,7 +226,7 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
   // scaled so the rendered route consumes the chosen nominal length.
   const slackMm = nominalLengthMm - minLengthMm;
   const allowance = slackAllowanceMm(request.slack, nominalLengthMm, minLengthMm);
-  const points = skeleton.map((p) => [...p] as Vec3);
+  let points = skeleton.map((p) => [...p] as Vec3);
   if (allowance > 1 && points.length >= 4) {
     // Sag depth: a hanging arc of extra length ~ 2·sqrt(sag² + …); the
     // simple deterministic approximation sag ≈ allowance/2 reads right.
@@ -237,69 +245,92 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
       );
     } else {
       // Slack drapes as a smooth parabolic bulge along the route's
-      // longest run — never a single displaced knot (a hard V both
-      // looks wrong and violates every bend check). Professional side
-      // channels bow outward (away from the rails); everything else
-      // hangs under gravity.
-      let runIndex = 2;
-      let runLength = 0;
-      for (let i = 2; i < points.length - 3; i++) {
-        const length = dist(points[i], points[i + 1]);
-        if (length > runLength) {
-          runLength = length;
-          runIndex = i;
+      // longest run. An installer tightens a drape that would kink the
+      // sheath — mirror that: if the draped route bends tighter than
+      // the cable allows, halve the drape, and drop it entirely when
+      // even that is too tight (micro-slack distributes invisibly).
+      const applyDrape = (base: Vec3[], scale: number): Vec3[] => {
+        const result = base.map((p) => [...p] as Vec3);
+        let runIndex = 2;
+        let runLength = 0;
+        for (let i = 2; i < result.length - 3; i++) {
+          const length = dist(result[i], result[i + 1]);
+          if (length > runLength) {
+            runLength = length;
+            runIndex = i;
+          }
         }
-      }
-      const a = points[runIndex];
-      const b = points[runIndex + 1];
-      const depth =
-        resolvedMode === 'professional' ? Math.min(sagM, 0.06) : sagM;
-      let bulge: Vec3;
-      if (resolvedMode === 'professional') {
-        // Side channels bow outward, away from the rails.
-        bulge = [(Math.sign(a[0]) || 1) * depth, 0, 0];
-      } else {
-        // Hang under gravity — but only the component perpendicular to
-        // the run bends the cable. A near-vertical run can't sag along
-        // itself: its loop bulges out of the panel instead.
-        const run: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        const rl = Math.hypot(...run) || 1;
-        const d: Vec3 = [run[0] / rl, run[1] / rl, run[2] / rl];
-        let perp: Vec3 = [d[1] * d[0], d[1] * d[1] - 1, d[1] * d[2]]; // g−(g·d)d with g=[0,−1,0] flipped sign
-        let pl = Math.hypot(...perp);
-        if (pl < 0.3) {
-          const out = Math.sign(source.exitDir[2] + destination.exitDir[2]) || 1;
-          perp = [
-            -(out * d[2]) * d[0],
-            -(out * d[2]) * d[1],
-            out - out * d[2] * d[2],
+        const a = result[runIndex];
+        const b = result[runIndex + 1];
+        const depth =
+          (resolvedMode === 'professional' ? Math.min(sagM, 0.06) : sagM) *
+          scale;
+        let bulge: Vec3;
+        if (resolvedMode === 'professional') {
+          // Side channels bow outward, away from the rails.
+          bulge = [(Math.sign(a[0]) || 1) * depth, 0, 0];
+        } else {
+          // Hang under gravity — but only the component perpendicular
+          // to the run bends the cable. A near-vertical run can't sag
+          // along itself: its loop bulges out of the panel instead.
+          const run: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+          const rl = Math.hypot(...run) || 1;
+          const d: Vec3 = [run[0] / rl, run[1] / rl, run[2] / rl];
+          let perp: Vec3 = [d[1] * d[0], d[1] * d[1] - 1, d[1] * d[2]];
+          let pl = Math.hypot(...perp);
+          if (pl < 0.3) {
+            const out =
+              Math.sign(source.exitDir[2] + destination.exitDir[2]) || 1;
+            perp = [
+              -(out * d[2]) * d[0],
+              -(out * d[2]) * d[1],
+              out - out * d[2] * d[2],
+            ];
+            pl = Math.hypot(...perp) || 1;
+          }
+          bulge = [
+            (perp[0] / pl) * depth,
+            (perp[1] / pl) * depth,
+            (perp[2] / pl) * depth,
           ];
-          pl = Math.hypot(...perp) || 1;
         }
-        bulge = [
-          (perp[0] / pl) * depth,
-          (perp[1] / pl) * depth,
-          (perp[2] / pl) * depth,
-        ];
+        // Sample density scales with drape depth relative to its run —
+        // a shallow sweep needs 3 knots, a J-loop needs many so its
+        // bottom stays round instead of collapsing into a V.
+        const count = Math.min(
+          15,
+          3 + Math.floor((8 * depth) / Math.max(runLength, 0.01)),
+        );
+        const knots: Vec3[] = [];
+        for (let k = 1; k <= count; k++) {
+          const t = k / (count + 1);
+          const arc = 4 * t * (1 - t);
+          knots.push([
+            a[0] + (b[0] - a[0]) * t + bulge[0] * arc,
+            a[1] + (b[1] - a[1]) * t + bulge[1] * arc,
+            a[2] + (b[2] - a[2]) * t + bulge[2] * arc,
+          ]);
+        }
+        result.splice(runIndex + 1, 0, ...knots);
+        return result;
+      };
+
+      const fitOptions = {
+        minBendRadiusMm: request.minBendRadiusMm,
+        stiffness: 0.4,
+      };
+      const fitsRadius = (candidate: Vec3[]): boolean =>
+        minFilletRadiusM(candidate, fitOptions) >=
+        request.minBendRadiusMm * MM_TO_M * 0.75;
+
+      const full = applyDrape(points, 1);
+      if (fitsRadius(full)) {
+        points = full;
+      } else {
+        const half = applyDrape(points, 0.5);
+        if (fitsRadius(half)) points = half;
+        // else: keep the taut skeleton — the slack lives in micro-bows.
       }
-      // Sample density scales with how deep the drape is relative to
-      // its run — a shallow sweep needs 3 knots, a J-loop needs many
-      // so its bottom stays round instead of collapsing into a V.
-      const count = Math.min(
-        15,
-        3 + Math.floor((8 * depth) / Math.max(runLength, 0.01)),
-      );
-      const knots: Vec3[] = [];
-      for (let k = 1; k <= count; k++) {
-        const t = k / (count + 1);
-        const arc = 4 * t * (1 - t);
-        knots.push([
-          a[0] + (b[0] - a[0]) * t + bulge[0] * arc,
-          a[1] + (b[1] - a[1]) * t + bulge[1] * arc,
-          a[2] + (b[2] - a[2]) * t + bulge[2] * arc,
-        ]);
-      }
-      points.splice(runIndex + 1, 0, ...knots);
     }
   }
 

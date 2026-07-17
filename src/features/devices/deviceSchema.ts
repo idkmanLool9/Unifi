@@ -347,6 +347,64 @@ export interface MechanicalSpec {
  * shelves, cable managers, PDUs…). Declarative only — accessories are
  * regular devices to the engine.
  */
+/* ---- Cable management metadata ---------------------------------------- */
+
+export const CABLE_MANAGEMENT_KINDS = [
+  'horizontal-manager',
+  'vertical-manager',
+  'finger-duct',
+  'brush-panel',
+  'cable-ring',
+  'cable-tray',
+  'raceway',
+  'patch-guide',
+] as const;
+export type CableManagementKind = (typeof CABLE_MANAGEMENT_KINDS)[number];
+
+/** Cable family ids (mirrors the cable catalog's categories). */
+export const CABLE_FAMILY_IDS = [
+  'copper',
+  'fiber',
+  'dac',
+  'power',
+  'peripheral',
+] as const;
+export type CableFamilyId = (typeof CABLE_FAMILY_IDS)[number];
+
+/**
+ * A routing node: a physical location inside a cable-management asset
+ * that cables travel through. The managed routing engine builds its
+ * graph from these — devices never carry routing logic, only nodes.
+ */
+export interface RoutingNodeDefinition {
+  id: string;
+  /** Node center, mm from chassis center (device-local, facing-aware). */
+  positionMm: [number, number, number];
+  /** Travel axis through the node (device-local; default: horizontal x). */
+  axisMm?: [number, number, number];
+  /** Per-node capacity override, cables. */
+  capacity?: number;
+  /** Bend radius the node geometry supports, mm. */
+  bendRadiusMm?: number;
+}
+
+/** How cables are allowed to travel through a management asset. */
+export interface CableManagementSpec {
+  kind: CableManagementKind;
+  /** Total cable capacity of the asset. */
+  capacity: number;
+  /**
+   * Routing cost multiplier (priority): <1 attracts routes, >1 repels.
+   * Default 1.
+   */
+  costFactor?: number;
+  /** Cable families this asset is meant for (others pay a penalty). */
+  preferredFamilies?: CableFamilyId[];
+  /** Enclosed assets admit cables only through their nodes. */
+  enclosed?: boolean;
+  nodes: RoutingNodeDefinition[];
+}
+
 export const ACCESSORY_KINDS = [
   'blank-panel',
   'brush-panel',
@@ -430,6 +488,8 @@ export interface DeviceDefinition {
   mechanical?: MechanicalSpec;
   /** Set when this device is a rail accessory (blank panel, PDU, …). */
   accessoryKind?: AccessoryKind;
+  /** Routing nodes + capacity for cable-management hardware. */
+  cableManagement?: CableManagementSpec;
   presentation: DevicePresentation;
 }
 
@@ -858,6 +918,93 @@ function parsePower(
   return { connectors, redundant, hotSwappable, psuCount, poeBudgetW, sources };
 }
 
+function parseCableManagement(
+  input: unknown,
+  checker: Checker,
+): CableManagementSpec | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('cableManagement', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const kind = sub.oneOf(input, 'kind', CABLE_MANAGEMENT_KINDS);
+  const capacity = sub.number(input, 'capacity', { min: 1, integer: true });
+  const costFactor =
+    input.costFactor === undefined
+      ? undefined
+      : sub.number(input, 'costFactor', { min: 0.05, max: 10 });
+  const enclosed = sub.optionalBoolean(input, 'enclosed');
+
+  let preferredFamilies: CableFamilyId[] | undefined;
+  if (input.preferredFamilies !== undefined) {
+    if (
+      Array.isArray(input.preferredFamilies) &&
+      input.preferredFamilies.every(
+        (f): f is CableFamilyId =>
+          typeof f === 'string' &&
+          (CABLE_FAMILY_IDS as readonly string[]).includes(f),
+      )
+    ) {
+      preferredFamilies = input.preferredFamilies;
+    } else {
+      sub.fail(
+        'preferredFamilies',
+        `entries must be one of: ${CABLE_FAMILY_IDS.join(', ')}`,
+      );
+    }
+  }
+
+  const nodes: RoutingNodeDefinition[] = [];
+  if (!Array.isArray(input.nodes) || input.nodes.length === 0) {
+    sub.fail('nodes', 'must be a non-empty array of routing nodes');
+  } else {
+    input.nodes.forEach((raw, index) => {
+      if (!isRecord(raw)) {
+        sub.fail(`nodes[${index}]`, 'must be an object');
+        return;
+      }
+      const nodeChecker = new Checker();
+      const id = nodeChecker.string(raw, 'id');
+      const positionOk = isVec3(raw.positionMm);
+      if (!positionOk) {
+        nodeChecker.fail('positionMm', 'must be [x, y, z] in mm');
+      }
+      const axisOk = raw.axisMm === undefined || isVec3(raw.axisMm);
+      if (!axisOk) nodeChecker.fail('axisMm', 'must be [x, y, z]');
+      const nodeCapacity =
+        raw.capacity === undefined
+          ? undefined
+          : nodeChecker.number(raw, 'capacity', { min: 1, integer: true });
+      const bendRadiusMm =
+        raw.bendRadiusMm === undefined
+          ? undefined
+          : nodeChecker.number(raw, 'bendRadiusMm', { min: 1, max: 200 });
+      if (nodeChecker.issues.length > 0) {
+        for (const issue of nodeChecker.issues) {
+          sub.fail(`nodes[${index}].${issue.path}`, issue.message);
+        }
+        return;
+      }
+      nodes.push({
+        id: id!,
+        positionMm: raw.positionMm as [number, number, number],
+        axisMm: raw.axisMm as [number, number, number] | undefined,
+        capacity: nodeCapacity,
+        bendRadiusMm,
+      });
+    });
+  }
+
+  if (sub.issues.length > 0) {
+    for (const issue of sub.issues) {
+      checker.fail(`cableManagement.${issue.path}`, issue.message);
+    }
+    return undefined;
+  }
+  return { kind: kind!, capacity: capacity!, costFactor, preferredFamilies, enclosed, nodes };
+}
+
 function parseCooling(
   input: unknown,
   checker: Checker,
@@ -1221,6 +1368,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
     input.accessoryKind === undefined
       ? undefined
       : c.oneOf(input, 'accessoryKind', ACCESSORY_KINDS);
+  const cableManagement = parseCableManagement(input.cableManagement, c);
   const presentation = parsePresentation(input.presentation, c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
@@ -1262,6 +1410,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       display,
       mechanical,
       accessoryKind,
+      cableManagement,
       presentation,
     },
   };

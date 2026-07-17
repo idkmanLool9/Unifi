@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Group, MeshStandardMaterial, type TubeGeometry } from 'three';
+import {
+  CylinderGeometry,
+  Group,
+  MeshStandardMaterial,
+  type TubeGeometry,
+} from 'three';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { resolveEndpoint, type Vec3 } from './anchors';
@@ -12,15 +17,21 @@ import {
   type ConnectorKind,
 } from './engine/connectors';
 import { acquireTube, releaseTube } from './engine/geometryCache';
-import { applyBundleOffset, bundleSlot } from './engine/bundles';
-import { maxTurnAngleDeg } from './engine/spline';
+import { applyBundleOffset, bundleSlot, loomRadiusM } from './engine/bundles';
+import {
+  buildRoutingGraph,
+  occupancyFromCables,
+  planManagedRoute,
+} from './engine/managedRouting';
+import { minFilletRadiusM } from './engine/spline';
 import { CABLE_CATALOG } from './cableCatalog';
-import { checkCable } from './compatibility';
+import { checkCable, formatLength } from './compatibility';
 import {
   computeRoute,
   estimateRouteCollisions,
   recommendLengthMm,
 } from './routing';
+import { useRoutingRulesStore } from '@/stores/routingRulesStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
 import { focusCable } from '@/features/viewport/focusActions';
 import { railHeight, U_METERS } from '@/features/rack/rackConstants';
@@ -28,6 +39,7 @@ import { MM_TO_M, type PlacedDevice, type RackGeometry } from '@/features/rack/r
 import {
   bundleMembers,
   consumeBornAnimation,
+  useBundleHighlightStore,
   useCableStore,
   type CableInstance,
 } from '@/stores/cableStore';
@@ -69,6 +81,20 @@ const SELECTION_MATERIAL = new MeshStandardMaterial({
   transparent: true,
   opacity: 0.28,
   depthWrite: false,
+});
+const BUNDLE_HIGHLIGHT_MATERIAL = new MeshStandardMaterial({
+  color: '#e0a23f',
+  transparent: true,
+  opacity: 0.3,
+  depthWrite: false,
+});
+/** Velcro strap wrap. */
+const STRAP_GEOMETRY = new CylinderGeometry(1, 1, 1, 18);
+STRAP_GEOMETRY.rotateX(Math.PI / 2); // axis onto Z
+const STRAP_MATERIAL = new MeshStandardMaterial({
+  color: '#16181c',
+  roughness: 0.85,
+  metalness: 0.02,
 });
 
 interface CableLayerProps {
@@ -114,6 +140,7 @@ function CableMesh({
   const bundles = useCableStore((s) => s.bundles);
   const allCables = useCableStore((s) => s.cables);
 
+  const rules = useRoutingRulesStore((s) => s.rules);
   const spec = CABLE_CATALOG[cable.type];
   const bundle = cable.bundleId
     ? bundles.find((b) => b.id === cable.bundleId)
@@ -137,9 +164,17 @@ function CableMesh({
     const maxDiameterMm = Math.max(...members.map((m) => m.thicknessMm), 1);
     return {
       slot: bundleSlot(index),
+      index,
+      count: members.length,
       spacingM: (maxDiameterMm + bundle.spacingMm) * MM_TO_M,
     };
   }, [bundle, allCables, cable.id]);
+
+  // Occupancy of every routing node by OTHER cables (their persisted
+  // routed keys) — this cable's own usage never penalizes itself.
+  const occupancySignature = allCables
+    .map((c) => (c.id === cable.id ? '' : (c.routedNodeKeys ?? []).join(',')))
+    .join(';');
 
   // The route depends only on these serializable facts.
   const routeKey = [
@@ -151,6 +186,12 @@ function CableMesh({
     bundleContext?.slot.join(','),
     bundleContext?.spacingM,
     (cable.waypointsMm ?? []).map((w) => w.join(',')).join(';'),
+    cable.viaInstanceId,
+    cable.ignoreManagers,
+    rules.managerPreference,
+    rules.separatePowerData,
+    rules.dacMaxLengthMm,
+    occupancySignature,
     srcInstance?.startU,
     srcInstance?.facing,
     dstInstance?.startU,
@@ -196,36 +237,69 @@ function CableMesh({
       })
       .filter((p): p is Vec3 => p !== null);
 
+    // Managed routing: plan through the node graph whenever hardware is
+    // placed and the mode allows it. The plan feeds computeRoute as the
+    // 'managed' core; when the graph offers nothing useful the cable
+    // falls back to the unmanaged disciplines.
+    const baseMode =
+      cable.routingMode === 'manual' && !cable.waypointsMm
+        ? 'auto'
+        : cable.routingMode;
+    const wantsManaged =
+      !cable.ignoreManagers &&
+      (baseMode === 'auto' || baseMode === 'managed' || baseMode === 'cable-manager');
+    const graph = buildRoutingGraph(instances, getDevice, geometry);
+    const plan = wantsManaged
+      ? planManagedRoute(source, destination, graph, {
+          family: spec.category,
+          rules,
+          occupancy: occupancyFromCables(allCables, cable.id),
+          forceInstanceId: cable.viaInstanceId,
+          managerBoost: baseMode === 'cable-manager' ? 2.2 : 1,
+          // Bundle members lie side by side inside the slot.
+          slotOffsetM: bundleContext
+            ? (bundleContext.index - (bundleContext.count - 1) / 2) *
+              bundleContext.spacingM
+            : 0,
+        })
+      : null;
+    const useManaged = plan !== null && plan.nodeKeys.length > 0;
+
     const route = computeRoute({
       source,
       destination,
-      // Bundled cables always follow the professional loom discipline.
-      // Manual mode without waypoints yet renders the auto route — the
-      // sync effect below captures it as the initial editable shape.
-      mode: bundleContext
-        ? 'professional'
-        : cable.routingMode === 'manual' && !cable.waypointsMm
-          ? 'auto'
-          : cable.routingMode,
+      // Bundled cables without a managed plan follow the professional
+      // loom discipline; managed plans win even inside bundles.
+      mode: useManaged
+        ? 'managed'
+        : bundleContext
+          ? 'professional'
+          : baseMode === 'managed' || baseMode === 'cable-manager'
+            ? 'auto'
+            : baseMode,
       slack: cable.slackMode,
       nominalLengthMm: cable.nominalLengthMm,
       minBendRadiusMm: cable.bendRadiusMm,
       geometry,
       waypoints: cable.waypointsMm,
+      managedPoints: plan?.core,
       cableManagerPoints: managers,
       topYM: geometry.railBaseYM + railHeight(rack.units),
     });
 
     // Loom offset applies to the shared run only — ends stay on-port.
-    const points = bundleContext
-      ? applyBundleOffset(
-          route.points,
-          3,
-          route.points.length - 4,
-          bundleContext.slot,
-          bundleContext.spacingM,
-        )
-      : route.points;
+    // Managed routes already separate members along the slot axis; the
+    // hex loom offset is for unmanaged runs.
+    const points =
+      bundleContext && !useManaged
+        ? applyBundleOffset(
+            route.points,
+            3,
+            route.points.length - 4,
+            bundleContext.slot,
+            bundleContext.spacingM,
+          )
+        : route.points;
 
     const collides =
       (route.resolvedMode === 'direct' || route.resolvedMode === 'natural') &&
@@ -237,29 +311,55 @@ function CableMesh({
         [srcInstance.id, dstInstance.id],
       );
 
-    // Validation targets the semantic route — loom offsets are a
-    // rendering shift and must not skew the turn measurement.
+    // Validation measures what actually renders: the fillet stage's
+    // achieved bend radius. A route is only flagged when the rendered
+    // sheath truly bends tighter than 85% of its rating — raw polyline
+    // knots that the fillets round away are not violations.
+    const achievedRadiusMm =
+      minFilletRadiusM(route.points, {
+        minBendRadiusMm: cable.bendRadiusMm,
+        stiffness: spec.stiffness,
+      }) / MM_TO_M;
     const check = checkCable(spec, source.port, destination.port, {
       minRouteLengthMm: route.minLengthMm,
       nominalLengthMm: cable.nominalLengthMm,
-      bendRadiusOk: route.bendRadiusOk,
-      maxTurnAngleDeg: maxTurnAngleDeg(route.points),
+      bendRadiusOk: achievedRadiusMm >= cable.bendRadiusMm * 0.7,
     });
+
+    // Separation / capacity / rule findings become actionable warnings.
+    const ruleWarnings = [...(plan?.warnings ?? [])];
+    if (
+      spec.category === 'dac' &&
+      route.routeLengthMm > rules.dacMaxLengthMm
+    ) {
+      ruleWarnings.push(
+        `DAC runs should stay under ${formatLength(rules.dacMaxLengthMm)} — consider fiber for this ${formatLength(route.routeLengthMm)} route.`,
+      );
+    }
 
     const status =
       check.level === 'invalid'
         ? ('invalid' as const)
-        : check.level === 'warning' || collides
+        : check.level === 'warning' || collides || ruleWarnings.length > 0
           ? ('warning' as const)
           : ('ok' as const);
     const statusMessage =
       check.level !== 'valid'
         ? check.message
-        : collides
-          ? 'Route passes through another chassis — try a side or top route.'
-          : undefined;
+        : ruleWarnings[0] ??
+          (collides
+            ? 'Route passes through another chassis — try a side or top route.'
+            : undefined);
 
-    return { source, destination, route, points, status, statusMessage };
+    return {
+      source,
+      destination,
+      route,
+      points,
+      status,
+      statusMessage,
+      routedNodeKeys: useManaged ? plan.nodeKeys : [],
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeKey, instances, spec, geometry]);
 
@@ -289,6 +389,11 @@ function CableMesh({
         3,
         computed.route.points.length - 3,
       ) as [number, number, number][];
+    }
+    // Persist which routing nodes this route occupies (capacity math).
+    const routedKey = computed.routedNodeKeys.join('|');
+    if ((cable.routedNodeKeys ?? []).join('|') !== routedKey) {
+      patch.routedNodeKeys = computed.routedNodeKeys;
     }
     if (
       cable.status !== computed.status ||
@@ -340,6 +445,9 @@ function CableMesh({
 
   // Connector-insertion animation for cables created this session.
   const born = useMemo(() => consumeBornAnimation(cable.id), [cable.id]);
+  const bundleHighlighted = useBundleHighlightStore(
+    (s) => s.highlightBundleId !== null && s.highlightBundleId === cable.bundleId,
+  );
 
   if (!computed || !tube) return null;
 
@@ -383,6 +491,31 @@ function CableMesh({
           scale={1.001}
         />
       )}
+      {bundleHighlighted && !selected && (
+        <mesh
+          geometry={tube.geometry}
+          material={BUNDLE_HIGHLIGHT_MATERIAL}
+          scale={1.002}
+        />
+      )}
+      {/* Velcro straps: rendered once per bundle, by the loom's center
+          member, wrapping the whole loom at regular intervals. */}
+      {bundle &&
+        bundle.straps !== false &&
+        bundleContext?.slot[0] === 0 &&
+        bundleContext?.slot[1] === 0 && (
+          <BundleStraps
+            points={computed.points}
+            radiusM={
+              loomRadiusM(
+                allCables
+                  .filter((c) => c.bundleId === bundle.id)
+                  .map((c) => c.thicknessMm),
+                bundle.spacingMm,
+              ) + 0.0012
+            }
+          />
+        )}
       {/* Real connectors from the factory, noses seated in the jacks */}
       {([
         ['source', computed.source, 0] as const,
@@ -458,6 +591,65 @@ function CableMesh({
         </>
       )}
     </group>
+  );
+}
+
+/* ---- velcro straps ---------------------------------------------------- */
+
+/** Strap spacing along the loom, meters. */
+const STRAP_INTERVAL_M = 0.16;
+/** Strap width, meters. */
+const STRAP_WIDTH_M = 0.012;
+
+/**
+ * Velcro wraps at regular intervals along the loom's shared run
+ * (between the exits — never on the fan-out to individual ports).
+ */
+function BundleStraps({ points, radiusM }: { points: Vec3[]; radiusM: number }) {
+  const straps = useMemo(() => {
+    const core = points.slice(2, points.length - 2);
+    const out: Array<{ position: Vec3; tangent: Vec3 }> = [];
+    let travelled = 0;
+    let next = STRAP_INTERVAL_M / 2;
+    for (let i = 1; i < core.length; i++) {
+      const a = core[i - 1];
+      const b = core[i];
+      const segment = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      if (segment < 1e-9) continue;
+      while (travelled + segment >= next) {
+        const t = (next - travelled) / segment;
+        out.push({
+          position: [
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+            a[2] + (b[2] - a[2]) * t,
+          ],
+          tangent: [
+            (b[0] - a[0]) / segment,
+            (b[1] - a[1]) / segment,
+            (b[2] - a[2]) / segment,
+          ],
+        });
+        next += STRAP_INTERVAL_M;
+      }
+      travelled += segment;
+    }
+    return out;
+  }, [points]);
+
+  return (
+    <>
+      {straps.map((strap, i) => (
+        <mesh
+          key={i}
+          geometry={STRAP_GEOMETRY}
+          material={STRAP_MATERIAL}
+          position={strap.position}
+          quaternion={plugQuaternion(strap.tangent)}
+          scale={[radiusM, radiusM, STRAP_WIDTH_M]}
+        />
+      ))}
+    </>
   );
 }
 

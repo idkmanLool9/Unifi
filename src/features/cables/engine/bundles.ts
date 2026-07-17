@@ -10,6 +10,18 @@ import type { Vec3 } from '../anchors';
  * arriving.
  */
 
+/** Outer radius of a hex-packed loom, meters. */
+export function loomRadiusM(
+  diametersMm: readonly number[],
+  spacingMm: number,
+): number {
+  const count = diametersMm.length;
+  if (count === 0) return 0;
+  const maxD = Math.max(...diametersMm);
+  const rings = count <= 1 ? 0 : count <= 7 ? 1 : count <= 19 ? 2 : 3;
+  return ((maxD * (1 + 2 * rings)) / 2 + spacingMm * rings) * 0.001;
+}
+
 /**
  * Hex circle-packing slot for a member: slot 0 is the loom center,
  * slots 1–6 the first ring, 7–18 the second, and so on. Returns the

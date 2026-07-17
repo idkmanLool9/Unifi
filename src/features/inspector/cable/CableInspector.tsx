@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { BookmarkPlus, Boxes, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  BookmarkPlus,
+  Boxes,
+  RotateCcw,
+  Scissors,
+  Trash2,
+} from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
@@ -18,9 +25,15 @@ import {
   type RoutingMode,
   type SlackMode,
 } from '@/features/cables/routing';
+import { getDevice } from '@/features/devices/deviceRegistry';
 import { resolveEndPort } from '@/stores/cableToolStore';
 import { useCablePresetsStore } from '@/stores/cablePresetsStore';
-import { useCableStore, type CableInstance } from '@/stores/cableStore';
+import {
+  useBundleHighlightStore,
+  useCableStore,
+  type CableInstance,
+} from '@/stores/cableStore';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { toast } from '@/stores/toastStore';
 import { cn } from '@/lib/utils';
@@ -36,11 +49,12 @@ const MODE_LABELS: Record<RoutingMode, string> = {
   direct: 'Shortest',
   natural: 'Cleanest',
   professional: 'Professional',
+  managed: 'Managed (via hardware)',
   left: 'Left side',
   right: 'Right side',
   top: 'Top',
   bottom: 'Bottom',
-  'cable-manager': 'Patch panel / manager',
+  'cable-manager': 'Manager priority',
   manual: 'Manual',
 };
 
@@ -299,12 +313,16 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
           </InfoRow>
           <InfoRow label="Min bend radius">{cable.bendRadiusMm} mm</InfoRow>
 
+          <ManagementTools cable={cable} />
+
           <button
             type="button"
             onClick={() =>
               updateCable(cable.id, {
                 routingMode: 'auto',
                 waypointsMm: undefined,
+                viaInstanceId: undefined,
+                ignoreManagers: undefined,
               })
             }
             className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
@@ -390,6 +408,92 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
   );
 }
 
+/* ---- cable management tools ------------------------------------------- */
+
+/** Management assets currently mounted in the rack. */
+function useMountedManagers() {
+  const instances = useDeviceInstancesStore((s) => s.instances);
+  return instances
+    .map((instance) => ({
+      instance,
+      definition: getDevice(instance.definitionId),
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        instance: (typeof instances)[number];
+        definition: NonNullable<ReturnType<typeof getDevice>>;
+      } => entry.definition?.cableManagement !== undefined,
+    );
+}
+
+function ManagementTools({ cable }: { cable: CableInstance }) {
+  const updateCable = useCableStore((s) => s.updateCable);
+  const reverseCable = useCableStore((s) => s.reverseCable);
+  const managers = useMountedManagers();
+
+  return (
+    <div className="space-y-2">
+      {managers.length > 0 && (
+        <div className="space-y-1">
+          <label
+            htmlFor="cable-via"
+            className="block text-xs text-secondary"
+          >
+            Force through manager
+          </label>
+          <select
+            id="cable-via"
+            value={cable.viaInstanceId ?? ''}
+            onChange={(e) =>
+              updateCable(cable.id, {
+                viaInstanceId: e.target.value || undefined,
+                ignoreManagers: e.target.value ? undefined : cable.ignoreManagers,
+              })
+            }
+            className={selectClass}
+          >
+            <option value="">Automatic (cheapest path)</option>
+            {managers.map(({ instance, definition }) => (
+              <option key={instance.id} value={instance.id}>
+                {definition.productName} · U{instance.startU}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-secondary">Ignore cable managers</span>
+        <Switch
+          label="Ignore cable managers"
+          checked={cable.ignoreManagers ?? false}
+          onChange={(ignore) =>
+            updateCable(cable.id, {
+              ignoreManagers: ignore || undefined,
+              viaInstanceId: ignore ? undefined : cable.viaInstanceId,
+            })
+          }
+        />
+      </div>
+      {(cable.routedNodeKeys?.length ?? 0) > 0 && (
+        <InfoRow label="Routed via">
+          {cable.routedNodeKeys!.length} node
+          {cable.routedNodeKeys!.length === 1 ? '' : 's'}
+        </InfoRow>
+      )}
+      <button
+        type="button"
+        onClick={() => reverseCable(cable.id)}
+        className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+      >
+        <ArrowLeftRight className="size-3" strokeWidth={1.75} />
+        Reverse direction
+      </button>
+    </div>
+  );
+}
+
 /* ---- bundles ---------------------------------------------------------- */
 
 function BundleSection({ cable }: { cable: CableInstance }) {
@@ -399,13 +503,26 @@ function BundleSection({ cable }: { cable: CableInstance }) {
   const updateBundle = useCableStore((s) => s.updateBundle);
   const removeBundle = useCableStore((s) => s.removeBundle);
   const assignToBundle = useCableStore((s) => s.assignToBundle);
+  const mergeBundles = useCableStore((s) => s.mergeBundles);
+  const splitBundle = useCableStore((s) => s.splitBundle);
+  const highlighted = useBundleHighlightStore(
+    (s) => s.highlightBundleId === (cable.bundleId ?? null) && s.highlightBundleId !== null,
+  );
+  const setHighlight = useBundleHighlightStore((s) => s.setHighlight);
 
   const bundle = cable.bundleId
     ? bundles.find((b) => b.id === cable.bundleId)
     : undefined;
-  const memberCount = bundle
-    ? cables.filter((c) => c.bundleId === bundle.id).length
-    : 0;
+  const members = bundle
+    ? cables.filter((c) => c.bundleId === bundle.id)
+    : [];
+  const memberCount = members.length;
+  // Estimated loom diameter from hex packing: rings of 6·r around one.
+  const maxDiameter = Math.max(...members.map((m) => m.thicknessMm), 0);
+  const rings = memberCount <= 1 ? 0 : memberCount <= 7 ? 1 : memberCount <= 19 ? 2 : 3;
+  const loomDiameterMm = Math.round(
+    maxDiameter * (1 + 2 * rings) + (bundle?.spacingMm ?? 0) * 2 * rings,
+  );
 
   return (
     <CollapsibleSection title="Bundle">
@@ -454,6 +571,7 @@ function BundleSection({ cable }: { cable: CableInstance }) {
                 <Boxes className="size-3 text-muted" /> {memberCount}
               </span>
             </InfoRow>
+            <InfoRow label="Loom Ø (est.)">{loomDiameterMm} mm</InfoRow>
             <div className="space-y-1">
               <label
                 htmlFor="bundle-spacing"
@@ -476,14 +594,78 @@ function BundleSection({ cable }: { cable: CableInstance }) {
                 className={cn(inputClass, 'tabular-nums')}
               />
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-secondary">Velcro straps</span>
+              <Switch
+                label="Render velcro straps"
+                checked={bundle.straps ?? true}
+                onChange={(straps) => updateBundle(bundle.id, { straps })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-secondary">Highlight members</span>
+              <Switch
+                label="Highlight bundle members"
+                checked={highlighted}
+                onChange={(on) => setHighlight(on ? bundle.id : null)}
+              />
+            </div>
+            {bundles.length > 1 && (
+              <div className="space-y-1">
+                <label
+                  htmlFor="bundle-merge"
+                  className="block text-xs text-secondary"
+                >
+                  Merge into
+                </label>
+                <select
+                  id="bundle-merge"
+                  value=""
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    mergeBundles(bundle.id, e.target.value);
+                    toast({ variant: 'success', title: 'Bundles merged' });
+                  }}
+                  className={selectClass}
+                >
+                  <option value="">Choose a bundle…</option>
+                  {bundles
+                    .filter((b) => b.id !== bundle.id)
+                    .map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+            {memberCount > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const created = splitBundle(bundle.id, [cable.id]);
+                  if (created) {
+                    toast({
+                      variant: 'success',
+                      title: `Moved into “${created.name}”`,
+                    });
+                  }
+                }}
+                className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+              >
+                <Scissors className="size-3" strokeWidth={1.75} />
+                Split this cable out
+              </button>
+            )}
             <p className="text-[10.5px] leading-snug text-muted">
-              Bundled cables run as one professional loom along the side
-              channel and split near their ports.
+              Bundled cables run as one loom — through management hardware
+              when available — and split near their ports.
             </p>
             <button
               type="button"
               onClick={() => {
                 removeBundle(bundle.id);
+                setHighlight(null);
                 toast({ variant: 'success', title: 'Bundle dissolved' });
               }}
               className="flex h-7 w-full items-center justify-center rounded-lg text-[11px] font-medium text-danger transition-colors hover:bg-danger/10"

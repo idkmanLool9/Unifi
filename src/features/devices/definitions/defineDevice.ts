@@ -1,5 +1,6 @@
 import type {
   AccessoryKind,
+  CableManagementSpec,
   CoolingCapabilities,
   DeviceDefinition,
   DevicePresentation,
@@ -45,6 +46,7 @@ export interface DeviceSeed {
   display?: DisplayCapabilities;
   mechanical?: MechanicalSpec;
   accessoryKind?: AccessoryKind;
+  cableManagement?: CableManagementSpec;
 }
 
 /** Standard 19in faceplate body width (fits the 450.8mm EIA opening). */

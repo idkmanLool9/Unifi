@@ -52,6 +52,12 @@ export interface CableInstance {
   waypointsMm?: [number, number, number][];
   /** Bundle membership. */
   bundleId?: string;
+  /** Routing-node keys the current route passes through (derived). */
+  routedNodeKeys?: string[];
+  /** Force the route through one management asset. */
+  viaInstanceId?: string;
+  /** Skip management hardware entirely for this cable. */
+  ignoreManagers?: boolean;
 }
 
 export interface CableBundle {
@@ -61,7 +67,19 @@ export interface CableBundle {
   spacingMm: number;
   /** Optional sleeve/label color for the whole bundle. */
   color?: string;
+  /** Render velcro straps along the loom (default true). */
+  straps?: boolean;
 }
+
+/** Transient bundle highlight (never persisted). */
+interface BundleHighlightState {
+  highlightBundleId: string | null;
+  setHighlight: (id: string | null) => void;
+}
+export const useBundleHighlightStore = create<BundleHighlightState>()((set) => ({
+  highlightBundleId: null,
+  setHighlight: (highlightBundleId) => set({ highlightBundleId }),
+}));
 
 export interface NewCable {
   source: CableEnd;
@@ -103,6 +121,12 @@ interface CableState {
   /** Dissolves the bundle; member cables stay, unassigned. */
   removeBundle: (id: string) => void;
   assignToBundle: (cableId: string, bundleId: string | undefined) => void;
+  /** Moves every member of `fromId` into `intoId` and deletes `fromId`. */
+  mergeBundles: (fromId: string, intoId: string) => void;
+  /** Moves the given members into a fresh bundle; returns it. */
+  splitBundle: (bundleId: string, cableIds: string[]) => CableBundle | null;
+  /** Swaps a cable's ends (reverse direction). */
+  reverseCable: (id: string) => void;
 }
 
 export const useCableStore = create<CableState>()(
@@ -191,6 +215,43 @@ export const useCableStore = create<CableState>()(
         set((s) => ({
           cables: s.cables.map((c) =>
             c.id === cableId ? { ...c, bundleId } : c,
+          ),
+        })),
+
+      mergeBundles: (fromId, intoId) =>
+        set((s) => ({
+          cables: s.cables.map((c) =>
+            c.bundleId === fromId ? { ...c, bundleId: intoId } : c,
+          ),
+          bundles: s.bundles.filter((b) => b.id !== fromId),
+        })),
+
+      splitBundle: (bundleId, cableIds) => {
+        const source = get().bundles.find((b) => b.id === bundleId);
+        if (!source || cableIds.length === 0) return null;
+        const bundle: CableBundle = {
+          id: crypto.randomUUID(),
+          name: `${source.name} (split)`,
+          spacingMm: source.spacingMm,
+          straps: source.straps,
+        };
+        set((s) => ({
+          bundles: [...s.bundles, bundle],
+          cables: s.cables.map((c) =>
+            c.bundleId === bundleId && cableIds.includes(c.id)
+              ? { ...c, bundleId: bundle.id }
+              : c,
+          ),
+        }));
+        return bundle;
+      },
+
+      reverseCable: (id) =>
+        set((s) => ({
+          cables: s.cables.map((c) =>
+            c.id === id
+              ? { ...c, source: c.destination, destination: c.source }
+              : c,
           ),
         })),
     }),
