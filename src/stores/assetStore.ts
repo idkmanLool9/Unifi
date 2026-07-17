@@ -18,6 +18,11 @@ export const useAssetStore = create<AssetState>()((set, get) => ({
 
   probe: (url) => {
     if (get().availability[url] !== undefined) return;
+    // Object/data URLs exist by construction — and blob: rejects HEAD.
+    if (url.startsWith('blob:') || url.startsWith('data:')) {
+      set((s) => ({ availability: { ...s.availability, [url]: 'available' } }));
+      return;
+    }
     set((s) => ({ availability: { ...s.availability, [url]: 'checking' } }));
 
     void fetch(url, { method: 'HEAD' })

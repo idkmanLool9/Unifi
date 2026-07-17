@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Cable,
   ChevronDown,
@@ -7,6 +8,7 @@ import {
   Download,
   FolderOpen,
   Hand,
+  LibraryBig,
   Monitor,
   Moon,
   MousePointer2,
@@ -104,6 +106,7 @@ function ToolGroup() {
 }
 
 export function TopToolbar() {
+  const navigate = useNavigate();
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -231,6 +234,14 @@ export function TopToolbar() {
           </IconButton>
         </Tooltip>
         <Divider />
+        <Tooltip label="Device Library">
+          <IconButton
+            label="Open the Device Library"
+            onClick={() => void navigate('/library')}
+          >
+            <LibraryBig className="size-4" strokeWidth={1.75} />
+          </IconButton>
+        </Tooltip>
         <Tooltip label="Command palette" shortcut="⌘K">
           <IconButton
             label="Command palette"

@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { loadExternalDefinitions } from '@/features/devices/deviceRegistry';
+import { applyLibraryLayers } from '@/features/library/workspace/libraryStartup';
 import { installDebugHooks } from '@/lib/debugHooks';
 import { applyPersistedAuthoredDevices } from '@/stores/authoredDevicesStore';
 
@@ -14,6 +15,7 @@ export function App() {
     installDebugHooks();
     void loadExternalDefinitions().finally(() => {
       applyPersistedAuthoredDevices();
+      void applyLibraryLayers();
     });
   }, []);
 

@@ -1,13 +1,15 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthoringPage } from '@/features/authoring/AuthoringPage';
+import { LibraryPage } from '@/features/library/workspace/LibraryPage';
 import { EditorPage } from '@/pages/EditorPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 export const router = createBrowserRouter(
   [
-    // Device Authoring Mode owns its full chrome (no AppShell).
+    // Device Authoring Mode and the Library own their full chrome.
     { path: 'author', element: <AuthoringPage /> },
+    { path: 'library', element: <LibraryPage /> },
     {
       element: <AppShell />,
       children: [
