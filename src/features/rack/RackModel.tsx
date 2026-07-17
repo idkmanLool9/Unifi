@@ -11,6 +11,7 @@ import { DEBUG_DIMS_ENABLED, DebugDimensions } from './DebugDimensions';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
 import { MountedDevices } from '@/features/devices/MountedDevices';
+import { CableEditLayer } from '@/features/cables/CableEditLayer';
 import { CableLayer } from '@/features/cables/CableLayer';
 import { CableToolLayer } from '@/features/cables/CableToolLayer';
 import { DragPlacementLayer } from '@/features/dragdrop/DragPlacementLayer';
@@ -391,6 +392,7 @@ export function RackModel({ rack, theme }: RackModelProps) {
       {/* Cables + Cable Tool (inherit rack orientation and animation) */}
       <CableLayer rack={rack} geometry={geometry} />
       <CableToolLayer geometry={geometry} />
+      <CableEditLayer geometry={geometry} />
 
       {/* Close-up visibility: fade structure blocking the focused view */}
       <ObstructionFader

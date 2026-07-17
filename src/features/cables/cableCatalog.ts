@@ -11,6 +11,7 @@ export const CABLE_TYPES = [
   'cat6',
   'cat6a',
   'cat7',
+  'cat8',
   'dac',
   'aoc',
   'fiber-sm',
@@ -54,6 +55,18 @@ export interface CableTypeSpec {
   fiberConnectors?: readonly FiberConnector[];
   /** Cable can deliver PoE to a powered port. */
   poeCapable?: boolean;
+  /**
+   * Sheath stiffness 0..1. Stiff cables (DAC, power) hold wider bends
+   * than their minimum radius; limp fiber follows the route tightly.
+   * Drives the fillet radius: r = minBend × (1 + stiffness).
+   */
+  stiffness: number;
+  /** Largest single direction change the sheath tolerates, degrees. */
+  maxBendAngleDeg: number;
+  /** Tube cross-section resolution (radial segments). */
+  radialSegments: number;
+  /** Sheath metalness (braided DAC reads metallic, PVC doesn't). */
+  metalness?: number;
 }
 
 const COPPER_LENGTHS = [250, 500, 1000, 2000, 3000, 5000, 10000] as const;
@@ -80,6 +93,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#5a83e0',
     roughness: 0.72,
     poeCapable: true,
+    stiffness: 0.35,
+    maxBendAngleDeg: 100,
+    radialSegments: 12,
   },
   cat6: {
     id: 'cat6',
@@ -95,6 +111,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#5a83e0',
     roughness: 0.72,
     poeCapable: true,
+    stiffness: 0.4,
+    maxBendAngleDeg: 100,
+    radialSegments: 12,
   },
   cat6a: {
     id: 'cat6a',
@@ -110,6 +129,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#5a83e0',
     roughness: 0.7,
     poeCapable: true,
+    stiffness: 0.45,
+    maxBendAngleDeg: 95,
+    radialSegments: 12,
   },
   cat7: {
     id: 'cat7',
@@ -125,6 +147,27 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#5a83e0',
     roughness: 0.7,
     poeCapable: true,
+    stiffness: 0.5,
+    maxBendAngleDeg: 90,
+    radialSegments: 12,
+  },
+  cat8: {
+    id: 'cat8',
+    name: 'Cat8 S/FTP',
+    category: 'copper',
+    compatiblePorts: COPPER_PORTS,
+    maxSpeedGbps: 40,
+    carries: 'data',
+    directional: false,
+    diameterMm: 8,
+    minBendRadiusMm: 40,
+    standardLengthsMm: [250, 500, 1000, 2000, 3000],
+    defaultColor: '#8a8f99',
+    roughness: 0.66,
+    poeCapable: true,
+    stiffness: 0.6,
+    maxBendAngleDeg: 85,
+    radialSegments: 14,
   },
   dac: {
     id: 'dac',
@@ -139,6 +182,10 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: DAC_LENGTHS,
     defaultColor: '#3a3f46',
     roughness: 0.55,
+    stiffness: 0.8,
+    maxBendAngleDeg: 75,
+    radialSegments: 12,
+    metalness: 0.35,
   },
   aoc: {
     id: 'aoc',
@@ -153,6 +200,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: FIBER_LENGTHS,
     defaultColor: '#22c1a4',
     roughness: 0.45,
+    stiffness: 0.25,
+    maxBendAngleDeg: 110,
+    radialSegments: 10,
   },
   'fiber-sm': {
     id: 'fiber-sm',
@@ -168,6 +218,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#e8d44d',
     roughness: 0.4,
     fiberConnectors: FIBER_CONNECTORS,
+    stiffness: 0.15,
+    maxBendAngleDeg: 120,
+    radialSegments: 10,
   },
   'fiber-mm': {
     id: 'fiber-mm',
@@ -183,6 +236,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     defaultColor: '#39c1d4',
     roughness: 0.4,
     fiberConnectors: FIBER_CONNECTORS,
+    stiffness: 0.15,
+    maxBendAngleDeg: 120,
+    radialSegments: 10,
   },
   'power-c13': {
     id: 'power-c13',
@@ -196,6 +252,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: POWER_LENGTHS,
     defaultColor: '#23262b',
     roughness: 0.62,
+    stiffness: 0.7,
+    maxBendAngleDeg: 80,
+    radialSegments: 14,
   },
   'power-c19': {
     id: 'power-c19',
@@ -209,6 +268,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: POWER_LENGTHS,
     defaultColor: '#23262b',
     roughness: 0.62,
+    stiffness: 0.75,
+    maxBendAngleDeg: 75,
+    radialSegments: 14,
   },
   'power-dc': {
     id: 'power-dc',
@@ -222,6 +284,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: POWER_LENGTHS,
     defaultColor: '#23262b',
     roughness: 0.62,
+    stiffness: 0.5,
+    maxBendAngleDeg: 90,
+    radialSegments: 12,
   },
   usb: {
     id: 'usb',
@@ -236,6 +301,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: [500, 1000, 2000, 3000],
     defaultColor: '#3a3f46',
     roughness: 0.6,
+    stiffness: 0.4,
+    maxBendAngleDeg: 100,
+    radialSegments: 12,
   },
   console: {
     id: 'console',
@@ -249,6 +317,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: [1000, 2000, 3000],
     defaultColor: '#57c1e8',
     roughness: 0.7,
+    stiffness: 0.3,
+    maxBendAngleDeg: 110,
+    radialSegments: 12,
   },
   serial: {
     id: 'serial',
@@ -262,6 +333,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: [1000, 2000, 3000],
     defaultColor: '#8a8f99',
     roughness: 0.65,
+    stiffness: 0.6,
+    maxBendAngleDeg: 80,
+    radialSegments: 12,
   },
   custom: {
     id: 'custom',
@@ -275,6 +349,9 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     standardLengthsMm: COPPER_LENGTHS,
     defaultColor: '#8a8f99',
     roughness: 0.6,
+    stiffness: 0.4,
+    maxBendAngleDeg: 100,
+    radialSegments: 12,
   },
 };
 

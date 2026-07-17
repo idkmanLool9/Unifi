@@ -25,6 +25,7 @@ export type CompatCode =
   | 'too-short'
   | 'excess-slack'
   | 'bend-radius'
+  | 'bend-angle'
   | 'route-collision';
 
 export interface CompatResult {
@@ -172,6 +173,8 @@ export function checkCable(
     minRouteLengthMm: number;
     nominalLengthMm: number;
     bendRadiusOk: boolean;
+    /** Sharpest direction change on the route, degrees. */
+    maxTurnAngleDeg?: number;
   },
 ): CompatResult {
   const fits =
@@ -200,6 +203,17 @@ export function checkCable(
         level: 'warning',
         code: 'bend-radius',
         message: `The ${spec.minBendRadiusMm} mm minimum bend radius cannot be maintained on this route.`,
+        suggestedTypes: [spec.id],
+      };
+    }
+    if (
+      metrics.maxTurnAngleDeg !== undefined &&
+      metrics.maxTurnAngleDeg > spec.maxBendAngleDeg
+    ) {
+      return {
+        level: 'warning',
+        code: 'bend-angle',
+        message: `A ${Math.round(metrics.maxTurnAngleDeg)}° turn exceeds the ${spec.maxBendAngleDeg}° this sheath tolerates.`,
         suggestedTypes: [spec.id],
       };
     }

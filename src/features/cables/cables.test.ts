@@ -278,12 +278,14 @@ describe('routing', () => {
     expect(
       resolveAutoMode(endpoint([-0.05, 0.2, 0.35]), endpoint([0.05, 0.25, 0.35])),
     ).toBe('direct');
+    // Long same-face spans and opposite faces both follow the
+    // professional side-channel discipline.
     expect(
       resolveAutoMode(endpoint([-0.2, 0.1, 0.35]), endpoint([0.2, 0.5, 0.35])),
-    ).toBe('natural');
+    ).toBe('professional');
     expect(
       resolveAutoMode(endpoint([0.1, 0.2, 0.35]), endpoint([0.1, 0.4, -0.35], -1)),
-    ).toBe('right');
+    ).toBe('professional');
   });
 
   it('recommends the milestone example lengths', () => {

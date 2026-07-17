@@ -14,6 +14,7 @@ export const ROUTING_MODES = [
   'auto',
   'direct',
   'natural',
+  'professional',
   'left',
   'right',
   'top',
@@ -84,20 +85,28 @@ const SIDE_CLEARANCE_M = 0.05;
 /** Clearance above/below the rail span for top/bottom routes, meters. */
 const VERTICAL_CLEARANCE_M = 0.06;
 
-/** Deterministic auto-mode resolution. */
+/**
+ * Deterministic auto-mode resolution (the "hybrid" behavior): short
+ * same-face hops patch directly; everything else follows the
+ * professional side-channel discipline a rack installer would use.
+ */
 export function resolveAutoMode(
   source: RouteEndpoint,
   destination: RouteEndpoint,
 ): Exclude<RoutingMode, 'auto' | 'manual'> {
   const sameFace =
     Math.sign(source.exitDir[2]) === Math.sign(destination.exitDir[2]);
-  if (!sameFace) {
-    // Opposite faces: go around the nearer rack side.
-    const meanX = (source.anchor[0] + destination.anchor[0]) / 2;
-    return meanX >= 0 ? 'right' : 'left';
-  }
+  if (!sameFace) return 'professional';
   const span = dist(source.anchor, destination.anchor);
-  return span < 0.3 ? 'direct' : 'natural';
+  return span < 0.3 ? 'direct' : 'professional';
+}
+
+/** The rack side a professional route uses (nearer to both ends). */
+export function professionalSide(
+  source: RouteEndpoint,
+  destination: RouteEndpoint,
+): 1 | -1 {
+  return (source.anchor[0] + destination.anchor[0]) / 2 >= 0 ? 1 : -1;
 }
 
 /** Slack the mode adds beyond the straight route, as extra length mm. */
@@ -146,6 +155,20 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
       core.push([x, dstExit[1], dstExit[2]]);
       break;
     }
+    case 'professional': {
+      // Installer discipline: into the nearer side channel, a clean
+      // vertical run at that side, then across to the destination.
+      // Opposite-face runs make the depth transition inside the side
+      // channel at the destination height (never diagonally).
+      const side = professionalSide(source, destination);
+      const x = side * (openingHalf + SIDE_CLEARANCE_M);
+      core.push([x, srcExit[1], srcExit[2]]);
+      if (Math.abs(srcExit[2] - dstExit[2]) > 0.05) {
+        core.push([x, dstExit[1], srcExit[2]]);
+      }
+      core.push([x, dstExit[1], dstExit[2]]);
+      break;
+    }
     case 'top':
     case 'bottom': {
       const y =
@@ -158,9 +181,16 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
       break;
     }
     case 'cable-manager': {
-      const via = request.cableManagerPoints?.[0];
+      // Route through the manager nearest the run's vertical midpoint —
+      // horizontal sweep into the manager, then out to the destination.
+      const midY = (srcExit[1] + dstExit[1]) / 2;
+      const via = [...(request.cableManagerPoints ?? [])].sort(
+        (a, b) => Math.abs(a[1] - midY) - Math.abs(b[1] - midY),
+      )[0];
       if (via) {
-        core.push([via[0], via[1], via[2] + Math.sign(srcExit[2]) * 0.03]);
+        const z = via[2] + Math.sign(srcExit[2]) * 0.03;
+        core.push([srcExit[0], via[1], z]);
+        core.push([dstExit[0], via[1], z]);
       } else {
         // Deterministic fallback: behave like natural.
         core.push(scale(add(srcExit, dstExit), 0.5));
@@ -206,12 +236,70 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
         [c[0], c[1], c[2]],
       );
     } else {
-      const midIndex = Math.floor(points.length / 2);
-      points[midIndex] = [
-        points[midIndex][0],
-        points[midIndex][1] - sagM,
-        points[midIndex][2],
-      ];
+      // Slack drapes as a smooth parabolic bulge along the route's
+      // longest run — never a single displaced knot (a hard V both
+      // looks wrong and violates every bend check). Professional side
+      // channels bow outward (away from the rails); everything else
+      // hangs under gravity.
+      let runIndex = 2;
+      let runLength = 0;
+      for (let i = 2; i < points.length - 3; i++) {
+        const length = dist(points[i], points[i + 1]);
+        if (length > runLength) {
+          runLength = length;
+          runIndex = i;
+        }
+      }
+      const a = points[runIndex];
+      const b = points[runIndex + 1];
+      const depth =
+        resolvedMode === 'professional' ? Math.min(sagM, 0.06) : sagM;
+      let bulge: Vec3;
+      if (resolvedMode === 'professional') {
+        // Side channels bow outward, away from the rails.
+        bulge = [(Math.sign(a[0]) || 1) * depth, 0, 0];
+      } else {
+        // Hang under gravity — but only the component perpendicular to
+        // the run bends the cable. A near-vertical run can't sag along
+        // itself: its loop bulges out of the panel instead.
+        const run: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const rl = Math.hypot(...run) || 1;
+        const d: Vec3 = [run[0] / rl, run[1] / rl, run[2] / rl];
+        let perp: Vec3 = [d[1] * d[0], d[1] * d[1] - 1, d[1] * d[2]]; // g−(g·d)d with g=[0,−1,0] flipped sign
+        let pl = Math.hypot(...perp);
+        if (pl < 0.3) {
+          const out = Math.sign(source.exitDir[2] + destination.exitDir[2]) || 1;
+          perp = [
+            -(out * d[2]) * d[0],
+            -(out * d[2]) * d[1],
+            out - out * d[2] * d[2],
+          ];
+          pl = Math.hypot(...perp) || 1;
+        }
+        bulge = [
+          (perp[0] / pl) * depth,
+          (perp[1] / pl) * depth,
+          (perp[2] / pl) * depth,
+        ];
+      }
+      // Sample density scales with how deep the drape is relative to
+      // its run — a shallow sweep needs 3 knots, a J-loop needs many
+      // so its bottom stays round instead of collapsing into a V.
+      const count = Math.min(
+        15,
+        3 + Math.floor((8 * depth) / Math.max(runLength, 0.01)),
+      );
+      const knots: Vec3[] = [];
+      for (let k = 1; k <= count; k++) {
+        const t = k / (count + 1);
+        const arc = 4 * t * (1 - t);
+        knots.push([
+          a[0] + (b[0] - a[0]) * t + bulge[0] * arc,
+          a[1] + (b[1] - a[1]) * t + bulge[1] * arc,
+          a[2] + (b[2] - a[2]) * t + bulge[2] * arc,
+        ]);
+      }
+      points.splice(runIndex + 1, 0, ...knots);
     }
   }
 
@@ -230,14 +318,16 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
 /**
  * Conservative bend feasibility: at every interior knee, the shorter
  * adjacent segment must be able to host the minimum bend radius for the
- * direction change it makes.
+ * direction change it makes. Collinear runs are merged first, so a
+ * straight surface→anchor→exit chain counts as one long runway.
  */
 export function bendRadiusFeasible(points: Vec3[], minRadiusMm: number): boolean {
   const minR = minRadiusMm * MM_TO_M;
-  for (let i = 1; i < points.length - 1; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    const c = points[i + 1];
+  const merged = mergeCollinear(points);
+  for (let i = 1; i < merged.length - 1; i++) {
+    const a = merged[i - 1];
+    const b = merged[i];
+    const c = merged[i + 1];
     const v1: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     const v2: Vec3 = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
     const l1 = Math.hypot(...v1);
@@ -252,6 +342,31 @@ export function bendRadiusFeasible(points: Vec3[], minRadiusMm: number): boolean
     if (Math.min(l1, l2) < needed * 0.6) return false;
   }
   return true;
+}
+
+/** Drops interior knots that continue (nearly) straight on. */
+function mergeCollinear(points: Vec3[]): Vec3[] {
+  if (points.length < 3) return points;
+  const out: Vec3[] = [points[0]];
+  for (let i = 1; i < points.length - 1; i++) {
+    const a = out[out.length - 1];
+    const b = points[i];
+    const c = points[i + 1];
+    const v1: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const v2: Vec3 = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
+    const l1 = Math.hypot(...v1);
+    const l2 = Math.hypot(...v2);
+    if (l1 < 1e-6) continue; // duplicate knot
+    if (l2 < 1e-6) {
+      out.push(b);
+      continue;
+    }
+    const cos = (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) / (l1 * l2);
+    if (cos > 0.995) continue; // straight on — merge
+    out.push(b);
+  }
+  out.push(points[points.length - 1]);
+  return out;
 }
 
 /**

@@ -1,16 +1,25 @@
-import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { BookmarkPlus, Boxes, RotateCcw, Trash2 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { Switch } from '@/components/ui/Switch';
 import { InfoRow } from '../InfoRow';
 import {
   CABLE_CATALOG,
   CABLE_PALETTE,
   cableTypesBetween,
   type CableTypeId,
+  type FiberConnector,
 } from '@/features/cables/cableCatalog';
 import { formatLength } from '@/features/cables/compatibility';
-import { recommendLengthMm, ROUTING_MODES, type RoutingMode, type SlackMode } from '@/features/cables/routing';
+import {
+  recommendLengthMm,
+  ROUTING_MODES,
+  type RoutingMode,
+  type SlackMode,
+} from '@/features/cables/routing';
 import { resolveEndPort } from '@/stores/cableToolStore';
+import { useCablePresetsStore } from '@/stores/cablePresetsStore';
 import { useCableStore, type CableInstance } from '@/stores/cableStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { toast } from '@/stores/toastStore';
@@ -23,24 +32,34 @@ const SLACK_OPTIONS: ReadonlyArray<{ value: SlackMode; label: string }> = [
 ];
 
 const MODE_LABELS: Record<RoutingMode, string> = {
-  auto: 'Auto',
-  direct: 'Direct',
-  natural: 'Natural',
+  auto: 'Auto (hybrid)',
+  direct: 'Shortest',
+  natural: 'Cleanest',
+  professional: 'Professional',
   left: 'Left side',
   right: 'Right side',
   top: 'Top',
   bottom: 'Bottom',
-  'cable-manager': 'Cable manager',
+  'cable-manager': 'Patch panel / manager',
   manual: 'Manual',
 };
-/** Manual waypoint editing arrives later — hide it from the picker. */
-const MODE_CHOICES = ROUTING_MODES.filter((m) => m !== 'manual');
+
+const FIBER_LABELS: Record<FiberConnector, string> = {
+  'lc-lc': 'LC ↔ LC',
+  'lc-sc': 'LC ↔ SC',
+  mpo: 'MPO trunk',
+};
 
 const STATUS_STYLE: Record<CableInstance['status'], string> = {
   ok: 'bg-success/15 text-success',
   warning: 'bg-warning/15 text-warning',
   invalid: 'bg-danger/15 text-danger',
 };
+
+const inputClass =
+  'h-7 w-full rounded-lg border border-edge bg-surface-raised px-2 text-xs font-medium text-primary focus:border-accent focus:outline-none';
+const selectClass =
+  'h-7 w-full rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none';
 
 /** Inspector contents for a selected cable — every control is live. */
 export function CableInspector({ cable }: { cable: CableInstance }) {
@@ -62,7 +81,9 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
       ? cableTypesBetween(src.port.type, dst.port.type).map((s) => s.id)
       : [cable.type];
 
-  const slack = cable.nominalLengthMm - Math.min(cable.calculatedRouteLengthMm, cable.nominalLengthMm);
+  const slack =
+    cable.nominalLengthMm -
+    Math.min(cable.calculatedRouteLengthMm, cable.nominalLengthMm);
   const minRoute = cable.calculatedRouteLengthMm;
   const recommended = recommendLengthMm(minRoute, spec.standardLengthsMm);
 
@@ -119,9 +140,10 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
                   color: next.defaultColor,
                   thicknessMm: next.diameterMm,
                   bendRadiusMm: next.minBendRadiusMm,
+                  fiberConnector: next.fiberConnectors ? 'lc-lc' : undefined,
                 });
               }}
-              className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none"
+              className={selectClass}
             >
               {compatibleTypes.map((id) => (
                 <option key={id} value={id}>
@@ -130,6 +152,33 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
               ))}
             </select>
           </div>
+
+          {spec.fiberConnectors && (
+            <div className="space-y-1">
+              <label
+                htmlFor="cable-fiber"
+                className="block text-xs text-secondary"
+              >
+                Termination
+              </label>
+              <select
+                id="cable-fiber"
+                value={cable.fiberConnector ?? 'lc-lc'}
+                onChange={(e) =>
+                  updateCable(cable.id, {
+                    fiberConnector: e.target.value as FiberConnector,
+                  })
+                }
+                className={selectClass}
+              >
+                {spec.fiberConnectors.map((fc) => (
+                  <option key={fc} value={fc}>
+                    {FIBER_LABELS[fc]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-1">
             <label htmlFor="cable-length" className="block text-xs text-secondary">
@@ -146,7 +195,7 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
                 if (e.target.value === 'custom') return;
                 updateCable(cable.id, { nominalLengthMm: Number(e.target.value) });
               }}
-              className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none"
+              className={selectClass}
             >
               {spec.standardLengthsMm.map((mm) => (
                 <option key={mm} value={mm}>
@@ -167,7 +216,7 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
                   nominalLengthMm: Math.max(100, Number(e.target.value) || 100),
                 })
               }
-              className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-2 text-xs font-medium text-primary tabular-nums focus:border-accent focus:outline-none"
+              className={cn(inputClass, 'tabular-nums')}
             />
           </div>
 
@@ -210,23 +259,27 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
                   routingMode: e.target.value as RoutingMode,
                 })
               }
-              className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none"
+              className={selectClass}
             >
-              {MODE_CHOICES.map((mode) => (
+              {ROUTING_MODES.map((mode) => (
                 <option key={mode} value={mode}>
                   {MODE_LABELS[mode]}
                 </option>
               ))}
             </select>
+            {cable.routingMode === 'manual' && (
+              <p className="text-[10.5px] leading-snug text-muted">
+                Drag the control points in the viewport. Click a ghost dot to
+                insert one, double-click a point to delete it.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
             <span className="block text-xs text-secondary">Slack</span>
             <SegmentedControl
               label="Slack mode"
-              value={
-                cable.slackMode === 'custom' ? 'normal' : cable.slackMode
-              }
+              value={cable.slackMode === 'custom' ? 'normal' : cable.slackMode}
               onChange={(slackMode) => updateCable(cable.id, { slackMode })}
               options={SLACK_OPTIONS}
             />
@@ -245,10 +298,26 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
             {minRoute > 0 ? formatLength(Math.max(slack, 0)) : '—'}
           </InfoRow>
           <InfoRow label="Min bend radius">{cable.bendRadiusMm} mm</InfoRow>
+
+          <button
+            type="button"
+            onClick={() =>
+              updateCable(cable.id, {
+                routingMode: 'auto',
+                waypointsMm: undefined,
+              })
+            }
+            className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+          >
+            <RotateCcw className="size-3" strokeWidth={1.75} />
+            Reset routing
+          </button>
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Label">
+      <BundleSection cable={cable} />
+
+      <CollapsibleSection title="Label & documentation">
         <div className="space-y-2">
           <input
             type="text"
@@ -258,8 +327,40 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
             onChange={(e) =>
               updateCable(cable.id, { label: e.target.value || undefined })
             }
-            className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-2 text-xs font-medium text-primary focus:border-accent focus:outline-none"
+            className={inputClass}
           />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-secondary">Show label at both ends</span>
+            <Switch
+              label="Show label in viewport"
+              checked={cable.labelVisible ?? false}
+              onChange={(labelVisible) => updateCable(cable.id, { labelVisible })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <input
+              type="text"
+              aria-label="Manufacturer"
+              placeholder="Manufacturer"
+              value={cable.manufacturer ?? ''}
+              onChange={(e) =>
+                updateCable(cable.id, {
+                  manufacturer: e.target.value || undefined,
+                })
+              }
+              className={inputClass}
+            />
+            <input
+              type="text"
+              aria-label="Part number"
+              placeholder="Part no."
+              value={cable.partNumber ?? ''}
+              onChange={(e) =>
+                updateCable(cable.id, { partNumber: e.target.value || undefined })
+              }
+              className={inputClass}
+            />
+          </div>
           <textarea
             aria-label="Cable notes"
             placeholder="Notes"
@@ -273,6 +374,8 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
         </div>
       </CollapsibleSection>
 
+      <PresetSection cable={cable} />
+
       <div className="px-3 py-3">
         <button
           type="button"
@@ -284,5 +387,208 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
         </button>
       </div>
     </>
+  );
+}
+
+/* ---- bundles ---------------------------------------------------------- */
+
+function BundleSection({ cable }: { cable: CableInstance }) {
+  const bundles = useCableStore((s) => s.bundles);
+  const cables = useCableStore((s) => s.cables);
+  const createBundle = useCableStore((s) => s.createBundle);
+  const updateBundle = useCableStore((s) => s.updateBundle);
+  const removeBundle = useCableStore((s) => s.removeBundle);
+  const assignToBundle = useCableStore((s) => s.assignToBundle);
+
+  const bundle = cable.bundleId
+    ? bundles.find((b) => b.id === cable.bundleId)
+    : undefined;
+  const memberCount = bundle
+    ? cables.filter((c) => c.bundleId === bundle.id).length
+    : 0;
+
+  return (
+    <CollapsibleSection title="Bundle">
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <label htmlFor="cable-bundle" className="block text-xs text-secondary">
+            Bundle membership
+          </label>
+          <select
+            id="cable-bundle"
+            value={cable.bundleId ?? ''}
+            onChange={(e) => {
+              if (e.target.value === '__new__') {
+                const created = createBundle();
+                assignToBundle(cable.id, created.id);
+                toast({ variant: 'success', title: `${created.name} created` });
+              } else {
+                assignToBundle(cable.id, e.target.value || undefined);
+              }
+            }}
+            className={selectClass}
+          >
+            <option value="">Not bundled</option>
+            {bundles.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+            <option value="__new__">＋ New bundle…</option>
+          </select>
+        </div>
+
+        {bundle && (
+          <>
+            <input
+              type="text"
+              aria-label="Bundle name"
+              value={bundle.name}
+              onChange={(e) =>
+                updateBundle(bundle.id, { name: e.target.value })
+              }
+              className={inputClass}
+            />
+            <InfoRow label="Members">
+              <span className="flex items-center gap-1">
+                <Boxes className="size-3 text-muted" /> {memberCount}
+              </span>
+            </InfoRow>
+            <div className="space-y-1">
+              <label
+                htmlFor="bundle-spacing"
+                className="block text-xs text-secondary"
+              >
+                Sheath spacing (mm)
+              </label>
+              <input
+                id="bundle-spacing"
+                type="number"
+                min={0}
+                max={20}
+                step={0.5}
+                value={bundle.spacingMm}
+                onChange={(e) =>
+                  updateBundle(bundle.id, {
+                    spacingMm: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+                className={cn(inputClass, 'tabular-nums')}
+              />
+            </div>
+            <p className="text-[10.5px] leading-snug text-muted">
+              Bundled cables run as one professional loom along the side
+              channel and split near their ports.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                removeBundle(bundle.id);
+                toast({ variant: 'success', title: 'Bundle dissolved' });
+              }}
+              className="flex h-7 w-full items-center justify-center rounded-lg text-[11px] font-medium text-danger transition-colors hover:bg-danger/10"
+            >
+              Dissolve bundle
+            </button>
+          </>
+        )}
+      </div>
+    </CollapsibleSection>
+  );
+}
+
+/* ---- presets ---------------------------------------------------------- */
+
+function PresetSection({ cable }: { cable: CableInstance }) {
+  const presets = useCablePresetsStore((s) => s.presets);
+  const addPreset = useCablePresetsStore((s) => s.addPreset);
+  const removePreset = useCablePresetsStore((s) => s.removePreset);
+  const updateCable = useCableStore((s) => s.updateCable);
+  const [name, setName] = useState('');
+
+  const apply = (id: string) => {
+    const preset = presets.find((p) => p.id === id);
+    if (!preset) return;
+    const spec = CABLE_CATALOG[preset.type];
+    updateCable(cable.id, {
+      type: preset.type,
+      color: preset.color,
+      nominalLengthMm: preset.lengthMm,
+      thicknessMm: spec.diameterMm,
+      bendRadiusMm: spec.minBendRadiusMm,
+      manufacturer: preset.manufacturer,
+      partNumber: preset.partNumber,
+    });
+    toast({ variant: 'success', title: `Applied “${preset.name}”` });
+  };
+
+  const save = () => {
+    const label = name.trim() || `${CABLE_CATALOG[cable.type].name} ${formatLength(cable.nominalLengthMm)}`;
+    addPreset({
+      name: label,
+      type: cable.type,
+      color: cable.color,
+      lengthMm: cable.nominalLengthMm,
+      manufacturer: cable.manufacturer,
+      partNumber: cable.partNumber,
+    });
+    setName('');
+    toast({ variant: 'success', title: `Preset “${label}” saved` });
+  };
+
+  return (
+    <CollapsibleSection title="Cable library" defaultOpen={false}>
+      <div className="space-y-2">
+        {presets.length > 0 && (
+          <div className="space-y-1">
+            {presets.map((preset) => (
+              <div key={preset.id} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => apply(preset.id)}
+                  className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-edge px-2 text-left text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+                  title={`Apply ${preset.name}`}
+                >
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: preset.color }}
+                  />
+                  <span className="truncate">{preset.name}</span>
+                  <span className="ml-auto shrink-0 text-muted">
+                    {formatLength(preset.lengthMm)}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete preset ${preset.name}`}
+                  onClick={() => removePreset(preset.id)}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                >
+                  <Trash2 className="size-3" strokeWidth={1.75} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-1.5">
+          <input
+            type="text"
+            aria-label="New preset name"
+            placeholder="Preset name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={save}
+            className="flex h-7 shrink-0 items-center gap-1 rounded-lg border border-edge px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+          >
+            <BookmarkPlus className="size-3.5" strokeWidth={1.75} />
+            Save
+          </button>
+        </div>
+      </div>
+    </CollapsibleSection>
   );
 }

@@ -27,6 +27,9 @@ import {
   calibratedPort,
   useCalibrationStore,
 } from '@/features/devices/hardware/connectorCalibration';
+import { CABLE_CATALOG } from './cableCatalog';
+import { formatLength } from './compatibility';
+import { computeRoute, recommendLengthMm } from './routing';
 import { etherlightingColor } from '@/features/devices/hardware/physicalPorts';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
@@ -285,6 +288,14 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
     focusPort(target.end);
   };
 
+  const source = sourceEnd
+    ? targets.find(
+        (t) =>
+          t.end.deviceInstanceId === sourceEnd.deviceInstanceId &&
+          t.end.portRef === sourceEnd.portRef,
+      )
+    : null;
+
   const hoverInfo = hovered && {
     reason:
       sourceEnd &&
@@ -296,13 +307,37 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
         : null,
   };
 
-  const source = sourceEnd
-    ? targets.find(
-        (t) =>
-          t.end.deviceInstanceId === sourceEnd.deviceInstanceId &&
-          t.end.portRef === sourceEnd.portRef,
-      )
-    : null;
+  // Live length estimate for the pending connection: the auto route
+  // between the armed source and the hovered port, plus the standard
+  // length that would be picked for it.
+  const estimate = useMemo(() => {
+    if (!source || !hovered || hovered === source) return null;
+    if (!hoverInfo?.reason || hoverInfo.reason.level === 'invalid') return null;
+    const route = computeRoute({
+      source: {
+        surface: source.position,
+        anchor: source.anchor,
+        exitDir: [0, 0, source.out],
+      },
+      destination: {
+        surface: hovered.position,
+        anchor: hovered.anchor,
+        exitDir: [0, 0, hovered.out],
+      },
+      mode: 'auto',
+      slack: 'normal',
+      nominalLengthMm: 0,
+      minBendRadiusMm: 25,
+      geometry,
+    });
+    const typeId = hoverInfo.reason.suggestedTypes[0];
+    const spec = typeId ? CABLE_CATALOG[typeId] : undefined;
+    const recommended = spec
+      ? recommendLengthMm(route.minLengthMm, spec.standardLengthsMm)
+      : null;
+    return { minLengthMm: route.minLengthMm, recommended };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, hovered, hoverInfo?.reason, geometry]);
 
   return (
     <group>
@@ -386,6 +421,14 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
                 {hoverInfo.reason.level === 'invalid'
                   ? hoverInfo.reason.message
                   : 'Click to connect'}
+              </div>
+            )}
+            {estimate && (
+              <div style={{ color: '#8fa4bd' }}>
+                ≈ {formatLength(estimate.minLengthMm)} route
+                {estimate.recommended
+                  ? ` · ${formatLength(estimate.recommended)} cable`
+                  : ''}
               </div>
             )}
           </div>

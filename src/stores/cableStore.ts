@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CABLE_CATALOG, type CableTypeId } from '@/features/cables/cableCatalog';
+import {
+  CABLE_CATALOG,
+  type CableTypeId,
+  type FiberConnector,
+} from '@/features/cables/cableCatalog';
 import type { RoutingMode, SlackMode } from '@/features/cables/routing';
 
 /**
@@ -36,11 +40,27 @@ export interface CableInstance {
   /** Human-readable status detail (why warning/invalid). */
   statusMessage?: string;
   label?: string;
+  /** Show the label chips at both ends in the viewport. */
+  labelVisible?: boolean;
   notes?: string;
+  /** Documentation metadata (cable library). */
+  manufacturer?: string;
+  partNumber?: string;
+  /** Fiber termination variant (LC↔LC, LC↔SC…), fiber cables only. */
+  fiberConnector?: FiberConnector;
   /** Manual-mode waypoints, rack-local meters. */
   waypointsMm?: [number, number, number][];
-  /** Future: cable bundling. */
+  /** Bundle membership. */
   bundleId?: string;
+}
+
+export interface CableBundle {
+  id: string;
+  name: string;
+  /** Extra clearance between member sheaths, mm. */
+  spacingMm: number;
+  /** Optional sleeve/label color for the whole bundle. */
+  color?: string;
 }
 
 export interface NewCable {
@@ -52,8 +72,21 @@ export interface NewCable {
   label?: string;
 }
 
+/**
+ * Cables created this session (for the insertion animation only —
+ * never persisted, so reloading a project doesn't replay every plug).
+ * The renderer consumes an id exactly once.
+ */
+const bornThisSession = new Set<string>();
+export function consumeBornAnimation(id: string): boolean {
+  return bornThisSession.delete(id);
+}
+
 interface CableState {
   cables: CableInstance[];
+  bundles: CableBundle[];
+  /** Monotonic label counter (Cable 1, Cable 2, …). */
+  labelCounter: number;
 
   addCable: (input: NewCable) => CableInstance;
   updateCable: (
@@ -64,15 +97,24 @@ interface CableState {
   /** Removes every cable touching a device; returns the removed cables. */
   removeForDevice: (deviceInstanceId: string) => CableInstance[];
   clearAll: () => void;
+
+  createBundle: (name?: string) => CableBundle;
+  updateBundle: (id: string, patch: Partial<Omit<CableBundle, 'id'>>) => void;
+  /** Dissolves the bundle; member cables stay, unassigned. */
+  removeBundle: (id: string) => void;
+  assignToBundle: (cableId: string, bundleId: string | undefined) => void;
 }
 
 export const useCableStore = create<CableState>()(
   persist(
     (set, get) => ({
       cables: [],
+      bundles: [],
+      labelCounter: 0,
 
       addCable: (input) => {
         const spec = CABLE_CATALOG[input.type];
+        const n = get().labelCounter + 1;
         const cable: CableInstance = {
           id: crypto.randomUUID(),
           source: input.source,
@@ -86,9 +128,13 @@ export const useCableStore = create<CableState>()(
           bendRadiusMm: spec.minBendRadiusMm,
           thicknessMm: spec.diameterMm,
           status: 'ok',
-          label: input.label,
+          label: input.label ?? `Cable ${n}`,
         };
-        set((s) => ({ cables: [...s.cables, cable] }));
+        bornThisSession.add(cable.id);
+        set((s) => ({
+          cables: [...s.cables, cable],
+          labelCounter: n,
+        }));
         return cable;
       },
 
@@ -116,7 +162,37 @@ export const useCableStore = create<CableState>()(
         return affected;
       },
 
-      clearAll: () => set({ cables: [] }),
+      clearAll: () => set({ cables: [], bundles: [] }),
+
+      createBundle: (name) => {
+        const bundle: CableBundle = {
+          id: crypto.randomUUID(),
+          name: name ?? `Bundle ${get().bundles.length + 1}`,
+          spacingMm: 1,
+        };
+        set((s) => ({ bundles: [...s.bundles, bundle] }));
+        return bundle;
+      },
+
+      updateBundle: (id, patch) =>
+        set((s) => ({
+          bundles: s.bundles.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+        })),
+
+      removeBundle: (id) =>
+        set((s) => ({
+          bundles: s.bundles.filter((b) => b.id !== id),
+          cables: s.cables.map((c) =>
+            c.bundleId === id ? { ...c, bundleId: undefined } : c,
+          ),
+        })),
+
+      assignToBundle: (cableId, bundleId) =>
+        set((s) => ({
+          cables: s.cables.map((c) =>
+            c.id === cableId ? { ...c, bundleId } : c,
+          ),
+        })),
     }),
     { name: 'rackforge-cables' },
   ),
@@ -145,3 +221,15 @@ export const cableForPort = (
       (c.destination.deviceInstanceId === end.deviceInstanceId &&
         c.destination.portRef === end.portRef),
   );
+
+/**
+ * Bundle members in stable id order — index in this list drives the
+ * member's deterministic offset inside the loom.
+ */
+export const bundleMembers = (
+  cables: readonly CableInstance[],
+  bundleId: string,
+): CableInstance[] =>
+  cables
+    .filter((c) => c.bundleId === bundleId)
+    .sort((a, b) => a.id.localeCompare(b.id));
