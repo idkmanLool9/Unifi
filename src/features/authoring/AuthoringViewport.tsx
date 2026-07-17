@@ -9,6 +9,7 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
+  TorusGeometry,
   Vector3,
 } from 'three';
 import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber';
@@ -27,6 +28,7 @@ import {
   type Vec3,
 } from './authoringModel';
 import {
+  isPowerType,
   primaryPort,
   selectedPorts,
   useAuthoringStore,
@@ -40,6 +42,7 @@ import { deviceModelUrl, getDevice } from '@/features/devices/deviceRegistry';
 import {
   DEFAULT_INSERTION_MM,
   GENERIC_INSERTION_MM,
+  GenericPlug,
   plugQuaternion,
   Rj45Plug,
 } from '@/features/cables/Rj45Plug';
@@ -84,6 +87,13 @@ const SUGGESTION_MATERIAL = new MeshBasicMaterial({
   color: '#3fb970',
   transparent: true,
   opacity: 0.22,
+  toneMapped: false,
+  depthWrite: false,
+});
+const DIMMED_MATERIAL = new MeshBasicMaterial({
+  color: '#5a6472',
+  transparent: true,
+  opacity: 0.1,
   toneMapped: false,
   depthWrite: false,
 });
@@ -284,8 +294,9 @@ function StageContent({ definition }: { definition: DeviceDefinition }) {
           <MountingHardware definition={live} geometry={PREVIEW_GEOMETRY} />
         )}
         <PortInserts />
+        <CategoryMarkers definition={definition} />
       </group>
-      <SelectionGizmo origin={origin} />
+      <SelectionGizmo origin={origin} definition={definition} />
     </>
   );
 }
@@ -419,6 +430,7 @@ function PortInserts() {
   const selection = useAuthoringStore((s) => s.selection);
   const select = useAuthoringStore((s) => s.select);
   const mode = useAuthoringStore((s) => s.mode);
+  const category = useAuthoringStore((s) => s.category);
   const previewVisible = useAuthoringStore((s) => s.previewVisible);
   const previewIntensity = useAuthoringStore((s) => s.previewIntensity);
 
@@ -428,12 +440,25 @@ function PortInserts() {
     SELECTED_MATERIAL.opacity = 0.45 * previewIntensity + 0.2;
   }, [previewIntensity]);
 
-  if (mode !== 'edit' || !previewVisible) return null;
+  const portCategory =
+    category === 'ports' ||
+    category === 'power' ||
+    category === 'anchors' ||
+    category === 'validation';
+  if (mode !== 'edit' || !previewVisible || !portCategory) return null;
 
   return (
     <group>
       {ports.map((port) => {
         const selected = selection.includes(port.id);
+        // Data ports dim in the Power category and vice versa, matching
+        // the layout map below the viewport.
+        const inFocus =
+          category === 'power'
+            ? isPowerType(port.type)
+            : category === 'ports'
+              ? !isPowerType(port.type)
+              : true;
         const out = port.location === 'front' ? 1 : -1;
         const size: Vec3 = [
           port.sizeMm[0] * MM_TO_M,
@@ -448,7 +473,13 @@ function PortInserts() {
           >
             <mesh
               geometry={UNIT_BOX}
-              material={selected ? SELECTED_MATERIAL : INSERT_MATERIAL}
+              material={
+                selected
+                  ? SELECTED_MATERIAL
+                  : inFocus
+                    ? INSERT_MATERIAL
+                    : DIMMED_MATERIAL
+              }
               position={[0, 0, out * (0.0006 - INSERT_DEPTH / 2)]}
               scale={size}
               onClick={(e: ThreeEvent<MouseEvent>) => {
@@ -503,55 +534,79 @@ const ANCHOR_MATERIAL = new MeshBasicMaterial({
 const ANCHOR_GEOMETRY = new CylinderGeometry(0.0022, 0.0022, 0.0012, 14);
 ANCHOR_GEOMETRY.rotateX(Math.PI / 2);
 
+/** Authored cable exit direction, normalized (device-local). */
+function exitVector(port: AuthoredPort): Vec3 {
+  const out = port.location === 'front' ? 1 : -1;
+  const e = port.exitDirMm;
+  if (e) {
+    const length = Math.hypot(e[0], e[1], e[2]);
+    if (length > 1e-6) return [e[0] / length, e[1] / length, e[2] / length];
+  }
+  return [0, 0, out];
+}
+
 /**
- * For every selected port: the real RJ45 connector inserted exactly as
- * a cable will sit, the exit-direction arrow and the cable-anchor
- * marker. Pure authoring feedback — never rendered outside this mode.
+ * For every selected port: the real connector inserted exactly as a
+ * cable will sit (RJ45 for copper, barrel plug otherwise), the authored
+ * exit-direction arrow and the cable-anchor marker. Pure authoring
+ * feedback — never rendered outside this mode.
  */
 function ConnectorPreviews() {
   const ports = useAuthoringStore((s) => s.ports);
   const selection = useAuthoringStore((s) => s.selection);
+  const category = useAuthoringStore((s) => s.category);
   const selected = selectedPorts({ ports, selection });
+
+  // The validation category shows inserts for orientation, but keeps
+  // the stage free of connector overlays.
+  if (category === 'validation') return null;
 
   return (
     <>
       {selected.map((port) => {
-        const out = port.location === 'front' ? 1 : -1;
-        const exit: Vec3 = [0, 0, out];
+        const exit = exitVector(port);
+        const quaternion = plugQuaternion(exit);
+        const copper = port.type in DEFAULT_INSERTION_MM;
         const insertionM =
           (port.insertionMm ??
             DEFAULT_INSERTION_MM[port.type] ??
             GENERIC_INSERTION_MM) * MM_TO_M;
         const surface = mm(port.positionMm);
         const plugPos: Vec3 = [
-          surface[0],
-          surface[1],
-          surface[2] - out * insertionM,
+          surface[0] - exit[0] * insertionM,
+          surface[1] - exit[1] * insertionM,
+          surface[2] - exit[2] * insertionM,
         ];
         const anchor: Vec3 = [
           surface[0] + port.anchorMm[0] * MM_TO_M,
           surface[1] + port.anchorMm[1] * MM_TO_M,
           surface[2] + port.anchorMm[2] * MM_TO_M,
         ];
-        const arrowLen = Math.abs(port.anchorMm[2]) * MM_TO_M + 0.012;
+        const arrowLen =
+          Math.max(Math.hypot(...port.anchorMm), 12) * MM_TO_M + 0.012;
         return (
           <group key={`preview-${port.id}`}>
-            <group position={plugPos} quaternion={plugQuaternion(exit)}>
-              <Rj45Plug color="#3f66d0" cableRadiusM={0.00275} />
+            <group position={plugPos} quaternion={quaternion}>
+              {copper ? (
+                <Rj45Plug color="#3f66d0" cableRadiusM={0.00275} />
+              ) : (
+                <GenericPlug color="#3f66d0" cableRadiusM={0.00275} />
+              )}
             </group>
-            {/* Exit direction */}
-            <mesh
-              geometry={EXIT_SHAFT}
-              material={EXIT_MATERIAL}
-              position={[surface[0], surface[1], surface[2] + (out * arrowLen) / 2]}
-              scale={[1, 1, arrowLen]}
-            />
-            <mesh
-              geometry={EXIT_TIP}
-              material={EXIT_MATERIAL}
-              position={[surface[0], surface[1], surface[2] + out * arrowLen]}
-              rotation={[0, out === 1 ? 0 : Math.PI, 0]}
-            />
+            {/* Exit direction (authored exitDirMm, or the panel normal) */}
+            <group position={surface} quaternion={quaternion}>
+              <mesh
+                geometry={EXIT_SHAFT}
+                material={EXIT_MATERIAL}
+                position={[0, 0, arrowLen / 2]}
+                scale={[1, 1, arrowLen]}
+              />
+              <mesh
+                geometry={EXIT_TIP}
+                material={EXIT_MATERIAL}
+                position={[0, 0, arrowLen]}
+              />
+            </group>
             {/* Cable anchor (plug body end / sheath start) */}
             <mesh
               geometry={ANCHOR_GEOMETRY}
@@ -565,86 +620,334 @@ function ConnectorPreviews() {
   );
 }
 
+/* ---- category markers: LEDs, display, cooling ------------------------- */
+
+const DISC_GEOMETRY = new CylinderGeometry(1, 1, 1, 20);
+DISC_GEOMETRY.rotateX(Math.PI / 2); // axis onto Z
+const RING_GEOMETRY = new TorusGeometry(1, 0.08, 8, 28);
+const RING_MATERIAL = new MeshBasicMaterial({
+  color: '#9dbcff',
+  toneMapped: false,
+});
+const HIT_MATERIAL = new MeshBasicMaterial({
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+});
+const DISPLAY_GLASS = new MeshBasicMaterial({
+  color: '#69d2ff',
+  transparent: true,
+  opacity: 0.22,
+  toneMapped: false,
+  depthWrite: false,
+});
+const FAN_MATERIAL = new MeshBasicMaterial({
+  color: '#3fb970',
+  transparent: true,
+  opacity: 0.28,
+  toneMapped: false,
+  depthWrite: false,
+});
+
+/** Category-specific stage overlays (device-local space). */
+function CategoryMarkers({ definition }: { definition: DeviceDefinition }) {
+  const category = useAuthoringStore((s) => s.category);
+  const mode = useAuthoringStore((s) => s.mode);
+  if (mode !== 'edit') return null;
+  return (
+    <>
+      {category === 'leds' && <LedMarkers />}
+      {category === 'displays' && <DisplayMarker definition={definition} />}
+      {category === 'cooling' && <FanMarkers />}
+    </>
+  );
+}
+
 /**
- * CAD transform gizmo bound to the primary selection. The gizmo drives a
- * proxy Object3D; every change is written back to the store in device
- * mm, with magnetic + grid snapping applied to translations. Dragging
- * automatically pauses the camera controls (drei wiring).
+ * Authored LEDs as emissive discs at their true size, with an enlarged
+ * invisible hit disc so a 2 mm LED is still clickable. Selection rings
+ * the active LED for the gizmo.
  */
-function SelectionGizmo({ origin }: { origin: Vec3 }) {
+function LedMarkers() {
+  const leds = useAuthoringStore((s) => s.leds);
+  const selectedLedId = useAuthoringStore((s) => s.selectedLedId);
+  const selectLed = useAuthoringStore((s) => s.selectLed);
+
+  return (
+    <group>
+      {leds.map((led) => {
+        const r = (Math.max(led.diameterMm, 1.2) / 2) * MM_TO_M;
+        const hitR = Math.max(r * 2.5, 0.003);
+        const selected = led.id === selectedLedId;
+        const out = led.positionMm[2] >= 0 ? 1 : -1;
+        return (
+          <group key={led.id} position={mm(led.positionMm)}>
+            <mesh geometry={DISC_GEOMETRY} scale={[r, r, 0.0012]}>
+              <meshBasicMaterial
+                color={led.on ? led.color : '#41474f'}
+                toneMapped={false}
+                transparent
+                opacity={led.on ? Math.min(1, 0.4 + 0.6 * led.intensity) : 0.9}
+                depthWrite={false}
+              />
+            </mesh>
+            <mesh
+              geometry={DISC_GEOMETRY}
+              material={HIT_MATERIAL}
+              scale={[hitR, hitR, 0.004]}
+              onClick={(e: ThreeEvent<MouseEvent>) => {
+                e.stopPropagation();
+                if (e.delta > 4) return;
+                selectLed(led.id);
+              }}
+            />
+            {selected && (
+              <mesh
+                geometry={RING_GEOMETRY}
+                material={RING_MATERIAL}
+                position={[0, 0, out * 0.0012]}
+                scale={[hitR, hitR, hitR]}
+              />
+            )}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** The display glass area + bezel outline at its authored position. */
+function DisplayMarker({ definition }: { definition: DeviceDefinition }) {
+  const display = useAuthoringStore((s) => s.display);
+  if (!display?.lcd) return null;
+  const w = (display.widthMm ?? 60) * MM_TO_M;
+  const h = (display.heightMm ?? 25) * MM_TO_M;
+  const bezel = (display.bezelMm ?? 2) * MM_TO_M;
+  const pos = (display.positionMm ?? [0, 0, definition.depthMm / 2]) as Vec3;
+  return (
+    <group position={mm(pos)}>
+      <mesh geometry={UNIT_BOX} material={DISPLAY_GLASS} scale={[w, h, 0.0008]} />
+      <lineSegments
+        geometry={UNIT_EDGES}
+        material={EDGE_MATERIAL}
+        scale={[w + bezel * 2, h + bezel * 2, 0.0014]}
+      />
+    </group>
+  );
+}
+
+/** Fan rotors as translucent discs; click selects for the gizmo. */
+function FanMarkers() {
+  const cooling = useAuthoringStore((s) => s.cooling);
+  const selectedFan = useAuthoringStore((s) => s.selectedFan);
+  const selectFan = useAuthoringStore((s) => s.selectFan);
+  const fans = cooling?.fanPositionsMm ?? [];
+  const r = ((cooling?.fanDiameterMm ?? 40) / 2) * MM_TO_M;
+
+  return (
+    <group>
+      {fans.map((fan, i) => (
+        <group key={i} position={mm(fan as Vec3)}>
+          <mesh
+            geometry={DISC_GEOMETRY}
+            material={FAN_MATERIAL}
+            scale={[r, r, 0.002]}
+            onClick={(e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation();
+              if (e.delta > 4) return;
+              selectFan(i);
+            }}
+          />
+          <mesh
+            geometry={RING_GEOMETRY}
+            material={selectedFan === i ? RING_MATERIAL : FAN_MATERIAL}
+            scale={[r, r, r]}
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** What the transform gizmo is currently bound to. */
+type GizmoKind = 'port' | 'anchor' | 'led' | 'display' | 'fan';
+
+/**
+ * CAD transform gizmo bound to the active category's selection: ports
+ * (translate/rotate/scale + multi-move), a port's cable anchor, an LED,
+ * the display (translate/scale) or a fan — all through one proxy
+ * Object3D written back to the store in device mm. Grid snapping comes
+ * from TransformControls' translationSnap; ports additionally get
+ * magnetic alignment. Dragging pauses the camera controls (drei
+ * wiring); beginTransform() records exactly one undo entry per drag.
+ */
+function SelectionGizmo({
+  origin,
+  definition,
+}: {
+  origin: Vec3;
+  definition: DeviceDefinition;
+}) {
   const tool = useAuthoringStore((s) => s.tool);
   const mode = useAuthoringStore((s) => s.mode);
+  const category = useAuthoringStore((s) => s.category);
   const ports = useAuthoringStore((s) => s.ports);
   const selection = useAuthoringStore((s) => s.selection);
   const snap = useAuthoringStore((s) => s.snap);
+  const leds = useAuthoringStore((s) => s.leds);
+  const selectedLedId = useAuthoringStore((s) => s.selectedLedId);
+  const display = useAuthoringStore((s) => s.display);
+  const cooling = useAuthoringStore((s) => s.cooling);
+  const selectedFan = useAuthoringStore((s) => s.selectedFan);
+
   const port = primaryPort({ ports, selection });
+  const led = leds.find((l) => l.id === selectedLedId);
+  const fan =
+    selectedFan !== null
+      ? (cooling?.fanPositionsMm?.[selectedFan] as Vec3 | undefined)
+      : undefined;
+
+  // Resolve the gizmo binding for the active category.
+  let kind: GizmoKind | null = null;
+  let targetPosMm: Vec3 | null = null;
+  let targetRotDeg: Vec3 = [0, 0, 0];
+  if (category === 'anchors') {
+    if (port) {
+      kind = 'anchor';
+      targetPosMm = [
+        port.positionMm[0] + port.anchorMm[0],
+        port.positionMm[1] + port.anchorMm[1],
+        port.positionMm[2] + port.anchorMm[2],
+      ];
+    }
+  } else if (category === 'leds') {
+    if (led) {
+      kind = 'led';
+      targetPosMm = led.positionMm;
+    }
+  } else if (category === 'displays') {
+    if (display?.lcd) {
+      kind = 'display';
+      targetPosMm = (display.positionMm ?? [
+        0,
+        0,
+        definition.depthMm / 2,
+      ]) as Vec3;
+    }
+  } else if (category === 'cooling') {
+    if (fan) {
+      kind = 'fan';
+      targetPosMm = fan;
+    }
+  } else if (category !== 'mount' && port) {
+    kind = 'port';
+    targetPosMm = port.positionMm;
+    targetRotDeg = port.rotationDeg;
+  }
 
   const proxy = useMemo(() => new Object3D(), []);
-  // Port state at the start of a drag, so deltas stay absolute.
+  // Target state at the start of a drag, so deltas stay absolute.
   const dragBase = useRef<AuthoredPort | null>(null);
   const dragOrigins = useRef(new Map<string, AuthoredPort>());
+  const dragDisplayBase = useRef<{ w: number; h: number } | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  // Keep the proxy in sync with the primary port between drags.
+  // Keep the proxy in sync with the bound target between drags.
+  const posKey = targetPosMm ? targetPosMm.join(',') : '';
+  const rotKey = targetRotDeg.join(',');
   useEffect(() => {
-    if (!port || dragging) return;
-    const [x, y, z] = mm(port.positionMm);
+    if (!targetPosMm || dragging) return;
+    const [x, y, z] = mm(targetPosMm);
     proxy.position.set(x + origin[0], y + origin[1], z + origin[2]);
-    proxy.rotation.set(...degToRad(port.rotationDeg));
+    proxy.rotation.set(...degToRad(targetRotDeg));
     proxy.scale.set(1, 1, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [port, proxy, dragging, origin[0], origin[1], origin[2]]);
+  }, [kind, posKey, rotKey, proxy, dragging, origin[0], origin[1], origin[2]]);
 
-  if (mode !== 'edit' || !port || tool === 'select') return null;
+  if (mode !== 'edit' || !kind || !targetPosMm || tool === 'select') return null;
 
+  // Ports keep the full toolset; the display supports translate/scale;
+  // anchors, LEDs and fans are position-only.
   const gizmoMode =
-    tool === 'move' ? 'translate' : tool === 'rotate' ? 'rotate' : 'scale';
+    kind === 'port'
+      ? tool === 'move'
+        ? 'translate'
+        : tool === 'rotate'
+          ? 'rotate'
+          : 'scale'
+      : kind === 'display' && tool === 'scale'
+        ? 'scale'
+        : 'translate';
 
   const applyChange = () => {
     const state = useAuthoringStore.getState();
-    const current = primaryPort(state);
-    const base = dragBase.current;
-    if (!current || !base) return;
-    if (tool === 'move') {
-      const raw: Vec3 = [
-        (proxy.position.x - origin[0]) / MM_TO_M,
-        (proxy.position.y - origin[1]) / MM_TO_M,
-        (proxy.position.z - origin[2]) / MM_TO_M,
-      ];
-      const snapped = snapPosition(current, raw, state.ports, state.snap);
-      // Multi-selection moves rigidly with the primary port.
-      const delta: Vec3 = [
-        snapped[0] - base.positionMm[0],
-        snapped[1] - base.positionMm[1],
-        snapped[2] - base.positionMm[2],
-      ];
-      for (const id of state.selection) {
-        const origin =
-          id === current.id
-            ? base
-            : dragOrigins.current.get(id);
-        if (!origin) continue;
-        state.movePort(id, [
-          origin.positionMm[0] + delta[0],
-          origin.positionMm[1] + delta[1],
-          origin.positionMm[2] + delta[2],
-        ]);
+    const raw: Vec3 = [
+      (proxy.position.x - origin[0]) / MM_TO_M,
+      (proxy.position.y - origin[1]) / MM_TO_M,
+      (proxy.position.z - origin[2]) / MM_TO_M,
+    ];
+
+    if (kind === 'port') {
+      const current = primaryPort(state);
+      const base = dragBase.current;
+      if (!current || !base) return;
+      if (gizmoMode === 'translate') {
+        const snapped = snapPosition(current, raw, state.ports, state.snap);
+        // Multi-selection moves rigidly with the primary port.
+        const delta: Vec3 = [
+          snapped[0] - base.positionMm[0],
+          snapped[1] - base.positionMm[1],
+          snapped[2] - base.positionMm[2],
+        ];
+        for (const id of state.selection) {
+          const start =
+            id === current.id ? base : dragOrigins.current.get(id);
+          if (!start) continue;
+          state.movePort(id, [
+            start.positionMm[0] + delta[0],
+            start.positionMm[1] + delta[1],
+            start.positionMm[2] + delta[2],
+          ]);
+        }
+      } else if (gizmoMode === 'rotate') {
+        state.updatePort(current.id, {
+          rotationDeg: [
+            round2(MathUtils.radToDeg(proxy.rotation.x)),
+            round2(MathUtils.radToDeg(proxy.rotation.y)),
+            round2(MathUtils.radToDeg(proxy.rotation.z)),
+          ],
+        });
+      } else {
+        state.updatePort(current.id, {
+          sizeMm: [
+            Math.max(2, round2(base.sizeMm[0] * proxy.scale.x)),
+            Math.max(2, round2(base.sizeMm[1] * proxy.scale.y)),
+          ],
+        });
       }
-    } else if (tool === 'rotate') {
-      state.updatePort(current.id, {
-        rotationDeg: [
-          round2(MathUtils.radToDeg(proxy.rotation.x)),
-          round2(MathUtils.radToDeg(proxy.rotation.y)),
-          round2(MathUtils.radToDeg(proxy.rotation.z)),
-        ],
-      });
-    } else {
-      state.updatePort(current.id, {
-        sizeMm: [
-          Math.max(2, round2(base.sizeMm[0] * proxy.scale.x)),
-          Math.max(2, round2(base.sizeMm[1] * proxy.scale.y)),
-        ],
-      });
+      return;
+    }
+
+    if (kind === 'anchor') {
+      const current = primaryPort(state);
+      if (!current) return;
+      state.moveAnchor(current.id, [
+        raw[0] - current.positionMm[0],
+        raw[1] - current.positionMm[1],
+        raw[2] - current.positionMm[2],
+      ]);
+    } else if (kind === 'led' && selectedLedId) {
+      state.moveLed(selectedLedId, raw);
+    } else if (kind === 'fan' && selectedFan !== null) {
+      state.moveFan(selectedFan, raw);
+    } else if (kind === 'display') {
+      if (gizmoMode === 'scale') {
+        const base = dragDisplayBase.current;
+        if (!base) return;
+        state.resizeDisplay(base.w * proxy.scale.x, base.h * proxy.scale.y);
+      } else {
+        state.moveDisplay(raw);
+      }
     }
   };
 
@@ -670,11 +973,18 @@ function SelectionGizmo({ origin }: { origin: Vec3 }) {
             state.ports.find((p) => p.id === id)!,
           ]),
         );
+        dragDisplayBase.current = state.display
+          ? {
+              w: state.display.widthMm ?? 60,
+              h: state.display.heightMm ?? 25,
+            }
+          : null;
         setDragging(true);
       }}
       onMouseUp={() => {
         setDragging(false);
         dragBase.current = null;
+        dragDisplayBase.current = null;
         // Re-sync happens via the effect on next render.
       }}
       />

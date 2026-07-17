@@ -7,7 +7,11 @@ import {
   CONNECTOR_SIZES,
 } from '@/features/devices/hardware/physicalPorts';
 import type {
+  CoolingCapabilities,
   DeviceDefinition,
+  DisplayCapabilities,
+  LedDefinition,
+  LedKind,
   PortDefinition,
   PortLocation,
   PortType,
@@ -46,6 +50,22 @@ export interface AuthoredPort {
   /** Plug insertion depth into the opening, mm (catalog default when
    *  undefined). */
   insertionMm?: number;
+  /** Cable exit direction, device-local (straight out when undefined). */
+  exitDirMm?: Vec3;
+  /** Preferred cable bend radius leaving this port, mm. */
+  bendRadiusMm?: number;
+}
+
+/** An authorable indicator LED (schema LedDefinition, defaults baked). */
+export interface AuthoredLed {
+  id: string;
+  label: string;
+  kind: LedKind;
+  color: string;
+  positionMm: Vec3;
+  diameterMm: number;
+  intensity: number;
+  on: boolean;
 }
 
 /** Cable plug protrusion used for default anchors, mm. */
@@ -135,8 +155,66 @@ export function portsFromDefinition(
         port.anchorMm[2] - port.positionMm[2],
       ],
       insertionMm: port.insertionMm,
+      exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
+      bendRadiusMm: port.bendRadiusMm,
     };
   });
+}
+
+/** Loads a definition's LEDs for authoring (defaults resolved). */
+export function ledsFromDefinition(definition: DeviceDefinition): AuthoredLed[] {
+  return definition.leds.map((led, i) => ({
+    id: led.id,
+    label: led.label ?? led.id,
+    kind: led.kind ?? 'status',
+    color: led.color ?? '#3fb970',
+    positionMm: led.positionMm
+      ? ([...led.positionMm] as Vec3)
+      : [
+          -definition.widthMm / 2 + 12 + i * 6,
+          definition.heightMm / 4,
+          definition.depthMm / 2,
+        ],
+    diameterMm: led.diameterMm ?? 2,
+    intensity: led.intensity ?? 1,
+    on: (led.state ?? 'on') === 'on',
+  }));
+}
+
+/** Serializes authored LEDs back into schema LedDefinitions. */
+export const toLedDefinitions = (leds: readonly AuthoredLed[]): LedDefinition[] =>
+  leds.map((led) => ({
+    id: led.id,
+    label: led.label,
+    kind: led.kind,
+    color: led.color,
+    positionMm: [...led.positionMm] as Vec3,
+    diameterMm: led.diameterMm,
+    intensity: led.intensity,
+    state: led.on ? 'on' : 'off',
+  }));
+
+/** A fresh LED near the faceplate's left edge. */
+export function createLed(
+  leds: readonly AuthoredLed[],
+  definition: DeviceDefinition,
+): AuthoredLed {
+  let n = 1;
+  while (leds.some((l) => l.id === `led-${n}`)) n++;
+  return {
+    id: `led-${n}`,
+    label: `LED ${n}`,
+    kind: 'status',
+    color: '#3fb970',
+    positionMm: [
+      -definition.widthMm / 2 + 12 + (n - 1) * 6,
+      definition.heightMm / 4,
+      definition.depthMm / 2,
+    ],
+    diameterMm: 2,
+    intensity: 1,
+    on: true,
+  };
 }
 
 const isZero = (v: Vec3) => v[0] === 0 && v[1] === 0 && v[2] === 0;
@@ -175,15 +253,23 @@ export function toPortDefinition(port: AuthoredPort): PortDefinition {
         ? undefined
         : ([...port.sizeMm] as [number, number]),
     insertionMm: port.insertionMm,
+    exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
+    bendRadiusMm: port.bendRadiusMm,
   };
 }
 
-/** Device-level authoring overrides (mount + model correction). */
+/** Device-level authoring overrides (mount, model, hardware systems). */
 export interface AuthoringOverrides {
   /** Mount correction, device-local mm (placement engine). */
   mountOffsetMm?: Vec3;
   /** Explicit GLB correction (wins over the auto import transform). */
   modelTransform?: DeviceDefinition['modelTransform'];
+  /** Authored indicator LEDs. */
+  leds?: readonly AuthoredLed[];
+  /** Authored display capabilities. */
+  display?: DisplayCapabilities;
+  /** Authored cooling capabilities. */
+  cooling?: CoolingCapabilities;
 }
 
 /**
@@ -209,6 +295,9 @@ export function definitionWithPorts(
     ports: ports.map(toPortDefinition),
     mountOffsetMm: mount ? mountOffsetMm : base.mountOffsetMm,
     modelTransform: overrides.modelTransform ?? base.modelTransform,
+    leds: overrides.leds ? toLedDefinitions(overrides.leds) : base.leds,
+    display: overrides.display ?? base.display,
+    cooling: overrides.cooling ?? base.cooling,
     lighting:
       anyEther && !base.lighting
         ? {

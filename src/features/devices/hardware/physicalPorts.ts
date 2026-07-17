@@ -44,6 +44,10 @@ export interface PhysicalPort {
   sizeMm?: [number, number];
   /** Authored plug insertion depth override, mm. */
   insertionMm?: number;
+  /** Authored cable exit direction (device-local, normalized on use). */
+  exitDirMm?: [number, number, number];
+  /** Preferred cable bend radius leaving this port, mm. */
+  bendRadiusMm?: number;
 }
 
 export interface ResolvedLed {
@@ -72,6 +76,11 @@ export const CONNECTOR_SIZES: Record<
   usb: { widthMm: 13.5, heightMm: 6.5, pitchMm: 17 },
   'usb-a': { widthMm: 13.5, heightMm: 6.5, pitchMm: 17 },
   'usb-c': { widthMm: 9.5, heightMm: 3.8, pitchMm: 13 },
+  hdmi: { widthMm: 15.4, heightMm: 6.2, pitchMm: 19 },
+  displayport: { widthMm: 16.7, heightMm: 5.2, pitchMm: 20 },
+  audio: { widthMm: 6.5, heightMm: 6.5, pitchMm: 10 },
+  'fiber-lc': { widthMm: 13, heightMm: 7, pitchMm: 15.5 },
+  phoenix: { widthMm: 18, heightMm: 10, pitchMm: 22 },
   console: { widthMm: 15, heightMm: 13, pitchMm: 17.9 },
   serial: { widthMm: 31, heightMm: 13, pitchMm: 36 },
   power: { widthMm: 27, heightMm: 20, pitchMm: 40 },
@@ -145,6 +154,8 @@ export function resolvePhysicalPorts(
         ],
         sizeMm: group.sizeMm,
         insertionMm: group.insertionMm,
+        exitDirMm: group.exitDirMm,
+        bendRadiusMm: group.bendRadiusMm,
       });
 
     if (group.positionMm) {

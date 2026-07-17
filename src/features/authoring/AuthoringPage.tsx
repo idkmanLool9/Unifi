@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { AlertTriangle, CircleCheck, OctagonX } from 'lucide-react';
 import { AuthoringTopBar } from './AuthoringTopBar';
 import { AuthoringViewport } from './AuthoringViewport';
 import { PortInspectorPanel } from './PortInspectorPanel';
@@ -7,6 +8,7 @@ import { PortLayoutStrip } from './PortLayoutStrip';
 import { PortToolsPanel } from './PortToolsPanel';
 import { useAuthoringStore } from './authoringStore';
 import { useAuthoringShortcuts } from './useAuthoringShortcuts';
+import { useValidation } from './useValidation';
 import { ContextMenuHost } from '@/components/ui/ContextMenuHost';
 import { ToastHost } from '@/components/ui/ToastHost';
 import {
@@ -98,6 +100,8 @@ export function AuthoringPage() {
 function AuthoringStatusBar({ deviceId }: { deviceId: string | null }) {
   const ports = useAuthoringStore((s) => s.ports);
   const dirty = useAuthoringStore((s) => s.dirty);
+  const setCategory = useAuthoringStore((s) => s.setCategory);
+  const { counts: validation } = useValidation();
   const definition = deviceId ? getDevice(deviceId) : undefined;
 
   const counts = new Map<string, number>();
@@ -132,7 +136,29 @@ function AuthoringStatusBar({ deviceId }: { deviceId: string | null }) {
           {definition?.productName ?? '—'}
         </span>
       </span>
-      <span className="ml-auto text-muted">
+      <button
+        type="button"
+        onClick={() => setCategory('validation')}
+        className="ml-auto flex items-center gap-2 rounded px-1.5 py-0.5 transition-colors hover:bg-raised"
+        title="Open the Validation category"
+      >
+        {validation.errors > 0 && (
+          <span className="flex items-center gap-1 text-danger">
+            <OctagonX className="size-3" /> {validation.errors}
+          </span>
+        )}
+        {validation.warnings > 0 && (
+          <span className="flex items-center gap-1 text-warning">
+            <AlertTriangle className="size-3" /> {validation.warnings}
+          </span>
+        )}
+        {validation.errors === 0 && validation.warnings === 0 && (
+          <span className="flex items-center gap-1 text-success">
+            <CircleCheck className="size-3" /> Valid
+          </span>
+        )}
+      </button>
+      <span className="text-muted">
         Ports{' '}
         <span className="font-medium text-secondary">
           {ports.length}

@@ -1,15 +1,18 @@
 import { create } from 'zustand';
 import {
   arrayPorts,
+  createLed,
   createPort,
   definitionWithPorts,
   DEFAULT_SNAP,
+  ledsFromDefinition,
   metadataJson,
   nextPortId,
   portsFromDefinition,
   round2,
   suggestPorts,
   type ArrayDirection,
+  type AuthoredLed,
   type AuthoredPort,
   type SnapSettings,
   type Vec3,
@@ -22,7 +25,9 @@ import {
 import { getDevice, registerDevice } from '@/features/devices/deviceRegistry';
 import {
   validateDeviceDefinition,
+  type CoolingCapabilities,
   type DeviceDefinition,
+  type DisplayCapabilities,
   type PortType,
 } from '@/features/devices/deviceSchema';
 import { useAuthoredDevicesStore } from '@/stores/authoredDevicesStore';
@@ -38,6 +43,28 @@ import { toast } from '@/stores/toastStore';
 export type AuthoringTool = 'select' | 'move' | 'rotate' | 'scale';
 export type AuthoringMode = 'view' | 'edit';
 
+/** Workspace categories — each switches tools, inspector and context. */
+export type AuthoringCategory =
+  | 'mount'
+  | 'ports'
+  | 'anchors'
+  | 'power'
+  | 'leds'
+  | 'displays'
+  | 'cooling'
+  | 'validation';
+
+/** Port types considered power connectors (Power Connectors category). */
+export const POWER_PORT_TYPES: readonly PortType[] = [
+  'power',
+  'dc',
+  'c14',
+  'c20',
+  'phoenix',
+];
+export const isPowerType = (type: PortType): boolean =>
+  POWER_PORT_TYPES.includes(type);
+
 export interface AuthoringCameraCommand {
   id: number;
   type: 'frame-device' | 'frame-ports';
@@ -50,6 +77,11 @@ interface HistoryEntry {
   selection: string[];
   mountOffsetMm: Vec3;
   modelTransform: DeviceDefinition['modelTransform'];
+  leds: AuthoredLed[];
+  selectedLedId: string | null;
+  display: DisplayCapabilities | undefined;
+  cooling: CoolingCapabilities | undefined;
+  selectedFan: number | null;
 }
 
 const HISTORY_LIMIT = 100;
@@ -72,12 +104,23 @@ interface AuthoringState {
    * suggestions never reappear on their own after a decision.
    */
   suggestionsDecided: boolean;
+  /** Active workspace category. */
+  category: AuthoringCategory;
   /** Mount correction being authored, device-local mm. */
   mountOffsetMm: Vec3;
   /** Explicit model-transform correction (undefined = keep current). */
   modelTransform: DeviceDefinition['modelTransform'];
   /** Render the device mounted on real rails via the placement engine. */
   mountPreview: boolean;
+  /** Authored indicator LEDs. */
+  leds: AuthoredLed[];
+  selectedLedId: string | null;
+  /** Authored display capabilities. */
+  display: DisplayCapabilities | undefined;
+  /** Authored cooling capabilities. */
+  cooling: CoolingCapabilities | undefined;
+  /** Selected fan index in cooling.fanPositionsMm. */
+  selectedFan: number | null;
   /** Undo/redo stacks. */
   past: HistoryEntry[];
   future: HistoryEntry[];
@@ -122,9 +165,31 @@ interface AuthoringState {
   /** Explicitly re-runs the GLB analysis after a decision. */
   detectPorts: () => void;
 
+  setCategory: (category: AuthoringCategory) => void;
   setMountOffset: (offset: Vec3) => void;
   setModelTransform: (transform: DeviceDefinition['modelTransform']) => void;
   toggleMountPreview: () => void;
+
+  addLed: () => void;
+  updateLed: (id: string, patch: Partial<AuthoredLed>) => void;
+  /** Gizmo-drag mover — no history entry (beginTransform records it). */
+  moveLed: (id: string, positionMm: Vec3) => void;
+  renameLed: (id: string, nextId: string) => void;
+  deleteLed: (id: string) => void;
+  selectLed: (id: string | null) => void;
+
+  updateDisplay: (patch: Partial<DisplayCapabilities> | undefined) => void;
+  /** Gizmo-drag movers for the display — no history entry. */
+  moveDisplay: (positionMm: Vec3) => void;
+  resizeDisplay: (widthMm: number, heightMm: number) => void;
+  /** Gizmo-drag mover for a port's cable anchor — no history entry. */
+  moveAnchor: (id: string, anchorMm: Vec3) => void;
+
+  updateCooling: (patch: Partial<CoolingCapabilities>) => void;
+  addFan: () => void;
+  moveFan: (index: number, positionMm: Vec3) => void;
+  deleteFan: (index: number) => void;
+  selectFan: (index: number | null) => void;
 
   /** Records the current state before a gizmo drag begins. */
   beginTransform: () => void;
@@ -160,6 +225,11 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => {
       selection: s.selection,
       mountOffsetMm: s.mountOffsetMm,
       modelTransform: s.modelTransform,
+      leds: s.leds,
+      selectedLedId: s.selectedLedId,
+      display: s.display,
+      cooling: s.cooling,
+      selectedFan: s.selectedFan,
     };
   };
   /** Push the current state onto the undo stack (clears redo). */
@@ -179,15 +249,183 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => {
   dirty: false,
   suggestions: null,
   suggestionsDecided: false,
+  category: 'ports',
   mountOffsetMm: [0, 0, 0],
   modelTransform: undefined,
   mountPreview: false,
+  leds: [],
+  selectedLedId: null,
+  display: undefined,
+  cooling: undefined,
+  selectedFan: null,
   past: [],
   future: [],
   previewVisible: true,
   previewIntensity: 0.75,
   gridVisible: true,
   cameraCommand: null,
+
+  setCategory: (category) =>
+    set((s) => ({
+      category,
+      // Mount category works on the whole device; the mount preview is
+      // its natural home. Leaving keeps whatever the user chose.
+      mountPreview: category === 'mount' ? true : s.mountPreview,
+    })),
+
+  addLed: () => {
+    const definition = get().deviceId ? getDevice(get().deviceId!) : undefined;
+    if (!definition) return;
+    remember();
+    set((s) => {
+      const led = createLed(s.leds, definition);
+      return { leds: [...s.leds, led], selectedLedId: led.id, dirty: true };
+    });
+  },
+  updateLed: (id, patch) => {
+    remember();
+    set((s) => ({
+      leds: s.leds.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+      dirty: true,
+    }));
+  },
+  renameLed: (id, nextId) => {
+    const clean = nextId.trim();
+    if (!clean || clean === id || get().leds.some((l) => l.id === clean)) return;
+    remember();
+    set((s) => ({
+      leds: s.leds.map((l) => (l.id === id ? { ...l, id: clean } : l)),
+      selectedLedId: s.selectedLedId === id ? clean : s.selectedLedId,
+      dirty: true,
+    }));
+  },
+  deleteLed: (id) => {
+    remember();
+    set((s) => ({
+      leds: s.leds.filter((l) => l.id !== id),
+      selectedLedId: s.selectedLedId === id ? null : s.selectedLedId,
+      dirty: true,
+    }));
+  },
+  moveLed: (id, positionMm) =>
+    set((s) => ({
+      leds: s.leds.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              positionMm: [
+                round2(positionMm[0]),
+                round2(positionMm[1]),
+                round2(positionMm[2]),
+              ] as Vec3,
+            }
+          : l,
+      ),
+      dirty: true,
+    })),
+  selectLed: (selectedLedId) => set({ selectedLedId }),
+
+  updateDisplay: (patch) => {
+    remember();
+    set((s) => ({
+      display:
+        patch === undefined
+          ? undefined
+          : { ...(s.display ?? { lcd: true }), ...patch },
+      dirty: true,
+    }));
+  },
+  moveDisplay: (positionMm) =>
+    set((s) =>
+      s.display
+        ? {
+            display: {
+              ...s.display,
+              positionMm: [
+                round2(positionMm[0]),
+                round2(positionMm[1]),
+                round2(positionMm[2]),
+              ],
+            },
+            dirty: true,
+          }
+        : s,
+    ),
+  resizeDisplay: (widthMm, heightMm) =>
+    set((s) =>
+      s.display
+        ? {
+            display: {
+              ...s.display,
+              widthMm: Math.max(4, round2(widthMm)),
+              heightMm: Math.max(4, round2(heightMm)),
+            },
+            dirty: true,
+          }
+        : s,
+    ),
+  moveAnchor: (id, anchorMm) =>
+    set((s) => ({
+      ports: s.ports.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              anchorMm: [
+                round2(anchorMm[0]),
+                round2(anchorMm[1]),
+                round2(anchorMm[2]),
+              ] as Vec3,
+            }
+          : p,
+      ),
+      dirty: true,
+    })),
+
+  updateCooling: (patch) => {
+    remember();
+    set((s) => ({ cooling: { ...(s.cooling ?? {}), ...patch }, dirty: true }));
+  },
+  addFan: () => {
+    const definition = get().deviceId ? getDevice(get().deviceId!) : undefined;
+    if (!definition) return;
+    remember();
+    set((s) => {
+      const fans = [...(s.cooling?.fanPositionsMm ?? [])];
+      fans.push([
+        fans.length * 50 - 50,
+        0,
+        -definition.depthMm / 2,
+      ]);
+      return {
+        cooling: { ...(s.cooling ?? {}), fanPositionsMm: fans },
+        selectedFan: fans.length - 1,
+        dirty: true,
+      };
+    });
+  },
+  moveFan: (index, positionMm) =>
+    set((s) => {
+      const fans = [...(s.cooling?.fanPositionsMm ?? [])];
+      if (!fans[index]) return s;
+      fans[index] = [
+        round2(positionMm[0]),
+        round2(positionMm[1]),
+        round2(positionMm[2]),
+      ];
+      return { cooling: { ...(s.cooling ?? {}), fanPositionsMm: fans }, dirty: true };
+    }),
+  deleteFan: (index) => {
+    remember();
+    set((s) => {
+      const fans = (s.cooling?.fanPositionsMm ?? []).filter((_, i) => i !== index);
+      return {
+        cooling: { ...(s.cooling ?? {}), fanPositionsMm: fans },
+        selectedFan: null,
+        dirty: true,
+      };
+    });
+  },
+  selectFan: (selectedFan) => set({ selectedFan }),
 
   setPreviewVisible: (previewVisible) => set({ previewVisible }),
   setPreviewIntensity: (previewIntensity) => set({ previewIntensity }),
@@ -217,6 +455,11 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => {
       suggestionsDecided: false,
       mountOffsetMm: [...(definition.mountOffsetMm ?? [0, 0, 0])] as Vec3,
       modelTransform: definition.modelTransform,
+      leds: ledsFromDefinition(definition),
+      selectedLedId: null,
+      display: definition.display ? { ...definition.display } : undefined,
+      cooling: definition.cooling ? { ...definition.cooling } : undefined,
+      selectedFan: null,
       past: [],
       future: [],
     });
@@ -481,13 +724,17 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => {
   },
 
   save: () => {
-    const { deviceId, ports, mountOffsetMm, modelTransform } = get();
+    const { deviceId, ports, mountOffsetMm, modelTransform, leds, display, cooling } =
+      get();
     const base = deviceId ? getDevice(deviceId) : undefined;
     if (!base) return false;
 
     const authored = definitionWithPorts(base, ports, {
       mountOffsetMm,
       modelTransform,
+      leds,
+      display,
+      cooling,
     });
     // Round-trip through the validator: what we register is exactly what
     // a metadata.json drop-in would produce.

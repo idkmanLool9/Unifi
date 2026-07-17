@@ -1,15 +1,23 @@
 import {
+  Anchor,
+  AudioLines,
   Cable,
+  CircleDot,
   Copy,
+  Fan,
   FlipHorizontal2,
   Grid2x2,
   LayoutGrid,
+  ListChecks,
+  MonitorSmartphone,
   MousePointer2,
   Move,
   Plug,
   PlugZap,
   Rotate3d,
+  Rows3,
   Scaling,
+  ScreenShare,
   Sparkles,
   SquareTerminal,
   Trash2,
@@ -17,7 +25,12 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { useAuthoringStore, type AuthoringTool } from './authoringStore';
+import {
+  useAuthoringStore,
+  type AuthoringCategory,
+  type AuthoringTool,
+} from './authoringStore';
+import { useValidation } from './useValidation';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Kbd } from '@/components/ui/Kbd';
 import { PanelHeader } from '@/components/ui/PanelHeader';
@@ -25,8 +38,29 @@ import { Switch } from '@/components/ui/Switch';
 import type { PortType } from '@/features/devices/deviceSchema';
 import { cn } from '@/lib/utils';
 
-/** The Add Port palette, mirroring the reference layout. */
-const PORT_TOOLS: ReadonlyArray<{
+/**
+ * Left workspace panel: authoring categories (each switches the whole
+ * workspace — palette, inspector, context panel, viewport overlays),
+ * the category's add-palette, shared actions and snapping. Every
+ * control is live; nothing here is decorative.
+ */
+
+const CATEGORIES: ReadonlyArray<{
+  id: AuthoringCategory;
+  label: string;
+  icon: LucideIcon;
+}> = [
+  { id: 'mount', label: 'Mount', icon: Rows3 },
+  { id: 'ports', label: 'Ports', icon: Cable },
+  { id: 'anchors', label: 'Cable Anchors', icon: Anchor },
+  { id: 'power', label: 'Power Connectors', icon: Zap },
+  { id: 'leds', label: 'LEDs', icon: CircleDot },
+  { id: 'displays', label: 'Displays', icon: MonitorSmartphone },
+  { id: 'cooling', label: 'Cooling', icon: Fan },
+  { id: 'validation', label: 'Validation', icon: ListChecks },
+];
+
+const DATA_PORT_TOOLS: ReadonlyArray<{
   type: PortType;
   label: string;
   icon: LucideIcon;
@@ -37,12 +71,25 @@ const PORT_TOOLS: ReadonlyArray<{
   { type: 'qsfp+', label: 'QSFP+', icon: PlugZap },
   { type: 'usb-a', label: 'USB-A', icon: Usb },
   { type: 'usb-c', label: 'USB-C', icon: Usb },
+  { type: 'hdmi', label: 'HDMI', icon: ScreenShare },
+  { type: 'displayport', label: 'DisplayPort', icon: ScreenShare },
+  { type: 'audio', label: 'Audio', icon: AudioLines },
+  { type: 'fiber-lc', label: 'Fiber LC', icon: Plug },
   { type: 'console', label: 'Console', icon: SquareTerminal },
   { type: 'serial', label: 'Serial', icon: SquareTerminal },
-  { type: 'c14', label: 'Power (IEC C14)', icon: Zap },
-  { type: 'c20', label: 'Power (IEC C20)', icon: Zap },
-  { type: 'dc', label: 'DC Input', icon: Zap },
   { type: 'other', label: 'Custom', icon: Grid2x2 },
+];
+
+const POWER_PORT_TOOLS: ReadonlyArray<{
+  type: PortType;
+  label: string;
+  icon: LucideIcon;
+}> = [
+  { type: 'c14', label: 'IEC C14', icon: Zap },
+  { type: 'c20', label: 'IEC C20', icon: Zap },
+  { type: 'dc', label: 'DC Barrel', icon: Zap },
+  { type: 'phoenix', label: 'Phoenix / Terminal', icon: Zap },
+  { type: 'power', label: 'Generic Power', icon: Zap },
 ];
 
 function ActionRow({
@@ -84,40 +131,69 @@ function ActionRow({
   );
 }
 
-/** Left sidebar of the authoring mode: add-port palette, actions, snap. */
-export function PortToolsPanel() {
-  const addPort = useAuthoringStore((s) => s.addPort);
-  const tool = useAuthoringStore((s) => s.tool);
-  const setTool = useAuthoringStore((s) => s.setTool);
-  const selection = useAuthoringStore((s) => s.selection);
-  const duplicateSelection = useAuthoringStore((s) => s.duplicateSelection);
-  const mirrorSelection = useAuthoringStore((s) => s.mirrorSelection);
-  const deleteSelection = useAuthoringStore((s) => s.deleteSelection);
-  const snap = useAuthoringStore((s) => s.snap);
-  const setSnap = useAuthoringStore((s) => s.setSnap);
-  const suggestions = useAuthoringStore((s) => s.suggestions);
-  const applySuggestions = useAuthoringStore((s) => s.applySuggestions);
-  const rejectSuggestions = useAuthoringStore((s) => s.rejectSuggestions);
-  const detectPorts = useAuthoringStore((s) => s.detectPorts);
-
-  const hasSelection = selection.length > 0;
-  const toolRow = (id: AuthoringTool, icon: LucideIcon, label: string, key: string) => (
-    <ActionRow
-      icon={icon}
-      label={label}
-      shortcut={key}
-      active={tool === id}
-      onClick={() => setTool(id)}
-    />
-  );
+function CategoryList() {
+  const category = useAuthoringStore((s) => s.category);
+  const setCategory = useAuthoringStore((s) => s.setCategory);
+  const { errors, warnings } = useValidation().counts;
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-edge bg-surface">
-      <PanelHeader title="Port Tools" />
+    <CollapsibleSection title="AUTHORING TOOLS">
+      <div className="space-y-0.5">
+        {CATEGORIES.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setCategory(id)}
+            className={cn(
+              'flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-[12px] transition-colors duration-100',
+              category === id
+                ? 'bg-accent/15 font-medium text-accent'
+                : 'text-secondary hover:bg-surface-hover hover:text-primary',
+            )}
+          >
+            <Icon className="size-3.5 shrink-0" strokeWidth={1.8} />
+            <span className="flex-1">{label}</span>
+            {id === 'validation' && errors + warnings > 0 && (
+              <span
+                className={cn(
+                  'rounded-full px-1.5 text-[10px] font-semibold tabular-nums',
+                  errors > 0
+                    ? 'bg-danger/15 text-danger'
+                    : 'bg-warning/15 text-warning',
+                )}
+              >
+                {errors + warnings}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </CollapsibleSection>
+  );
+}
 
-      <CollapsibleSection title="ADD PORT">
+function AddPalette() {
+  const category = useAuthoringStore((s) => s.category);
+  const addPort = useAuthoringStore((s) => s.addPort);
+  const addLed = useAuthoringStore((s) => s.addLed);
+  const addFan = useAuthoringStore((s) => s.addFan);
+  const display = useAuthoringStore((s) => s.display);
+  const updateDisplay = useAuthoringStore((s) => s.updateDisplay);
+
+  const tools =
+    category === 'ports'
+      ? DATA_PORT_TOOLS
+      : category === 'power'
+        ? POWER_PORT_TOOLS
+        : null;
+
+  if (tools) {
+    return (
+      <CollapsibleSection
+        title={category === 'power' ? 'ADD POWER CONNECTOR' : 'ADD PORT'}
+      >
         <div className="grid grid-cols-1 gap-0.5">
-          {PORT_TOOLS.map(({ type, label, icon: Icon }) => (
+          {tools.map(({ type, label, icon: Icon }) => (
             <button
               key={`${type}-${label}`}
               type="button"
@@ -130,6 +206,95 @@ export function PortToolsPanel() {
           ))}
         </div>
       </CollapsibleSection>
+    );
+  }
+
+  if (category === 'leds') {
+    return (
+      <CollapsibleSection title="ADD">
+        <ActionRow icon={CircleDot} label="Add LED" onClick={addLed} />
+      </CollapsibleSection>
+    );
+  }
+  if (category === 'cooling') {
+    return (
+      <CollapsibleSection title="ADD">
+        <ActionRow icon={Fan} label="Add fan" onClick={addFan} />
+      </CollapsibleSection>
+    );
+  }
+  if (category === 'displays') {
+    return (
+      <CollapsibleSection title="DISPLAY">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-secondary">Device has a display</span>
+          <Switch
+            checked={display?.lcd ?? false}
+            onChange={(on) =>
+              updateDisplay(on ? { lcd: true } : undefined)
+            }
+            label="Device has a display"
+          />
+        </div>
+      </CollapsibleSection>
+    );
+  }
+  if (category === 'anchors') {
+    return (
+      <CollapsibleSection title="CABLE ANCHORS">
+        <p className="text-[11px] leading-relaxed text-muted">
+          Select a port to edit where its cable connects: insertion
+          depth, exit direction, bend radius and the anchor point. The
+          viewport previews the plugged connector live.
+        </p>
+      </CollapsibleSection>
+    );
+  }
+  return null;
+}
+
+export function PortToolsPanel() {
+  const category = useAuthoringStore((s) => s.category);
+  const tool = useAuthoringStore((s) => s.tool);
+  const setTool = useAuthoringStore((s) => s.setTool);
+  const selection = useAuthoringStore((s) => s.selection);
+  const duplicateSelection = useAuthoringStore((s) => s.duplicateSelection);
+  const mirrorSelection = useAuthoringStore((s) => s.mirrorSelection);
+  const deleteSelection = useAuthoringStore((s) => s.deleteSelection);
+  const snap = useAuthoringStore((s) => s.snap);
+  const setSnap = useAuthoringStore((s) => s.setSnap);
+  const suggestions = useAuthoringStore((s) => s.suggestions);
+  const applySuggestions = useAuthoringStore((s) => s.applySuggestions);
+  const rejectSuggestions = useAuthoringStore((s) => s.rejectSuggestions);
+  const detectPorts = useAuthoringStore((s) => s.detectPorts);
+  const undo = useAuthoringStore((s) => s.undo);
+  const redo = useAuthoringStore((s) => s.redo);
+  const canUndo = useAuthoringStore((s) => s.past.length > 0);
+  const canRedo = useAuthoringStore((s) => s.future.length > 0);
+
+  const hasSelection = selection.length > 0;
+  const portCategory =
+    category === 'ports' || category === 'power' || category === 'anchors';
+  const toolRow = (
+    id: AuthoringTool,
+    icon: LucideIcon,
+    label: string,
+    key: string,
+  ) => (
+    <ActionRow
+      icon={icon}
+      label={label}
+      shortcut={key}
+      active={tool === id}
+      onClick={() => setTool(id)}
+    />
+  );
+
+  return (
+    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-edge bg-surface">
+      <PanelHeader title="Authoring" />
+      <CategoryList />
+      <AddPalette />
 
       <CollapsibleSection title="ACTIONS">
         <div className="space-y-0.5">
@@ -141,13 +306,13 @@ export function PortToolsPanel() {
             icon={Copy}
             label="Duplicate"
             shortcut="⌘D"
-            disabled={!hasSelection}
+            disabled={!portCategory || !hasSelection}
             onClick={duplicateSelection}
           />
           <ActionRow
             icon={LayoutGrid}
             label="Array…"
-            disabled={!hasSelection}
+            disabled={!portCategory || !hasSelection}
             onClick={() =>
               document.getElementById('authoring-array-count')?.focus()
             }
@@ -155,7 +320,7 @@ export function PortToolsPanel() {
           <ActionRow
             icon={FlipHorizontal2}
             label="Mirror"
-            disabled={!hasSelection}
+            disabled={!portCategory || !hasSelection}
             onClick={mirrorSelection}
           />
           <ActionRow
@@ -163,8 +328,22 @@ export function PortToolsPanel() {
             label="Delete"
             shortcut="⌫"
             danger
-            disabled={!hasSelection}
+            disabled={!portCategory || !hasSelection}
             onClick={deleteSelection}
+          />
+          <ActionRow
+            icon={Rotate3d}
+            label="Undo"
+            shortcut="⌘Z"
+            disabled={!canUndo}
+            onClick={undo}
+          />
+          <ActionRow
+            icon={Rotate3d}
+            label="Redo"
+            shortcut="⇧⌘Z"
+            disabled={!canRedo}
+            onClick={redo}
           />
         </div>
       </CollapsibleSection>
@@ -201,46 +380,51 @@ export function PortToolsPanel() {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="GLB ANALYSIS">
-        <div className="space-y-2">
-          {suggestions ? (
-            <>
-              <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-secondary">
-                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent" strokeWidth={1.8} />
-                Detected {suggestions.length} connector candidate
-                {suggestions.length === 1 ? '' : 's'} in the model geometry
-                (shown in green). Accept to replace the current ports, or
-                reject to discard the analysis completely.
-              </p>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={applySuggestions}
-                  className="h-6 flex-1 rounded-md bg-accent text-[11px] font-semibold text-white transition-colors hover:bg-accent/90"
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  onClick={rejectSuggestions}
-                  className="h-6 flex-1 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
-                >
-                  Reject
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={detectPorts}
-              className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
-            >
-              <Sparkles className="size-3.5" strokeWidth={1.8} />
-              Detect connectors
-            </button>
-          )}
-        </div>
-      </CollapsibleSection>
+      {(category === 'ports' || category === 'power') && (
+        <CollapsibleSection title="GLB ANALYSIS">
+          <div className="space-y-2">
+            {suggestions ? (
+              <>
+                <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-secondary">
+                  <Sparkles
+                    className="mt-0.5 size-3.5 shrink-0 text-accent"
+                    strokeWidth={1.8}
+                  />
+                  Detected {suggestions.length} connector candidate
+                  {suggestions.length === 1 ? '' : 's'} in the model geometry
+                  (shown in green). Accept to replace the current ports, or
+                  reject to discard the analysis completely.
+                </p>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={applySuggestions}
+                    className="h-6 flex-1 rounded-md bg-accent text-[11px] font-semibold text-white transition-colors hover:bg-accent/90"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={rejectSuggestions}
+                    className="h-6 flex-1 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={detectPorts}
+                className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+              >
+                <Sparkles className="size-3.5" strokeWidth={1.8} />
+                Detect connectors
+              </button>
+            )}
+          </div>
+        </CollapsibleSection>
+      )}
     </aside>
   );
 }

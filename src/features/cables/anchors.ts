@@ -148,10 +148,25 @@ export function resolveEndpoint(
     geometry,
   );
   const flip = instance.facing === 'front' ? 1 : -1;
+
+  // Authored exit direction wins; default is straight out of the face.
+  let exitDir: Vec3 = [0, 0, outwardLocal * flip];
+  if (port.exitDirMm) {
+    const [ex, ey, ez] = port.exitDirMm;
+    const length = Math.hypot(ex, ey, ez);
+    if (length > 1e-6) {
+      // Device-local → rack-local through the facing yaw (x/z flip).
+      exitDir = [
+        (flip * ex) / length,
+        ey / length,
+        (flip * ez) / length,
+      ];
+    }
+  }
   return {
     port,
     surface,
     anchor,
-    exitDir: [0, 0, outwardLocal * flip],
+    exitDir,
   };
 }

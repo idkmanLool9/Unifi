@@ -41,6 +41,11 @@ export const PORT_TYPES = [
   'usb',
   'usb-a',
   'usb-c',
+  'hdmi',
+  'displayport',
+  'audio',
+  'fiber-lc',
+  'phoenix',
   'console',
   'serial',
   'power',
@@ -98,6 +103,14 @@ export interface PortDefinition {
    * (cable renderer; catalog default per connector type when omitted).
    */
   insertionMm?: number;
+  /**
+   * Authored cable exit direction in device-local space (normalized on
+   * use). Default: straight out of the panel face. Lets angled or
+   * recessed connectors route cables correctly.
+   */
+  exitDirMm?: [number, number, number];
+  /** Preferred cable bend radius leaving this port, mm. */
+  bendRadiusMm?: number;
 }
 
 export const LED_KINDS = [
@@ -642,6 +655,16 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
       entry.insertionMm === undefined
         ? undefined
         : sub.number(entry, 'insertionMm', { min: 0, max: 40 });
+    const exitDirMm =
+      entry.exitDirMm === undefined
+        ? undefined
+        : isVec3(entry.exitDirMm)
+          ? entry.exitDirMm
+          : sub.fail('exitDirMm', 'must be [x, y, z] numbers');
+    const bendRadiusMm =
+      entry.bendRadiusMm === undefined
+        ? undefined
+        : sub.number(entry, 'bendRadiusMm', { min: 1, max: 200 });
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -664,6 +687,8 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         anchorMm,
         sizeMm,
         insertionMm,
+        exitDirMm,
+        bendRadiusMm,
       });
     }
   });

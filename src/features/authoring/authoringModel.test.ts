@@ -120,6 +120,50 @@ describe('authoring model', () => {
     primeCalibration(parsed.value.id, null);
   });
 
+  it('resolves authored cable exit directions, normalized and facing-aware', () => {
+    const ports = [
+      port({
+        id: 'lan-1',
+        exitDirMm: [0, 1, 1],
+        insertionMm: 10,
+        bendRadiusMm: 30,
+      }),
+    ];
+    const parsed = validateDeviceDefinition(
+      JSON.parse(metadataJson(definitionWithPorts(proMax, ports))),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    primeCalibration(parsed.value.id, new Map());
+    const geometry = rackGeometry('open-frame-700');
+    const front = resolveEndpoint(
+      parsed.value,
+      { startU: 1, facing: 'front' },
+      geometry,
+      'lan-1[1]',
+    )!;
+    // [0,1,1] normalizes to 45° up-and-out.
+    expect(front.exitDir[0]).toBeCloseTo(0, 6);
+    expect(front.exitDir[1]).toBeCloseTo(Math.SQRT1_2, 4);
+    expect(front.exitDir[2]).toBeCloseTo(Math.SQRT1_2, 4);
+
+    // Rear facing mirrors x/z but keeps the vertical component.
+    const rear = resolveEndpoint(
+      parsed.value,
+      { startU: 1, facing: 'rear' },
+      geometry,
+      'lan-1[1]',
+    )!;
+    expect(rear.exitDir[1]).toBeCloseTo(Math.SQRT1_2, 4);
+    expect(rear.exitDir[2]).toBeCloseTo(-Math.SQRT1_2, 4);
+
+    // Insertion + bend radius survive the round trip to the pipeline.
+    expect(front.port.insertionMm).toBe(10);
+    expect(front.port.bendRadiusMm).toBe(30);
+    primeCalibration(parsed.value.id, null);
+  });
+
   it('adds a minimal lighting block when authored ports use Etherlighting', () => {
     const base = { ...proMax, lighting: undefined };
     const authored = definitionWithPorts(base, [port({ etherlighting: true })]);
