@@ -1,6 +1,7 @@
 {
   "devices": [
     "ubiquiti/dream-machine-pro",
-    "ubiquiti/pro-max-24-poe"
+    "ubiquiti/pro-max-24-poe",
+    "generic/ups-2u"
   ]
 }

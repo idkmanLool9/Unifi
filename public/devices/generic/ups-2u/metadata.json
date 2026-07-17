@@ -1,0 +1,58 @@
+{
+  "id": "gen-ups-2u",
+  "slug": "ups-2u",
+  "manufacturer": "generic",
+  "manufacturerName": "Generic",
+  "productName": "2U Rackmount UPS",
+  "modelNumber": "UPS-2U-1500",
+  "category": "power",
+  "rackUnits": 2,
+  "widthMm": 442,
+  "heightMm": 87,
+  "depthMm": 300,
+  "weightKg": 22,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 25,
+  "maximumPowerWatts": 1500,
+  "tags": ["ups", "battery", "backup", "power"],
+  "description": "2U rackmount UPS with a front status display and power button, rear AC input and a network management port.",
+  "mountingOffsetMm": 0,
+  "ports": [
+    {
+      "id": "mgmt",
+      "type": "rj45",
+      "count": 1,
+      "label": "Network management",
+      "location": "rear",
+      "speedGbps": 1
+    }
+  ],
+  "leds": [
+    {
+      "id": "status",
+      "label": "Online status",
+      "kind": "power",
+      "color": "#3fb970",
+      "positionMm": [0, 25, 150]
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "input",
+        "type": "c14",
+        "count": 1,
+        "location": "rear",
+        "label": "AC input"
+      }
+    ],
+    "sources": ["ac", "battery"]
+  },
+  "presentation": {
+    "faceplate": "ups",
+    "tone": "dark",
+    "portsLabel": "1500 VA",
+    "speedLabel": "UPS"
+  }
+}
