@@ -251,17 +251,29 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
       // even that is too tight (micro-slack distributes invisibly).
       const applyDrape = (base: Vec3[], scale: number): Vec3[] => {
         const result = base.map((p) => [...p] as Vec3);
+        // Free hangs (direct/natural) drape the WHOLE exit-to-exit
+        // span as one catenary — intermediate shaping knots would chop
+        // the loop into segments too short to bend. Disciplined modes
+        // drape only their longest straight run, preserving channel
+        // and node knots.
         let runIndex = 2;
-        let runLength = 0;
-        for (let i = 2; i < result.length - 3; i++) {
-          const length = dist(result[i], result[i + 1]);
-          if (length > runLength) {
-            runLength = length;
-            runIndex = i;
+        let runEnd = 3;
+        if (resolvedMode === 'direct' || resolvedMode === 'natural') {
+          runIndex = 2;
+          runEnd = result.length - 3;
+        } else {
+          let runLength = 0;
+          for (let i = 2; i < result.length - 3; i++) {
+            const length = dist(result[i], result[i + 1]);
+            if (length > runLength) {
+              runLength = length;
+              runIndex = i;
+            }
           }
+          runEnd = runIndex + 1;
         }
         const a = result[runIndex];
-        const b = result[runIndex + 1];
+        const b = result[runEnd];
         const depth =
           (resolvedMode === 'professional' ? Math.min(sagM, 0.06) : sagM) *
           scale;
@@ -297,9 +309,10 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
         // Sample density scales with drape depth relative to its run —
         // a shallow sweep needs 3 knots, a J-loop needs many so its
         // bottom stays round instead of collapsing into a V.
+        const spanLength = dist(a, b);
         const count = Math.min(
           15,
-          3 + Math.floor((8 * depth) / Math.max(runLength, 0.01)),
+          3 + Math.floor((8 * depth) / Math.max(spanLength, 0.01)),
         );
         const knots: Vec3[] = [];
         for (let k = 1; k <= count; k++) {
@@ -311,7 +324,8 @@ export function computeRoute(request: RouteRequest): ComputedRoute {
             a[2] + (b[2] - a[2]) * t + bulge[2] * arc,
           ]);
         }
-        result.splice(runIndex + 1, 0, ...knots);
+        // Replace any interior knots inside the draped span.
+        result.splice(runIndex + 1, runEnd - runIndex - 1, ...knots);
         return result;
       };
 

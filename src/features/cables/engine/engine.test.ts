@@ -70,13 +70,18 @@ describe('arc-fillet spline', () => {
     }
   });
 
-  it('keeps collinear routes untouched', () => {
+  it('merges collinear knots into one straight runway', () => {
     const points: Vec3[] = [
       [0, 0, 0],
       [0.1, 0, 0],
       [0.25, 0, 0],
     ];
-    expect(filletPolyline(points, OPTS)).toEqual(points);
+    // Straight chains collapse to their endpoints — the interior knot
+    // carries no bend and would only starve neighboring fillets.
+    expect(filletPolyline(points, OPTS)).toEqual([
+      [0, 0, 0],
+      [0.25, 0, 0],
+    ]);
   });
 
   it('shrinks the radius when segments are too short to host it', () => {
