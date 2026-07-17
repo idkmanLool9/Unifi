@@ -7,6 +7,14 @@ import {
 } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { resolveEndpoint, type Vec3 } from './anchors';
+import {
+  cableStartOffsetMm,
+  DEFAULT_INSERTION_MM,
+  GENERIC_INSERTION_MM,
+  GenericPlug,
+  plugQuaternion,
+  Rj45Plug,
+} from './Rj45Plug';
 import { CABLE_CATALOG } from './cableCatalog';
 import { checkCable } from './compatibility';
 import {
@@ -54,11 +62,6 @@ const SELECTION_MATERIAL = new MeshStandardMaterial({
   transparent: true,
   opacity: 0.28,
   depthWrite: false,
-});
-const PLUG_MATERIAL = new MeshStandardMaterial({
-  color: '#17191d',
-  roughness: 0.5,
-  metalness: 0.3,
 });
 
 interface CableLayerProps {
@@ -241,21 +244,30 @@ function CableMesh({
 
   const tube = useMemo(() => {
     if (!computed) return null;
-    const curve = new CatmullRomCurve3(
-      computed.route.points.map((p) => new Vector3(...p)),
-      false,
-      'catmullrom',
-      0.6,
-    );
-    const segments = Math.min(
-      96,
-      Math.max(24, computed.route.points.length * 10),
-    );
+    const points = computed.route.points.map((p) => new Vector3(...p));
+    // The sheath begins at the plug's boot, not at the panel face —
+    // the connector body covers the gap, so nothing clips through the
+    // hardware and the cable leaves along the true exit direction.
+    if (points.length >= 2) {
+      for (const [index, end] of [
+        [0, computed.source],
+        [points.length - 1, computed.destination],
+      ] as const) {
+        const offset =
+          cableStartOffsetMm(end.port.type, end.port.insertionMm) * MM_TO_M;
+        points[index] = new Vector3(...end.surface).addScaledVector(
+          new Vector3(...end.exitDir),
+          offset,
+        );
+      }
+    }
+    const curve = new CatmullRomCurve3(points, false, 'catmullrom', 0.6);
+    const segments = Math.min(120, Math.max(32, points.length * 10));
     return new TubeGeometry(
       curve,
       segments,
       (cable.thicknessMm / 2) * MM_TO_M,
-      8,
+      12,
       false,
     );
   }, [computed, cable.thicknessMm]);
@@ -280,7 +292,7 @@ function CableMesh({
     focusCable(cable.id);
   };
 
-  const plugSize = spec.diameterMm * MM_TO_M * 1.9;
+  const cableRadiusM = (cable.thicknessMm / 2) * MM_TO_M;
 
   return (
     <group>
@@ -295,27 +307,32 @@ function CableMesh({
       {selected && (
         <mesh geometry={tube} material={SELECTION_MATERIAL} scale={1.001} />
       )}
-      {/* Plug bodies entering the connectors */}
-      {[computed.source, computed.destination].map((end, i) => (
-        <mesh
-          key={i}
-          position={[
-            (end.surface[0] + end.anchor[0]) / 2,
-            (end.surface[1] + end.anchor[1]) / 2,
-            (end.surface[2] + end.anchor[2]) / 2,
-          ]}
-          material={PLUG_MATERIAL}
-          castShadow
-        >
-          <boxGeometry
-            args={[
-              plugSize * 0.8,
-              plugSize,
-              Math.abs(end.anchor[2] - end.surface[2]) + 0.004,
-            ]}
-          />
-        </mesh>
-      ))}
+      {/* Real connectors, noses inserted into the jacks */}
+      {[computed.source, computed.destination].map((end, i) => {
+        const insertionM =
+          (end.port.insertionMm ??
+            DEFAULT_INSERTION_MM[end.port.type] ??
+            GENERIC_INSERTION_MM) * MM_TO_M;
+        const position: Vec3 = [
+          end.surface[0] - end.exitDir[0] * insertionM,
+          end.surface[1] - end.exitDir[1] * insertionM,
+          end.surface[2] - end.exitDir[2] * insertionM,
+        ];
+        const copper = end.port.type in DEFAULT_INSERTION_MM;
+        return (
+          <group
+            key={i}
+            position={position}
+            quaternion={plugQuaternion(end.exitDir)}
+          >
+            {copper ? (
+              <Rj45Plug color={cable.color} cableRadiusM={cableRadiusM} />
+            ) : (
+              <GenericPlug color={cable.color} cableRadiusM={cableRadiusM} />
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

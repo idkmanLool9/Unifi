@@ -191,8 +191,17 @@ export function devicePlacement(
     facing === 'front'
       ? geometry.frontRailZ - halfDepth
       : geometry.rearRailZ + halfDepth;
+  // Authored mount correction, in device-local mm: +z is toward the
+  // device's own faceplate, so the fix mirrors correctly when the
+  // device is mounted facing the rear.
+  const flip = facing === 'front' ? 1 : -1;
+  const [mx, my, mz] = definition.mountOffsetMm ?? [0, 0, 0];
   return {
-    position: [0, y, z],
+    position: [
+      flip * mx * MM_TO_M,
+      y + my * MM_TO_M,
+      z + flip * mz * MM_TO_M,
+    ],
     rotationY: facing === 'front' ? 0 : Math.PI,
   };
 }

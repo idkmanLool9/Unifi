@@ -1,11 +1,15 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BoxGeometry,
+  Camera,
+  CylinderGeometry,
   EdgesGeometry,
   LineBasicMaterial,
   MathUtils,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   Object3D,
+  Vector3,
 } from 'three';
 import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber';
 import {
@@ -24,17 +28,30 @@ import {
 } from './authoringModel';
 import {
   primaryPort,
+  selectedPorts,
   useAuthoringStore,
 } from './authoringStore';
 import { SceneLighting } from '@/features/viewport/SceneLighting';
 import { LoadedModel } from '@/features/devices/DeviceModel';
 import { DevicePlaceholder } from '@/features/devices/DevicePlaceholder';
 import { HardwareLayer } from '@/features/devices/hardware/HardwareLayer';
+import { MountingHardware } from '@/features/devices/MountingHardware';
 import { deviceModelUrl, getDevice } from '@/features/devices/deviceRegistry';
+import {
+  DEFAULT_INSERTION_MM,
+  GENERIC_INSERTION_MM,
+  plugQuaternion,
+  Rj45Plug,
+} from '@/features/cables/Rj45Plug';
 import { useAssetAvailability } from '@/stores/assetStore';
 import { useResolvedTheme } from '@/hooks/useResolvedTheme';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
-import { MM_TO_M } from '@/features/rack/rackMath';
+import { U_METERS } from '@/features/rack/rackConstants';
+import {
+  devicePlacement,
+  rackGeometry,
+  MM_TO_M,
+} from '@/features/rack/rackMath';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
 
 /**
@@ -90,6 +107,13 @@ const degToRad = (v: Vec3): Vec3 => [
 const deviceLift = (definition: DeviceDefinition): number =>
   (definition.heightMm / 2) * MM_TO_M + 0.04;
 
+/** Device origin in stage space — read by box select and camera framing. */
+const deviceOrigin = { current: [0, 0, 0] as Vec3 };
+
+/** The rack geometry used by the Mount Preview (real placement engine). */
+const PREVIEW_GEOMETRY = rackGeometry('open-frame-700');
+const PREVIEW_START_U = 2;
+
 export function AuthoringViewport() {
   const theme = useResolvedTheme();
   const colors = VIEWPORT_THEME[theme];
@@ -98,14 +122,63 @@ export function AuthoringViewport() {
   const clearSelection = useAuthoringStore((s) => s.clearSelection);
   const definition = deviceId ? getDevice(deviceId) : undefined;
   const downAt = useRef<{ x: number; y: number } | null>(null);
+  const cameraRef = useRef<Camera | null>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [marquee, setMarquee] = useState<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  } | null>(null);
 
   if (!definition) return null;
 
+  // Shift+drag box select: project every port into screen space and
+  // select what falls inside the marquee.
+  const finishMarquee = (box: NonNullable<typeof marquee>) => {
+    const camera = cameraRef.current;
+    const host = hostRef.current;
+    if (!camera || !host) return;
+    const rect = host.getBoundingClientRect();
+    const [minX, maxX] = [Math.min(box.x1, box.x2), Math.max(box.x1, box.x2)];
+    const [minY, maxY] = [Math.min(box.y1, box.y2), Math.max(box.y1, box.y2)];
+    if (maxX - minX < 6 && maxY - minY < 6) return;
+    const state = useAuthoringStore.getState();
+    const origin = deviceOrigin.current;
+    const hit = state.ports
+      .filter((port) => {
+        const world = new Vector3(
+          origin[0] + port.positionMm[0] * MM_TO_M,
+          origin[1] + port.positionMm[1] * MM_TO_M,
+          origin[2] + port.positionMm[2] * MM_TO_M,
+        ).project(camera);
+        const sx = rect.left + ((world.x + 1) / 2) * rect.width;
+        const sy = rect.top + ((1 - world.y) / 2) * rect.height;
+        return sx >= minX && sx <= maxX && sy >= minY && sy <= maxY;
+      })
+      .map((port) => port.id);
+    if (hit.length > 0) state.selectMany(hit);
+  };
+
   return (
     <div
+      ref={hostRef}
       className="viewport-backdrop relative h-full min-w-0 flex-1"
       onPointerDown={(e) => {
         downAt.current = { x: e.clientX, y: e.clientY };
+        if (e.shiftKey && e.button === 0) {
+          setMarquee({ x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY });
+          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+        }
+      }}
+      onPointerMove={(e) => {
+        if (marquee) setMarquee({ ...marquee, x2: e.clientX, y2: e.clientY });
+      }}
+      onPointerUp={() => {
+        if (marquee) {
+          finishMarquee(marquee);
+          setMarquee(null);
+        }
       }}
     >
       <Canvas
@@ -119,9 +192,10 @@ export function AuthoringViewport() {
           if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) {
             return; // orbit gesture, not a deselect click
           }
-          clearSelection();
+          if (!e.shiftKey) clearSelection();
         }}
       >
+        <CameraCapture cameraRef={cameraRef} />
         <SceneLighting />
         {gridVisible && (
           <Grid
@@ -147,44 +221,96 @@ export function AuthoringViewport() {
           resolution={512}
         />
         <StageContent definition={definition} />
-        <AuthoringCameraRig definition={definition} />
+        <AuthoringCameraRig definition={definition} marqueeActive={marquee !== null} />
       </Canvas>
+      {marquee && (
+        <div
+          className="pointer-events-none absolute border border-accent/70 bg-accent/10"
+          style={{
+            left: Math.min(marquee.x1, marquee.x2) - (hostRef.current?.getBoundingClientRect().left ?? 0),
+            top: Math.min(marquee.y1, marquee.y2) - (hostRef.current?.getBoundingClientRect().top ?? 0),
+            width: Math.abs(marquee.x2 - marquee.x1),
+            height: Math.abs(marquee.y2 - marquee.y1),
+          }}
+        />
+      )}
       <div className="viewport-vignette pointer-events-none absolute inset-0" />
     </div>
   );
 }
 
-/** Device + inserts, lifted so the chassis rests just above the floor. */
+/** Publishes the R3F camera to the DOM layer (box select projection). */
+function CameraCapture({ cameraRef }: { cameraRef: { current: Camera | null } }) {
+  const camera = useThree((s) => s.camera);
+  cameraRef.current = camera;
+  return null;
+}
+
+/**
+ * Device + inserts. Free stage: floating above the floor grid. Mount
+ * Preview: positioned by the REAL placement engine against a rail
+ * gauge, so what you see here is exactly what the rack editor renders.
+ */
 function StageContent({ definition }: { definition: DeviceDefinition }) {
-  const lift = deviceLift(definition);
+  const ports = useAuthoringStore((s) => s.ports);
+  const mountOffsetMm = useAuthoringStore((s) => s.mountOffsetMm);
+  const modelTransform = useAuthoringStore((s) => s.modelTransform);
+  const mountPreview = useAuthoringStore((s) => s.mountPreview);
+
+  // Live authored definition: hardware, placement and model transform
+  // all follow every edit immediately.
+  const live = useMemo(
+    () => definitionWithPorts(definition, ports, { mountOffsetMm, modelTransform }),
+    [definition, ports, mountOffsetMm, modelTransform],
+  );
+
+  const origin: Vec3 = mountPreview
+    ? devicePlacement(live, PREVIEW_START_U, 'front', PREVIEW_GEOMETRY).position
+    : [0, deviceLift(definition), 0];
+  deviceOrigin.current = origin;
+
   return (
     <>
-      <group position={[0, lift, 0]}>
-        <AuthoredDevice definition={definition} />
+      {mountPreview && (
+        <RailGauge
+          geometry={PREVIEW_GEOMETRY}
+          baseU={PREVIEW_START_U}
+          units={live.rackUnits}
+        />
+      )}
+      <group position={origin}>
+        <AuthoredDevice definition={definition} live={live} />
+        {mountPreview && (
+          <MountingHardware definition={live} geometry={PREVIEW_GEOMETRY} />
+        )}
         <PortInserts />
       </group>
-      {/* World space: the gizmo bakes the stage lift itself. */}
-      <SelectionGizmo lift={lift} />
+      <SelectionGizmo origin={origin} />
     </>
   );
 }
 
 /**
  * The device body. GLBs load through the shared cache and universal
- * import pipeline (calibration/detection runs against the ORIGINAL
- * definition so analysis reflects the real model). Placeholder devices
- * render the live authored definition, so procedural connectors follow
- * every edit in real time.
+ * import pipeline; the live authored modelTransform is applied, so
+ * model corrections update in place. Calibration/detection runs against
+ * the ORIGINAL definition id (cached once). Placeholder devices render
+ * the live authored definition, so procedural connectors follow edits.
  */
-function AuthoredDevice({ definition }: { definition: DeviceDefinition }) {
+function AuthoredDevice({
+  definition,
+  live,
+}: {
+  definition: DeviceDefinition;
+  live: DeviceDefinition;
+}) {
   const url = deviceModelUrl(definition);
   const availability = useAssetAvailability(url);
-  const ports = useAuthoringStore((s) => s.ports);
 
-  // Live definition: placeholder hardware tracks the authored ports.
-  const live = useMemo(
-    () => definitionWithPorts(definition, ports),
-    [definition, ports],
+  // The GLB gets the live model transform; everything else original.
+  const modelDefinition = useMemo(
+    () => ({ ...definition, modelTransform: live.modelTransform }),
+    [definition, live.modelTransform],
   );
 
   if (availability !== 'available') {
@@ -197,8 +323,90 @@ function AuthoredDevice({ definition }: { definition: DeviceDefinition }) {
   }
   return (
     <Suspense fallback={<DevicePlaceholder definition={live} />}>
-      <LoadedModel url={url} definition={definition} />
+      <LoadedModel url={url} definition={modelDefinition} />
     </Suspense>
+  );
+}
+
+/* ---- mount preview rail gauge ---------------------------------------- */
+
+const RAIL_MATERIAL = new MeshStandardMaterial({
+  color: '#2a2e34',
+  metalness: 0.7,
+  roughness: 0.45,
+});
+const HOLE_MATERIAL = new MeshStandardMaterial({
+  color: '#07080a',
+  metalness: 0.2,
+  roughness: 0.9,
+});
+const HOLE_GEOMETRY = new CylinderGeometry(0.0048, 0.0048, 0.0022, 12);
+HOLE_GEOMETRY.rotateX(Math.PI / 2);
+
+/** EIA-310 hole offsets inside one U, mm from the U boundary. */
+const EIA_HOLES_MM = [6.35, 22.225, 38.1];
+
+/**
+ * A minimal pair of front mounting rails with true EIA-310 hole
+ * spacing, drawn at the real rail plane of the preview geometry. The
+ * developer sees immediately whether ears and holes line up.
+ */
+function RailGauge({
+  geometry,
+  baseU,
+  units,
+}: {
+  geometry: ReturnType<typeof rackGeometry>;
+  baseU: number;
+  units: number;
+}) {
+  const span = units + 2; // one spare U above and below
+  const bottomU = Math.max(1, baseU - 1);
+  const y0 = geometry.railBaseYM + (bottomU - 1) * U_METERS;
+  const height = span * U_METERS;
+  const railX = geometry.railSpacingM / 2;
+  const z = geometry.frontRailZ;
+
+  const holes: Vec3[] = [];
+  for (let u = 0; u < span; u++) {
+    for (const offset of EIA_HOLES_MM) {
+      holes.push([0, y0 + u * U_METERS + offset * MM_TO_M, 0]);
+    }
+  }
+
+  return (
+    <group>
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * railX, 0, 0]}>
+          {/* Rail flange behind the mounting plane */}
+          <mesh
+            material={RAIL_MATERIAL}
+            position={[0, y0 + height / 2, z - 0.0016]}
+          >
+            <boxGeometry args={[0.018, height, 0.003]} />
+          </mesh>
+          {/* U boundary notches */}
+          {Array.from({ length: span + 1 }, (_, u) => (
+            <mesh
+              key={`u-${u}`}
+              material={HOLE_MATERIAL}
+              position={[0.012, y0 + u * U_METERS, z - 0.0014]}
+            >
+              <boxGeometry args={[0.004, 0.0006, 0.0034]} />
+            </mesh>
+          ))}
+          {/* EIA mounting holes on the flange face */}
+          {holes.map((hole, i) => (
+            <mesh
+              key={i}
+              geometry={HOLE_GEOMETRY}
+              material={HOLE_MATERIAL}
+              position={[0, hole[1], z - 0.0004]}
+            />
+          ))}
+        </group>
+      ))}
+    </group>
   );
 }
 
@@ -271,7 +479,87 @@ function PortInserts() {
           ]}
         />
       ))}
+      <ConnectorPreviews />
     </group>
+  );
+}
+
+/* ---- cable connection preview (selected ports) ------------------------ */
+
+const EXIT_SHAFT = new CylinderGeometry(0.0008, 0.0008, 1, 8);
+EXIT_SHAFT.rotateX(Math.PI / 2);
+const EXIT_TIP = new CylinderGeometry(0, 0.0028, 0.008, 12);
+EXIT_TIP.rotateX(Math.PI / 2);
+const EXIT_MATERIAL = new MeshBasicMaterial({
+  color: '#4c82f7',
+  toneMapped: false,
+});
+const ANCHOR_MATERIAL = new MeshBasicMaterial({
+  color: '#ffd166',
+  toneMapped: false,
+});
+const ANCHOR_GEOMETRY = new CylinderGeometry(0.0022, 0.0022, 0.0012, 14);
+ANCHOR_GEOMETRY.rotateX(Math.PI / 2);
+
+/**
+ * For every selected port: the real RJ45 connector inserted exactly as
+ * a cable will sit, the exit-direction arrow and the cable-anchor
+ * marker. Pure authoring feedback — never rendered outside this mode.
+ */
+function ConnectorPreviews() {
+  const ports = useAuthoringStore((s) => s.ports);
+  const selection = useAuthoringStore((s) => s.selection);
+  const selected = selectedPorts({ ports, selection });
+
+  return (
+    <>
+      {selected.map((port) => {
+        const out = port.location === 'front' ? 1 : -1;
+        const exit: Vec3 = [0, 0, out];
+        const insertionM =
+          (port.insertionMm ??
+            DEFAULT_INSERTION_MM[port.type] ??
+            GENERIC_INSERTION_MM) * MM_TO_M;
+        const surface = mm(port.positionMm);
+        const plugPos: Vec3 = [
+          surface[0],
+          surface[1],
+          surface[2] - out * insertionM,
+        ];
+        const anchor: Vec3 = [
+          surface[0] + port.anchorMm[0] * MM_TO_M,
+          surface[1] + port.anchorMm[1] * MM_TO_M,
+          surface[2] + port.anchorMm[2] * MM_TO_M,
+        ];
+        const arrowLen = Math.abs(port.anchorMm[2]) * MM_TO_M + 0.012;
+        return (
+          <group key={`preview-${port.id}`}>
+            <group position={plugPos} quaternion={plugQuaternion(exit)}>
+              <Rj45Plug color="#3f66d0" cableRadiusM={0.00275} />
+            </group>
+            {/* Exit direction */}
+            <mesh
+              geometry={EXIT_SHAFT}
+              material={EXIT_MATERIAL}
+              position={[surface[0], surface[1], surface[2] + (out * arrowLen) / 2]}
+              scale={[1, 1, arrowLen]}
+            />
+            <mesh
+              geometry={EXIT_TIP}
+              material={EXIT_MATERIAL}
+              position={[surface[0], surface[1], surface[2] + out * arrowLen]}
+              rotation={[0, out === 1 ? 0 : Math.PI, 0]}
+            />
+            {/* Cable anchor (plug body end / sheath start) */}
+            <mesh
+              geometry={ANCHOR_GEOMETRY}
+              material={ANCHOR_MATERIAL}
+              position={anchor}
+            />
+          </group>
+        );
+      })}
+    </>
   );
 }
 
@@ -281,7 +569,7 @@ function PortInserts() {
  * mm, with magnetic + grid snapping applied to translations. Dragging
  * automatically pauses the camera controls (drei wiring).
  */
-function SelectionGizmo({ lift }: { lift: number }) {
+function SelectionGizmo({ origin }: { origin: Vec3 }) {
   const tool = useAuthoringStore((s) => s.tool);
   const mode = useAuthoringStore((s) => s.mode);
   const ports = useAuthoringStore((s) => s.ports);
@@ -299,10 +587,11 @@ function SelectionGizmo({ lift }: { lift: number }) {
   useEffect(() => {
     if (!port || dragging) return;
     const [x, y, z] = mm(port.positionMm);
-    proxy.position.set(x, y + lift, z);
+    proxy.position.set(x + origin[0], y + origin[1], z + origin[2]);
     proxy.rotation.set(...degToRad(port.rotationDeg));
     proxy.scale.set(1, 1, 1);
-  }, [port, proxy, dragging, lift]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [port, proxy, dragging, origin[0], origin[1], origin[2]]);
 
   if (mode !== 'edit' || !port || tool === 'select') return null;
 
@@ -316,9 +605,9 @@ function SelectionGizmo({ lift }: { lift: number }) {
     if (!current || !base) return;
     if (tool === 'move') {
       const raw: Vec3 = [
-        proxy.position.x / MM_TO_M,
-        (proxy.position.y - lift) / MM_TO_M,
-        proxy.position.z / MM_TO_M,
+        (proxy.position.x - origin[0]) / MM_TO_M,
+        (proxy.position.y - origin[1]) / MM_TO_M,
+        (proxy.position.z - origin[2]) / MM_TO_M,
       ];
       const snapped = snapPosition(current, raw, state.ports, state.snap);
       // Multi-selection moves rigidly with the primary port.
@@ -371,6 +660,7 @@ function SelectionGizmo({ lift }: { lift: number }) {
       onObjectChange={applyChange}
       onMouseDown={() => {
         const state = useAuthoringStore.getState();
+        state.beginTransform();
         dragBase.current = primaryPort(state);
         dragOrigins.current = new Map(
           state.selection.map((id) => [
@@ -391,20 +681,33 @@ function SelectionGizmo({ lift }: { lift: number }) {
 }
 
 /** Camera: initial framing + one-shot frame commands from the chrome. */
-function AuthoringCameraRig({ definition }: { definition: DeviceDefinition }) {
+function AuthoringCameraRig({
+  definition,
+  marqueeActive,
+}: {
+  definition: DeviceDefinition;
+  marqueeActive: boolean;
+}) {
   const controlsRef = useRef<CameraControlsImpl | null>(null);
   const command = useAuthoringStore((s) => s.cameraCommand);
+  const mountPreview = useAuthoringStore((s) => s.mountPreview);
   const invalidate = useThree((s) => s.invalidate);
+
+  // A marquee drag owns the pointer.
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (controls) controls.enabled = !marqueeActive;
+  }, [marqueeActive]);
 
   const frame = (face: 'front' | 'rear', portsOnly: boolean) => {
     const controls = controlsRef.current;
     if (!controls) return;
-    const lift = deviceLift(definition);
+    const [ox, oy, oz] = deviceOrigin.current;
     const out = face === 'front' ? 1 : -1;
     const halfDepth = (definition.depthMm / 2) * MM_TO_M;
 
-    let cx = 0;
-    let cy = lift;
+    let cx = ox;
+    let cy = oy;
     let span = definition.widthMm * MM_TO_M;
     if (portsOnly) {
       const ports = useAuthoringStore
@@ -415,8 +718,8 @@ function AuthoringCameraRig({ definition }: { definition: DeviceDefinition }) {
         const ys = ports.map((p) => p.positionMm[1]);
         const min = Math.min(...xs);
         const max = Math.max(...xs);
-        cx = (((min + max) / 2) * MM_TO_M) || 0;
-        cy = lift + ((Math.min(...ys) + Math.max(...ys)) / 2) * MM_TO_M;
+        cx = ox + (((min + max) / 2) * MM_TO_M || 0);
+        cy = oy + ((Math.min(...ys) + Math.max(...ys)) / 2) * MM_TO_M;
         span = Math.max(0.08, (max - min + 60) * MM_TO_M);
       }
     }
@@ -424,10 +727,10 @@ function AuthoringCameraRig({ definition }: { definition: DeviceDefinition }) {
     void controls.setLookAt(
       cx,
       cy + distance * 0.18,
-      out * (halfDepth + distance),
+      oz + out * (halfDepth + distance),
       cx,
       cy,
-      out * halfDepth,
+      oz + out * halfDepth,
       true,
     );
     invalidate();
@@ -451,6 +754,17 @@ function AuthoringCameraRig({ definition }: { definition: DeviceDefinition }) {
     frame(command.face, command.type === 'frame-ports');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command]);
+
+  // Toggling the Mount Preview moves the device — follow it.
+  const firstMountRender = useRef(true);
+  useEffect(() => {
+    if (firstMountRender.current) {
+      firstMountRender.current = false;
+      return;
+    }
+    frame('front', false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mountPreview]);
 
   return (
     <CameraControls

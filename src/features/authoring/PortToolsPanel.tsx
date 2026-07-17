@@ -97,7 +97,8 @@ export function PortToolsPanel() {
   const setSnap = useAuthoringStore((s) => s.setSnap);
   const suggestions = useAuthoringStore((s) => s.suggestions);
   const applySuggestions = useAuthoringStore((s) => s.applySuggestions);
-  const dismissSuggestions = useAuthoringStore((s) => s.dismissSuggestions);
+  const rejectSuggestions = useAuthoringStore((s) => s.rejectSuggestions);
+  const detectPorts = useAuthoringStore((s) => s.detectPorts);
 
   const hasSelection = selection.length > 0;
   const toolRow = (id: AuthoringTool, icon: LucideIcon, label: string, key: string) => (
@@ -200,34 +201,46 @@ export function PortToolsPanel() {
         </div>
       </CollapsibleSection>
 
-      {suggestions && (
-        <CollapsibleSection title="GLB ANALYSIS">
-          <div className="space-y-2">
-            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-secondary">
-              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent" strokeWidth={1.8} />
-              Detected {suggestions.length} connector candidate
-              {suggestions.length === 1 ? '' : 's'} in the model geometry
-              (shown in green). Replace the current ports with them?
-            </p>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={applySuggestions}
-                className="h-6 flex-1 rounded-md bg-accent text-[11px] font-semibold text-white transition-colors hover:bg-accent/90"
-              >
-                Use suggestions
-              </button>
-              <button
-                type="button"
-                onClick={dismissSuggestions}
-                className="h-6 flex-1 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </CollapsibleSection>
-      )}
+      <CollapsibleSection title="GLB ANALYSIS">
+        <div className="space-y-2">
+          {suggestions ? (
+            <>
+              <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-secondary">
+                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent" strokeWidth={1.8} />
+                Detected {suggestions.length} connector candidate
+                {suggestions.length === 1 ? '' : 's'} in the model geometry
+                (shown in green). Accept to replace the current ports, or
+                reject to discard the analysis completely.
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={applySuggestions}
+                  className="h-6 flex-1 rounded-md bg-accent text-[11px] font-semibold text-white transition-colors hover:bg-accent/90"
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={rejectSuggestions}
+                  className="h-6 flex-1 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
+                >
+                  Reject
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={detectPorts}
+              className="flex h-6 w-full items-center justify-center gap-1.5 rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+            >
+              <Sparkles className="size-3.5" strokeWidth={1.8} />
+              Detect connectors
+            </button>
+          )}
+        </div>
+      </CollapsibleSection>
     </aside>
   );
 }

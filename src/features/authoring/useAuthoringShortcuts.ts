@@ -34,6 +34,19 @@ export function useAuthoringShortcuts(): void {
         store.save();
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        if (isTyping(e)) return;
+        e.preventDefault();
+        if (e.shiftKey) store.redo();
+        else store.undo();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        if (isTyping(e)) return;
+        e.preventDefault();
+        store.redo();
+        return;
+      }
       if (isTyping(e)) return;
 
       switch (e.key.toLowerCase()) {

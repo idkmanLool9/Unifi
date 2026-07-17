@@ -9,6 +9,7 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { PanelHeader } from '@/components/ui/PanelHeader';
 import { Slider } from '@/components/ui/Slider';
 import { Switch } from '@/components/ui/Switch';
+import { useImportReportStore } from '@/features/devices/import/importReportStore';
 import { PORT_TYPES, type PortType } from '@/features/devices/deviceSchema';
 
 /**
@@ -151,11 +152,13 @@ export function PortInspectorPanel() {
       <PanelHeader title="Port Inspector" />
 
       {!port ? (
-        <div className="px-4 py-6 text-center text-xs leading-relaxed text-muted">
-          Select a port in the viewport or the layout strip below.
-          <br />
-          Shift-click adds to the selection.
-        </div>
+        <>
+          <div className="border-b border-edge px-4 py-4 text-center text-[11px] leading-relaxed text-muted">
+            Select a port in the viewport or the layout strip below.
+            Shift-click adds; Shift-drag box-selects.
+          </div>
+          <DeviceMountSections />
+        </>
       ) : (
         <>
           {selected.length > 1 && (
@@ -339,23 +342,156 @@ export function PortInspectorPanel() {
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection title="ANCHOR" defaultOpen={false}>
+          <CollapsibleSection title="CABLE CONNECTION" defaultOpen={false}>
             <div className="space-y-2">
               <TripleRow
                 label="Cable anchor offset"
                 value={port.anchorMm}
                 onCommit={(anchorMm) => update({ anchorMm })}
               />
+              <Row label="Insertion">
+                <NumField
+                  value={port.insertionMm ?? 13}
+                  suffix="mm"
+                  onCommit={(v) =>
+                    update({
+                      insertionMm: Math.max(0, Math.min(40, v)),
+                    })
+                  }
+                />
+              </Row>
               <p className="text-[10px] leading-relaxed text-muted">
-                Offset from the connector center, mm. Cables exit toward{' '}
-                {port.location === 'front' ? '+Z (front)' : '−Z (rear)'}; the
-                anchor is where the plug body ends.
+                Anchor: where the plug body ends and the cable sheath
+                starts (offset from the connector center, mm). Insertion:
+                how deep the connector nose sits inside the opening.
+                Cables exit toward{' '}
+                {port.location === 'front' ? '+Z (front)' : '−Z (rear)'};
+                connector roll comes from the port's Z rotation. Selected
+                ports preview the plugged connector in the viewport.
               </p>
             </div>
           </CollapsibleSection>
         </>
       )}
     </aside>
+  );
+}
+
+/**
+ * Device-level mount and model corrections, live in the viewport (turn
+ * on Mount Preview to check against real rails). Saved into metadata —
+ * the GLB itself is never modified.
+ */
+function DeviceMountSections() {
+  const mountOffsetMm = useAuthoringStore((s) => s.mountOffsetMm);
+  const setMountOffset = useAuthoringStore((s) => s.setMountOffset);
+  const modelTransform = useAuthoringStore((s) => s.modelTransform);
+  const setModelTransform = useAuthoringStore((s) => s.setModelTransform);
+  const mountPreview = useAuthoringStore((s) => s.mountPreview);
+  const toggleMountPreview = useAuthoringStore((s) => s.toggleMountPreview);
+
+  return (
+    <>
+      <CollapsibleSection title="MOUNT ALIGNMENT">
+        <div className="space-y-2">
+          <SwitchRow
+            label="Mount preview (real rails)"
+            checked={mountPreview}
+            onChange={toggleMountPreview}
+          />
+          <TripleRow
+            label="Mount offset (mm)"
+            value={mountOffsetMm}
+            onCommit={setMountOffset}
+          />
+          <p className="text-[10px] leading-relaxed text-muted">
+            Correction applied by the placement engine on top of the
+            rail-flush position: X lateral, Y vertical, Z toward the
+            faceplate. Use it when the model's ears or holes don't land
+            exactly on the rails.
+          </p>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="MODEL CORRECTION" defaultOpen={false}>
+        <div className="space-y-2">
+          {modelTransform ? (
+            <>
+              <TripleRow
+                label="Model offset (mm)"
+                value={modelTransform.offsetMm as Vec3}
+                onCommit={(offsetMm) =>
+                  setModelTransform({ ...modelTransform, offsetMm })
+                }
+              />
+              <TripleRow
+                label="Model rotation (°)"
+                value={modelTransform.rotationDeg as Vec3}
+                onCommit={(rotationDeg) =>
+                  setModelTransform({ ...modelTransform, rotationDeg })
+                }
+              />
+              <Row label="Scale">
+                <NumField
+                  value={
+                    typeof modelTransform.scale === 'number'
+                      ? modelTransform.scale
+                      : 1
+                  }
+                  step={0.001}
+                  onCommit={(scale) =>
+                    setModelTransform({
+                      ...modelTransform,
+                      scale: Math.max(0.001, scale),
+                    })
+                  }
+                />
+              </Row>
+              <button
+                type="button"
+                onClick={() => setModelTransform(undefined)}
+                className="h-6 w-full rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
+              >
+                Reset to automatic import transform
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] leading-relaxed text-muted">
+                The universal importer currently positions this model
+                automatically. Take manual control to fine-tune how the
+                GLB sits inside the device box.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  // Seed from the resolved import transform so taking
+                  // control never moves the model.
+                  const deviceId = useAuthoringStore.getState().deviceId;
+                  const report = deviceId
+                    ? useImportReportStore.getState().reports[deviceId]
+                    : undefined;
+                  setModelTransform(
+                    report
+                      ? {
+                          scale: report.transform.scale,
+                          rotationDeg: [
+                            ...report.transform.rotationDeg,
+                          ] as Vec3,
+                          offsetMm: [...report.transform.offsetMm] as Vec3,
+                        }
+                      : { scale: 1, rotationDeg: [0, 0, 0], offsetMm: [0, 0, 0] },
+                  );
+                }}
+                className="h-6 w-full rounded-md border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover"
+              >
+                Edit model transform manually…
+              </button>
+            </>
+          )}
+        </div>
+      </CollapsibleSection>
+    </>
   );
 }
 

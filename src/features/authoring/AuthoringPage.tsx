@@ -54,12 +54,19 @@ export function AuthoringPage() {
 
   // Definitions also land asynchronously at startup (external metadata,
   // then browser-persisted authored devices). Re-derive the session so
-  // the editor always shows the definition that actually won — again,
-  // never over unsaved edits.
+  // the editor always shows the definition that actually won — and if
+  // the URL requested a device that only just finished loading (an
+  // external-only definition), switch to it. Never over unsaved edits.
   const registryVersion = useRegistryStore((s) => s.version);
   useEffect(() => {
     const state = useAuthoringStore.getState();
-    if (state.deviceId && !state.dirty) state.reload();
+    if (!state.deviceId || state.dirty) return;
+    const requested = params.get('device');
+    if (requested && requested !== state.deviceId && getDevice(requested)) {
+      state.open(requested);
+    } else {
+      state.reload();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registryVersion]);
 

@@ -43,6 +43,9 @@ export interface AuthoredPort {
   visible: boolean;
   /** Cable anchor offset from the connector center, mm. */
   anchorMm: Vec3;
+  /** Plug insertion depth into the opening, mm (catalog default when
+   *  undefined). */
+  insertionMm?: number;
 }
 
 /** Cable plug protrusion used for default anchors, mm. */
@@ -131,6 +134,7 @@ export function portsFromDefinition(
         port.anchorMm[1] - port.positionMm[1],
         port.anchorMm[2] - port.positionMm[2],
       ],
+      insertionMm: port.insertionMm,
     };
   });
 }
@@ -170,23 +174,41 @@ export function toPortDefinition(port: AuthoredPort): PortDefinition {
       near(port.sizeMm[0], catalog[0]) && near(port.sizeMm[1], catalog[1])
         ? undefined
         : ([...port.sizeMm] as [number, number]),
+    insertionMm: port.insertionMm,
   };
+}
+
+/** Device-level authoring overrides (mount + model correction). */
+export interface AuthoringOverrides {
+  /** Mount correction, device-local mm (placement engine). */
+  mountOffsetMm?: Vec3;
+  /** Explicit GLB correction (wins over the auto import transform). */
+  modelTransform?: DeviceDefinition['modelTransform'];
 }
 
 /**
  * The authored definition: the base device with its ports replaced by
- * the authored set and `portsAuthored` stamped, so calibration never
- * second-guesses these positions again.
+ * the authored set, `portsAuthored` stamped (so calibration never
+ * second-guesses these positions again), and any device-level mount /
+ * model corrections applied.
  */
 export function definitionWithPorts(
   base: DeviceDefinition,
   ports: readonly AuthoredPort[],
+  overrides: AuthoringOverrides = {},
 ): DeviceDefinition {
   const anyEther = ports.some((p) => p.etherlighting);
+  const mount = overrides.mountOffsetMm;
+  const mountOffsetMm =
+    mount && !(mount[0] === 0 && mount[1] === 0 && mount[2] === 0)
+      ? ([...mount] as Vec3)
+      : undefined;
   return {
     ...base,
     portsAuthored: true,
     ports: ports.map(toPortDefinition),
+    mountOffsetMm: mount ? mountOffsetMm : base.mountOffsetMm,
+    modelTransform: overrides.modelTransform ?? base.modelTransform,
     lighting:
       anyEther && !base.lighting
         ? {

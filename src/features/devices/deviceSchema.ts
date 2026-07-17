@@ -93,6 +93,11 @@ export interface PortDefinition {
    * GLB carries detectable connector geometry).
    */
   sizeMm?: [number, number];
+  /**
+   * How deep a plugged connector's nose sits inside the opening, mm
+   * (cable renderer; catalog default per connector type when omitted).
+   */
+  insertionMm?: number;
 }
 
 export const LED_KINDS = [
@@ -390,6 +395,14 @@ export interface DeviceDefinition {
   /** Vertical trim from the U boundary, in millimeters. */
   mountingOffsetMm: number;
   /**
+   * Mount correction in device-local mm, applied by the placement
+   * engine on top of the standard rail-flush position: [lateral,
+   * vertical, depth] (+z pushes the device toward its own faceplate).
+   * Authored in the Device Authoring mode when a model's ears/holes
+   * don't land exactly on the rails. The GLB itself is never modified.
+   */
+  mountOffsetMm?: [number, number, number];
+  /**
    * Set by the Device Authoring mode: every port was placed by hand, so
    * GLB connector calibration must never override these positions.
    */
@@ -625,6 +638,10 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
             entry.sizeMm.every((v) => typeof v === 'number' && v > 0)
           ? (entry.sizeMm as [number, number])
           : sub.fail('sizeMm', 'must be [width, height] positive numbers');
+    const insertionMm =
+      entry.insertionMm === undefined
+        ? undefined
+        : sub.number(entry, 'insertionMm', { min: 0, max: 40 });
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -646,6 +663,7 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         etherlighting,
         anchorMm,
         sizeMm,
+        insertionMm,
       });
     }
   });
@@ -1142,6 +1160,12 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
     input.mountingOffsetMm === undefined
       ? 0
       : (c.number(input, 'mountingOffsetMm', { min: -10, max: 10 }) ?? 0);
+  const mountOffsetMm =
+    input.mountOffsetMm === undefined
+      ? undefined
+      : isVec3(input.mountOffsetMm)
+        ? input.mountOffsetMm
+        : c.fail('mountOffsetMm', 'must be [x, y, z] numbers');
 
   let tags: string[] = [];
   if (input.tags !== undefined) {
@@ -1203,6 +1227,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       modelTransform,
       modelDetail,
       mountingOffsetMm,
+      mountOffsetMm,
       portsAuthored,
       ports,
       leds,

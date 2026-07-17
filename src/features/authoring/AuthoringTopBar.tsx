@@ -6,6 +6,7 @@ import {
   MousePointer2,
   Move,
   Rotate3d,
+  Rows3,
   Ruler,
   Save,
   Scaling,
@@ -80,6 +81,8 @@ export function AuthoringTopBar() {
   const setSnap = useAuthoringStore((s) => s.setSnap);
   const gridVisible = useAuthoringStore((s) => s.gridVisible);
   const toggleGrid = useAuthoringStore((s) => s.toggleGrid);
+  const mountPreview = useAuthoringStore((s) => s.mountPreview);
+  const toggleMountPreview = useAuthoringStore((s) => s.toggleMountPreview);
   const dirty = useAuthoringStore((s) => s.dirty);
   const open = useAuthoringStore((s) => s.open);
   const save = useAuthoringStore((s) => s.save);
@@ -194,6 +197,16 @@ export function AuthoringTopBar() {
               .getState()
               .dispatchCamera({ type: 'frame-ports', face: 'front' })
           }
+        />
+        <ToolbarButton
+          icon={Rows3}
+          label={
+            mountPreview
+              ? 'Exit mount preview'
+              : 'Mount preview — real rack placement'
+          }
+          active={mountPreview}
+          onClick={toggleMountPreview}
         />
       </div>
 

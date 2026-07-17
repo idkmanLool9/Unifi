@@ -42,6 +42,8 @@ export interface PhysicalPort {
   anchorMm: [number, number, number];
   /** Authored opening size override, mm (calibration still wins). */
   sizeMm?: [number, number];
+  /** Authored plug insertion depth override, mm. */
+  insertionMm?: number;
 }
 
 export interface ResolvedLed {
@@ -142,6 +144,7 @@ export function resolvePhysicalPorts(
           positionMm[2] + anchor[2],
         ],
         sizeMm: group.sizeMm,
+        insertionMm: group.insertionMm,
       });
 
     if (group.positionMm) {

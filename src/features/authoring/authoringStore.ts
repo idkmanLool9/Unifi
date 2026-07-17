@@ -44,6 +44,16 @@ export interface AuthoringCameraCommand {
   face: 'front' | 'rear';
 }
 
+/** Undo/redo snapshot: everything an edit can touch. */
+interface HistoryEntry {
+  ports: AuthoredPort[];
+  selection: string[];
+  mountOffsetMm: Vec3;
+  modelTransform: DeviceDefinition['modelTransform'];
+}
+
+const HISTORY_LIMIT = 100;
+
 interface AuthoringState {
   /** Definition id being authored, or null when the mode is closed. */
   deviceId: string | null;
@@ -57,6 +67,20 @@ interface AuthoringState {
   dirty: boolean;
   /** GLB-analysis suggestions awaiting an explicit user decision. */
   suggestions: AuthoredPort[] | null;
+  /**
+   * The developer accepted or rejected the analysis for this session —
+   * suggestions never reappear on their own after a decision.
+   */
+  suggestionsDecided: boolean;
+  /** Mount correction being authored, device-local mm. */
+  mountOffsetMm: Vec3;
+  /** Explicit model-transform correction (undefined = keep current). */
+  modelTransform: DeviceDefinition['modelTransform'];
+  /** Render the device mounted on real rails via the placement engine. */
+  mountPreview: boolean;
+  /** Undo/redo stacks. */
+  past: HistoryEntry[];
+  future: HistoryEntry[];
   /** Show the translucent cavity previews in the viewport. */
   previewVisible: boolean;
   /** Cavity preview strength, 0..1. */
@@ -94,7 +118,18 @@ interface AuthoringState {
 
   refreshSuggestions: () => void;
   applySuggestions: () => void;
-  dismissSuggestions: () => void;
+  rejectSuggestions: () => void;
+  /** Explicitly re-runs the GLB analysis after a decision. */
+  detectPorts: () => void;
+
+  setMountOffset: (offset: Vec3) => void;
+  setModelTransform: (transform: DeviceDefinition['modelTransform']) => void;
+  toggleMountPreview: () => void;
+
+  /** Records the current state before a gizmo drag begins. */
+  beginTransform: () => void;
+  undo: () => void;
+  redo: () => void;
 
   save: () => boolean;
 }
@@ -116,7 +151,25 @@ export const primaryPort = (s: {
   return s.ports.find((p) => p.id === id) ?? null;
 };
 
-export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
+export const useAuthoringStore = create<AuthoringState>()((set, get) => {
+  /** Snapshot of everything undo must restore. */
+  const snapshot = (): HistoryEntry => {
+    const s = get();
+    return {
+      ports: s.ports,
+      selection: s.selection,
+      mountOffsetMm: s.mountOffsetMm,
+      modelTransform: s.modelTransform,
+    };
+  };
+  /** Push the current state onto the undo stack (clears redo). */
+  const remember = () =>
+    set((s) => ({
+      past: [...s.past.slice(-HISTORY_LIMIT + 1), snapshot()],
+      future: [],
+    }));
+
+  return {
   deviceId: null,
   ports: [],
   selection: [],
@@ -125,6 +178,12 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
   snap: { ...DEFAULT_SNAP },
   dirty: false,
   suggestions: null,
+  suggestionsDecided: false,
+  mountOffsetMm: [0, 0, 0],
+  modelTransform: undefined,
+  mountPreview: false,
+  past: [],
+  future: [],
   previewVisible: true,
   previewIntensity: 0.75,
   gridVisible: true,
@@ -133,6 +192,7 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
   setPreviewVisible: (previewVisible) => set({ previewVisible }),
   setPreviewIntensity: (previewIntensity) => set({ previewIntensity }),
   toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
+  toggleMountPreview: () => set((s) => ({ mountPreview: !s.mountPreview })),
   dispatchCamera: (command) =>
     set((s) => ({
       cameraCommand: { ...command, id: (s.cameraCommand?.id ?? 0) + 1 },
@@ -154,12 +214,59 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
       tool: 'move',
       dirty: false,
       suggestions: null,
+      suggestionsDecided: false,
+      mountOffsetMm: [...(definition.mountOffsetMm ?? [0, 0, 0])] as Vec3,
+      modelTransform: definition.modelTransform,
+      past: [],
+      future: [],
     });
     get().refreshSuggestions();
   },
 
   close: () =>
-    set({ deviceId: null, ports: [], selection: [], suggestions: null, dirty: false }),
+    set({
+      deviceId: null,
+      ports: [],
+      selection: [],
+      suggestions: null,
+      suggestionsDecided: false,
+      dirty: false,
+      past: [],
+      future: [],
+    }),
+
+  setMountOffset: (offset) => {
+    remember();
+    set({ mountOffsetMm: [...offset] as Vec3, dirty: true });
+  },
+  setModelTransform: (transform) => {
+    remember();
+    set({ modelTransform: transform, dirty: true });
+  },
+
+  beginTransform: () => remember(),
+  undo: () =>
+    set((s) => {
+      const previous = s.past[s.past.length - 1];
+      if (!previous) return s;
+      return {
+        past: s.past.slice(0, -1),
+        future: [...s.future, snapshot()],
+        ...previous,
+        dirty: true,
+      };
+    }),
+  redo: () =>
+    set((s) => {
+      const next = s.future[s.future.length - 1];
+      if (!next) return s;
+      return {
+        future: s.future.slice(0, -1),
+        past: [...s.past, snapshot()],
+        ...next,
+        dirty: true,
+      };
+    }),
 
   setMode: (mode) => set({ mode }),
   setTool: (tool) => set({ tool }),
@@ -175,7 +282,8 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
   selectMany: (ids) => set({ selection: ids }),
   clearSelection: () => set({ selection: [] }),
 
-  addPort: (type) =>
+  addPort: (type) => {
+    remember();
     set((s) => {
       const definition = s.deviceId ? getDevice(s.deviceId) : undefined;
       if (!definition) return s;
@@ -186,13 +294,16 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
         dirty: true,
         mode: 'edit' as const,
       };
-    }),
+    });
+  },
 
-  updatePort: (id, patch) =>
+  updatePort: (id, patch) => {
+    remember();
     set((s) => ({
       ports: s.ports.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       dirty: true,
-    })),
+    }));
+  },
 
   movePort: (id, positionMm) =>
     set((s) => ({
@@ -211,18 +322,26 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
       dirty: true,
     })),
 
-  renamePort: (id, nextId) =>
-    set((s) => {
-      const clean = nextId.trim();
-      if (!clean || s.ports.some((p) => p.id === clean && p.id !== id)) return s;
-      return {
-        ports: s.ports.map((p) => (p.id === id ? { ...p, id: clean } : p)),
-        selection: s.selection.map((x) => (x === id ? clean : x)),
-        dirty: true,
-      };
-    }),
+  renamePort: (id, nextId) => {
+    const clean = nextId.trim();
+    const s0 = get();
+    if (
+      !clean ||
+      clean === id ||
+      s0.ports.some((p) => p.id === clean && p.id !== id)
+    ) {
+      return;
+    }
+    remember();
+    set((s) => ({
+      ports: s.ports.map((p) => (p.id === id ? { ...p, id: clean } : p)),
+      selection: s.selection.map((x) => (x === id ? clean : x)),
+      dirty: true,
+    }));
+  },
 
-  duplicateSelection: () =>
+  duplicateSelection: () => {
+    if (get().selection.length > 0) remember();
     set((s) => {
       const selected = selectedPorts(s);
       if (selected.length === 0) return s;
@@ -249,16 +368,20 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
         selection: clones.map((c) => c.id),
         dirty: true,
       };
-    }),
+    });
+  },
 
-  deleteSelection: () =>
+  deleteSelection: () => {
+    if (get().selection.length > 0) remember();
     set((s) => ({
       ports: s.ports.filter((p) => !s.selection.includes(p.id)),
       selection: [],
       dirty: s.selection.length > 0 ? true : s.dirty,
-    })),
+    }));
+  },
 
-  mirrorSelection: () =>
+  mirrorSelection: () => {
+    if (get().selection.length > 0) remember();
     set((s) => {
       const selected = selectedPorts(s);
       if (selected.length === 0) return s;
@@ -282,9 +405,11 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
         created.push(clone.id);
       }
       return { ports: pool, selection: created, dirty: true };
-    }),
+    });
+  },
 
-  applyArray: (count, spacingMm, direction) =>
+  applyArray: (count, spacingMm, direction) => {
+    if (get().selection.length > 0 && count >= 1) remember();
     set((s) => {
       const selected = selectedPorts(s);
       if (selected.length === 0 || count < 1) return s;
@@ -296,12 +421,16 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
         created.push(...copies.map((c) => c.id));
       }
       return { ports: pool, selection: created, dirty: true };
-    }),
+    });
+  },
 
   refreshSuggestions: () => {
-    const { deviceId, ports } = get();
+    const { deviceId, ports, suggestionsDecided } = get();
     const definition = deviceId ? getDevice(deviceId) : undefined;
     if (!definition) return;
+    // A decision is final for the session — never resurface on reloads
+    // or calibration bumps. detectPorts() re-arms explicitly.
+    if (suggestionsDecided) return;
     const detected = detectedConnectors(definition.id);
     if (detected.length === 0) {
       set({ suggestions: null });
@@ -319,25 +448,47 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
     });
   },
 
-  applySuggestions: () =>
+  applySuggestions: () => {
+    if (!get().suggestions) return;
+    remember();
     set((s) => {
       if (!s.suggestions) return s;
       return {
         ports: s.suggestions,
         selection: [],
         suggestions: null,
+        suggestionsDecided: true,
         dirty: true,
       };
-    }),
+    });
+  },
 
-  dismissSuggestions: () => set({ suggestions: null }),
+  rejectSuggestions: () =>
+    // Rejection is complete: nothing remains, nothing comes back.
+    set({ suggestions: null, suggestionsDecided: true }),
+
+  detectPorts: () => {
+    set({ suggestionsDecided: false, suggestions: null });
+    get().refreshSuggestions();
+    if (!get().suggestions) {
+      toast({
+        variant: 'info',
+        title: 'No connector candidates',
+        description:
+          'The GLB analysis found nothing new to suggest for this model.',
+      });
+    }
+  },
 
   save: () => {
-    const { deviceId, ports } = get();
+    const { deviceId, ports, mountOffsetMm, modelTransform } = get();
     const base = deviceId ? getDevice(deviceId) : undefined;
     if (!base) return false;
 
-    const authored = definitionWithPorts(base, ports);
+    const authored = definitionWithPorts(base, ports, {
+      mountOffsetMm,
+      modelTransform,
+    });
     // Round-trip through the validator: what we register is exactly what
     // a metadata.json drop-in would produce.
     const result = validateDeviceDefinition(
@@ -372,7 +523,8 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
     });
     return true;
   },
-}));
+  };
+});
 
 /**
  * Writes the authored metadata into the repository via the dev-server
