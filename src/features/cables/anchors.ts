@@ -2,6 +2,7 @@ import { calibratedPort } from '@/features/devices/hardware/connectorCalibration
 import {
   resolvePhysicalPorts,
   resolvePowerConnectors,
+  rotatePortVector,
   CONNECTOR_SIZES,
   type PhysicalPort,
 } from '@/features/devices/hardware/physicalPorts';
@@ -37,12 +38,36 @@ export function allPhysicalPorts(definition: DeviceDefinition): PhysicalPort[] {
   return ports;
 }
 
-/** Looks up one connector by its stable ref. */
-export const findPhysicalPort = (
+const sanitizeRef = (raw: string): string =>
+  raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+/**
+ * Looks up one connector by its stable ref. Historic authoring saves
+ * drifted port ids by folding the `[1]` suffix into the id on every
+ * round-trip (`gbe-top[1]` → `gbe-top-1[1]` → `gbe-top-1-1[1]`); refs
+ * recorded before such a save no longer match. The repair walks that
+ * exact transformation forward a few generations so old cables resolve
+ * against today's ids — callers can compare the returned port's ref to
+ * persist the healed value.
+ */
+export function findPhysicalPort(
   definition: DeviceDefinition,
   portRef: string,
-): PhysicalPort | undefined =>
-  allPhysicalPorts(definition).find((p) => p.ref === portRef);
+): PhysicalPort | undefined {
+  const ports = allPhysicalPorts(definition);
+  const exact = ports.find((p) => p.ref === portRef);
+  if (exact) return exact;
+  let candidate = portRef;
+  for (let hop = 0; hop < 4; hop++) {
+    candidate = `${sanitizeRef(candidate)}[1]`;
+    const repaired = ports.find((p) => p.ref === candidate);
+    if (repaired) return repaired;
+  }
+  return undefined;
+}
 
 /**
  * The connector's face: device-local position plus visible opening size.
@@ -109,7 +134,7 @@ export interface ResolvedEndpoint {
   surface: Vec3;
   /** Cable anchor, rack-local meters (where the plug body ends). */
   anchor: Vec3;
-  /** Outward exit direction in rack-local space (unit-ish, ±Z). */
+  /** Unit exit direction in rack-local space (rotation-aware). */
   exitDir: Vec3;
 }
 
@@ -127,11 +152,15 @@ export function resolveEndpoint(
 
   const calibrated = calibratedPort(definition.id, portRef);
   const positionMm = calibrated?.positionMm ?? port.positionMm;
+  const calibratedAnchorOffset = rotatePortVector(
+    [0, 0, outwardLocal * 22],
+    port.rotationDeg,
+  );
   const anchorMm: Vec3 = calibrated
     ? [
-        positionMm[0],
-        positionMm[1],
-        positionMm[2] + outwardLocal * 22,
+        positionMm[0] + calibratedAnchorOffset[0],
+        positionMm[1] + calibratedAnchorOffset[1],
+        positionMm[2] + calibratedAnchorOffset[2],
       ]
     : port.anchorMm;
 
@@ -149,20 +178,22 @@ export function resolveEndpoint(
   );
   const flip = instance.facing === 'front' ? 1 : -1;
 
-  // Authored exit direction wins; default is straight out of the face.
-  let exitDir: Vec3 = [0, 0, outwardLocal * flip];
+  // The exit is port-local: authored direction wins, default is straight
+  // out of the face; the port's authored rotation swings it, then the
+  // facing yaw (x/z flip) lifts it into rack space.
+  let localExit: Vec3 = [0, 0, outwardLocal];
   if (port.exitDirMm) {
     const [ex, ey, ez] = port.exitDirMm;
     const length = Math.hypot(ex, ey, ez);
-    if (length > 1e-6) {
-      // Device-local → rack-local through the facing yaw (x/z flip).
-      exitDir = [
-        (flip * ex) / length,
-        ey / length,
-        (flip * ez) / length,
-      ];
-    }
+    if (length > 1e-6) localExit = [ex / length, ey / length, ez / length];
   }
+  const rotated = rotatePortVector(localExit, port.rotationDeg);
+  // `+ 0` keeps flipped zero components from becoming -0.
+  const exitDir: Vec3 = [
+    flip * rotated[0] + 0,
+    rotated[1] + 0,
+    flip * rotated[2] + 0,
+  ];
   return {
     port,
     surface,

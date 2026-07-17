@@ -88,7 +88,9 @@ export const CONNECTOR_SIZES: Record<
   serial: { widthMm: 31, heightMm: 13, pitchMm: 36 },
   power: { widthMm: 27, heightMm: 20, pitchMm: 40 },
   dc: { widthMm: 12, heightMm: 12, pitchMm: 20 },
+  c13: { widthMm: 27, heightMm: 20, pitchMm: 40 },
   c14: { widthMm: 27, heightMm: 20, pitchMm: 40 },
+  c19: { widthMm: 31, heightMm: 24, pitchMm: 45 },
   c20: { widthMm: 31, heightMm: 24, pitchMm: 45 },
   'iec-lock': { widthMm: 27, heightMm: 20, pitchMm: 40 },
   nema: { widthMm: 27, heightMm: 24, pitchMm: 40 },
@@ -106,6 +108,48 @@ const ANCHOR_OUT_MM = 22;
 
 export const portRef = (groupId: string, index: number): string =>
   `${groupId}[${index}]`;
+
+/**
+ * Rotates a port-local vector by the authored port rotation (degrees,
+ * XYZ order — the same Euler convention the renderer applies to the
+ * port's visuals). Anchors and cable exit directions are port-local, so
+ * rotating a port swings its cable attachment with it.
+ */
+export function rotatePortVector(
+  v: [number, number, number],
+  rotationDeg: [number, number, number],
+  inverse = false,
+): [number, number, number] {
+  const [rx, ry, rz] = rotationDeg;
+  if (rx === 0 && ry === 0 && rz === 0) return v;
+  const rad = Math.PI / 180;
+  let [x, y, z] = v;
+  const rotZ = (deg: number) => {
+    const c = Math.cos(deg * rad);
+    const s = Math.sin(deg * rad);
+    [x, y] = [c * x - s * y, s * x + c * y];
+  };
+  const rotY = (deg: number) => {
+    const c = Math.cos(deg * rad);
+    const s = Math.sin(deg * rad);
+    [x, z] = [c * x + s * z, -s * x + c * z];
+  };
+  const rotX = (deg: number) => {
+    const c = Math.cos(deg * rad);
+    const s = Math.sin(deg * rad);
+    [y, z] = [c * y - s * z, s * y + c * z];
+  };
+  if (inverse) {
+    rotX(-rx);
+    rotY(-ry);
+    rotZ(-rz);
+  } else {
+    rotZ(rz);
+    rotY(ry);
+    rotX(rx);
+  }
+  return [x, y, z];
+}
 
 const rowY = (row: number | undefined, heightMm: number): number =>
   row === undefined ? 0 : (heightMm / 4) * (1 - 2 * row);
@@ -133,7 +177,12 @@ export function resolvePhysicalPorts(
     const location = group.location ?? 'front';
     const zFace = (definition.depthMm / 2) * (location === 'front' ? 1 : -1);
     const outward = location === 'front' ? 1 : -1;
-    const anchor = group.anchorMm ?? [0, 0, outward * ANCHOR_OUT_MM];
+    const rotationDeg = group.rotationDeg ?? ([0, 0, 0] as const);
+    // The anchor offset is port-local: it swings with the port rotation.
+    const anchor = rotatePortVector(
+      group.anchorMm ?? [0, 0, outward * ANCHOR_OUT_MM],
+      [rotationDeg[0], rotationDeg[1], rotationDeg[2]],
+    );
 
     const push = (index: number, positionMm: [number, number, number]) =>
       ports.push({

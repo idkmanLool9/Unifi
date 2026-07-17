@@ -46,7 +46,9 @@ const PORT_CLASS_LABEL: Record<string, string> = {
   sfp28: 'SFP28',
   'qsfp+': 'QSFP+',
   qsfp28: 'QSFP28',
+  c13: 'IEC C13',
   c14: 'IEC C14',
+  c19: 'IEC C19',
   c20: 'IEC C20',
   power: 'power',
   dc: 'DC power',
@@ -154,7 +156,9 @@ function incompatibleMessage(a: PhysicalPort, b: PhysicalPort): string {
     return 'SFP ports take DAC or fiber, not copper Ethernet.';
   }
   const power = (p: PhysicalPort) =>
-    ['c14', 'c20', 'power', 'dc', 'iec-lock', 'nema'].includes(p.type);
+    ['c13', 'c14', 'c19', 'c20', 'power', 'dc', 'iec-lock', 'nema'].includes(
+      p.type,
+    );
   if (power(a) !== power(b)) {
     return `A ${label(a)} port cannot connect to a ${label(b)} port.`;
   }

@@ -690,11 +690,13 @@ export function connectorKindFor(
       return 'hdmi';
     case 'displayport':
       return 'displayport';
+    case 'c13':
     case 'c14':
     case 'power':
     case 'iec-lock':
     case 'nema':
       return 'c13';
+    case 'c19':
     case 'c20':
       return 'c19';
     case 'dc':

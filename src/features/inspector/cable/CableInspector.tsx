@@ -389,6 +389,21 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
             }
             className="w-full rounded-lg border border-edge bg-surface-raised px-2 py-1.5 text-xs text-primary focus:border-accent focus:outline-none"
           />
+          <div className="space-y-1">
+            <span className="block text-xs text-secondary">Instructions</span>
+            <textarea
+              aria-label="Cable instructions"
+              placeholder="Installation / patching instructions…"
+              rows={4}
+              value={cable.instructions ?? ''}
+              onChange={(e) =>
+                updateCable(cable.id, {
+                  instructions: e.target.value || undefined,
+                })
+              }
+              className="w-full rounded-lg border border-edge bg-surface-raised px-2 py-1.5 text-xs leading-relaxed text-primary focus:border-accent focus:outline-none"
+            />
+          </div>
         </div>
       </CollapsibleSection>
 

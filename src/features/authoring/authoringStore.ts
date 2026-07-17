@@ -58,7 +58,9 @@ export type AuthoringCategory =
 export const POWER_PORT_TYPES: readonly PortType[] = [
   'power',
   'dc',
+  'c13',
   'c14',
+  'c19',
   'c20',
   'phoenix',
 ];

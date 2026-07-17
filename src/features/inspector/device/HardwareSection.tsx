@@ -23,7 +23,9 @@ const TYPE_LABELS: Partial<Record<PhysicalConnectorType, string>> = {
   serial: 'Serial',
   power: 'Power',
   dc: 'DC',
+  c13: 'IEC C13',
   c14: 'IEC C14',
+  c19: 'IEC C19',
   c20: 'IEC C20',
 };
 

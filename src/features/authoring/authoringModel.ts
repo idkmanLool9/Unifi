@@ -4,6 +4,7 @@ import {
 } from '@/features/devices/hardware/connectorCalibration';
 import {
   resolvePhysicalPorts,
+  rotatePortVector,
   CONNECTOR_SIZES,
 } from '@/features/devices/hardware/physicalPorts';
 import type {
@@ -126,11 +127,33 @@ export function createPort(
  * Loads a definition's existing ports into the authoring model. GLB
  * calibration (when present) is baked into the loaded positions/sizes,
  * so the editor always starts from what the user actually sees.
+ *
+ * Ids must be round-trip stable: a single-count group keeps its group id
+ * verbatim (its ref `<id>[1]` re-serializes to the identical ref), and a
+ * multi-count group expands once to `<id>-<index>` singles that are then
+ * stable forever. Folding the `[1]` suffix into the id (the historic
+ * behavior) drifted every ref on every save and orphaned all cables.
  */
 export function portsFromDefinition(
   definition: DeviceDefinition,
 ): AuthoredPort[] {
-  return resolvePhysicalPorts(definition).map((port) => {
+  const resolved = resolvePhysicalPorts(definition);
+  const groupCounts = new Map<string, number>();
+  for (const port of resolved) {
+    groupCounts.set(port.groupId, (groupCounts.get(port.groupId) ?? 0) + 1);
+  }
+  const used = new Set<string>();
+  const stableId = (groupId: string, index: number): string => {
+    const base =
+      groupCounts.get(groupId) === 1
+        ? sanitizeId(groupId)
+        : sanitizeId(`${groupId}-${index}`);
+    let id = base;
+    for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+    used.add(id);
+    return id;
+  };
+  return resolved.map((port) => {
     // Data-port groups only carry PortType values (power connectors
     // resolve through a separate pipeline and are not authored here).
     const type = port.type as PortType;
@@ -140,7 +163,7 @@ export function portsFromDefinition(
       ? [calibrated.widthMm, calibrated.heightMm]
       : (port.sizeMm ?? defaultSize(type));
     return {
-      id: sanitizeId(port.ref),
+      id: stableId(port.groupId, port.index),
       type,
       label: port.label,
       location: port.location,
@@ -152,11 +175,17 @@ export function portsFromDefinition(
       poeBudgetW: port.poeBudgetW,
       etherlighting: port.etherlighting,
       visible: port.visible,
-      anchorMm: [
-        port.anchorMm[0] - port.positionMm[0],
-        port.anchorMm[1] - port.positionMm[1],
-        port.anchorMm[2] - port.positionMm[2],
-      ],
+      // Resolved anchors are rotated into device space; authoring works
+      // in the port-local frame, so un-rotate for a stable round-trip.
+      anchorMm: rotatePortVector(
+        [
+          port.anchorMm[0] - port.positionMm[0],
+          port.anchorMm[1] - port.positionMm[1],
+          port.anchorMm[2] - port.positionMm[2],
+        ],
+        port.rotationDeg,
+        true,
+      ),
       insertionMm: port.insertionMm,
       exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
       bendRadiusMm: port.bendRadiusMm,

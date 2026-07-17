@@ -59,7 +59,9 @@ export interface ResolvedPortLight {
 const POWER_TYPES = new Set([
   'power',
   'dc',
+  'c13',
   'c14',
+  'c19',
   'c20',
   'iec-lock',
   'nema',

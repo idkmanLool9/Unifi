@@ -85,7 +85,9 @@ const POWER_PORT_TOOLS: ReadonlyArray<{
   label: string;
   icon: LucideIcon;
 }> = [
+  { type: 'c13', label: 'IEC C13', icon: Zap },
   { type: 'c14', label: 'IEC C14', icon: Zap },
+  { type: 'c19', label: 'IEC C19', icon: Zap },
   { type: 'c20', label: 'IEC C20', icon: Zap },
   { type: 'dc', label: 'DC Barrel', icon: Zap },
   { type: 'phoenix', label: 'Phoenix / Terminal', icon: Zap },

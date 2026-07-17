@@ -18,6 +18,7 @@ import {
   type DetectedConnector,
 } from '@/features/devices/hardware/connectorCalibration';
 import {
+  findPhysicalPort,
   portFace,
   resolveEndpoint,
 } from '@/features/cables/anchors';
@@ -168,6 +169,68 @@ describe('authoring model', () => {
     const base = { ...proMax, lighting: undefined };
     const authored = definitionWithPorts(base, [port({ etherlighting: true })]);
     expect(authored.lighting?.etherlighting).toBe(true);
+  });
+
+  it('keeps port ids (and therefore refs) stable across authoring saves', () => {
+    primeCalibration(proMax.id, null);
+    const first = portsFromDefinition(proMax);
+    const authoredOnce = definitionWithPorts(proMax, first);
+    const second = portsFromDefinition(authoredOnce);
+    // Historic behavior folded the `[1]` suffix into every id per save
+    // (gbe-top[1] → gbe-top-1[1] → gbe-top-1-1[1]), orphaning cables.
+    expect(second.map((p) => p.id)).toEqual(first.map((p) => p.id));
+    const authoredTwice = definitionWithPorts(authoredOnce, second);
+    expect(resolvePhysicalPorts(authoredTwice).map((p) => p.ref)).toEqual(
+      resolvePhysicalPorts(authoredOnce).map((p) => p.ref),
+    );
+  });
+
+  it('single-count groups keep their id verbatim when loaded', () => {
+    const authored = definitionWithPorts(proMax, [port({ id: 'wan' })]);
+    expect(portsFromDefinition(authored)[0].id).toBe('wan');
+  });
+
+  it('repairs cable refs drifted by historic authoring saves', () => {
+    primeCalibration(proMax.id, null);
+    const drifted = definitionWithPorts(proMax, [port({ id: 'gbe-top-1-1' })]);
+    const healed = 'gbe-top-1-1[1]';
+    expect(findPhysicalPort(drifted, healed)?.ref).toBe(healed);
+    expect(findPhysicalPort(drifted, 'gbe-top-1[1]')?.ref).toBe(healed);
+    expect(findPhysicalPort(drifted, 'gbe-top[1]')?.ref).toBe(healed);
+    expect(findPhysicalPort(drifted, 'unrelated[1]')).toBeUndefined();
+  });
+
+  it('rotating a port swings its anchor and cable exit direction', () => {
+    primeCalibration(proMax.id, null);
+    const authored = definitionWithPorts(proMax, [
+      port({ id: 'side', rotationDeg: [0, 90, 0] }),
+    ]);
+    // Anchor offset is port-local: +90° yaw points it along +X.
+    const resolved = resolvePhysicalPorts(authored)[0];
+    expect(resolved.anchorMm[0]).toBeCloseTo(resolved.positionMm[0] + 22, 3);
+    expect(resolved.anchorMm[2]).toBeCloseTo(resolved.positionMm[2], 3);
+    // Loading back into authoring recovers the port-local [0, 0, 22].
+    const loaded = portsFromDefinition(authored)[0];
+    expect(loaded.anchorMm[0]).toBeCloseTo(0, 3);
+    expect(loaded.anchorMm[2]).toBeCloseTo(22, 3);
+
+    const geometry = rackGeometry('open-frame-700');
+    const front = resolveEndpoint(
+      authored,
+      { startU: 1, facing: 'front' },
+      geometry,
+      'side[1]',
+    )!;
+    expect(front.exitDir[0]).toBeCloseTo(1, 5);
+    expect(front.exitDir[2]).toBeCloseTo(0, 5);
+    // Rear facing mirrors the swung exit like everything else.
+    const rear = resolveEndpoint(
+      authored,
+      { startU: 1, facing: 'rear' },
+      geometry,
+      'side[1]',
+    )!;
+    expect(rear.exitDir[0]).toBeCloseTo(-1, 5);
   });
 });
 

@@ -293,7 +293,9 @@ describe('connector factory', () => {
     expect(connectorKindFor('usb-c', 'peripheral')).toBe('usb-c');
     expect(connectorKindFor('hdmi', 'peripheral')).toBe('hdmi');
     expect(connectorKindFor('c14', 'power')).toBe('c13');
+    expect(connectorKindFor('c13', 'power')).toBe('c13');
     expect(connectorKindFor('c20', 'power')).toBe('c19');
+    expect(connectorKindFor('c19', 'power')).toBe('c19');
     expect(connectorKindFor('dc', 'power')).toBe('barrel');
     expect(connectorKindFor('serial', 'peripheral')).toBe('db9');
     expect(connectorKindFor('other', 'peripheral')).toBe('generic');

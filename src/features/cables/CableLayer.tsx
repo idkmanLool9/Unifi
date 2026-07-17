@@ -137,6 +137,7 @@ function CableMesh({
   );
   const selectCable = useSelectionStore((s) => s.selectCable);
   const updateCable = useCableStore((s) => s.updateCable);
+  const repairEndpoints = useCableStore((s) => s.repairEndpoints);
   const bundles = useCableStore((s) => s.bundles);
   const allCables = useCableStore((s) => s.cables);
 
@@ -178,6 +179,8 @@ function CableMesh({
 
   // The route depends only on these serializable facts.
   const routeKey = [
+    cable.source.portRef,
+    cable.destination.portRef,
     cable.type,
     cable.nominalLengthMm,
     cable.routingMode,
@@ -370,6 +373,24 @@ function CableMesh({
   useEffect(() => {
     if (!computed) return;
     const patch: Parameters<typeof updateCable>[1] = {};
+    // Endpoint resolution can repair a ref that drifted through historic
+    // authoring saves — persist the healed value so the cable stays
+    // visible without re-repairing on every load.
+    if (
+      computed.source.port.ref !== cable.source.portRef ||
+      computed.destination.port.ref !== cable.destination.portRef
+    ) {
+      repairEndpoints(cable.id, {
+        sourcePortRef:
+          computed.source.port.ref !== cable.source.portRef
+            ? computed.source.port.ref
+            : undefined,
+        destinationPortRef:
+          computed.destination.port.ref !== cable.destination.portRef
+            ? computed.destination.port.ref
+            : undefined,
+      });
+    }
     if (cable.calculatedRouteLengthMm === 0) {
       const recommended = recommendLengthMm(
         computed.route.minLengthMm,
@@ -403,7 +424,7 @@ function CableMesh({
       patch.statusMessage = computed.statusMessage;
     }
     if (Object.keys(patch).length > 0) updateCable(cable.id, patch);
-  }, [computed, cable, spec, updateCable]);
+  }, [computed, cable, spec, updateCable, repairEndpoints]);
 
   // Tube geometry from the engine cache: the sheath begins at each
   // plug's boot (the connector body covers the gap) and every corner

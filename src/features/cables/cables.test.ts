@@ -104,6 +104,30 @@ describe('compatibility engine', () => {
     expect(types).not.toContain('cat6a');
   });
 
+  it('pairs a C14 inlet with a PDU C13 outlet via the C13–C14 cord', () => {
+    const result = checkPortPair(
+      end('a', 'ac[1]'),
+      port({ type: 'c14' }),
+      end('b', 'out[1]'),
+      port({ ref: 'out[1]', type: 'c13' }),
+      empty,
+    );
+    expect(result.level).toBe('valid');
+    expect(result.suggestedTypes).toContain('power-c13');
+  });
+
+  it('pairs a C20 inlet with a C19 outlet via the C19–C20 cord', () => {
+    const result = checkPortPair(
+      end('a', 'ac[1]'),
+      port({ type: 'c20' }),
+      end('b', 'out[1]'),
+      port({ ref: 'out[1]', type: 'c19' }),
+      empty,
+    );
+    expect(result.level).toBe('valid');
+    expect(result.suggestedTypes).toContain('power-c19');
+  });
+
   it('rejects power to RJ45 with a clear reason', () => {
     const result = checkPortPair(
       end('a', 'ac[1]'),

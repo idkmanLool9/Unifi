@@ -76,7 +76,8 @@ const POWER_LENGTHS = [600, 1000, 1800, 2500] as const;
 
 const COPPER_PORTS = ['rj45', 'keystone', 'poe-in'] as const;
 const SFP_PORTS = ['sfp', 'sfp+', 'sfp28', 'qsfp+', 'qsfp28'] as const;
-const IEC_13_PORTS = ['c14', 'power', 'iec-lock'] as const;
+// A C13–C14 cord bridges a device's C14 inlet and a PDU's C13 outlet.
+const IEC_13_PORTS = ['c13', 'c14', 'power', 'iec-lock'] as const;
 
 export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
   cat5e: {
@@ -260,7 +261,7 @@ export const CABLE_CATALOG: Record<CableTypeId, CableTypeSpec> = {
     id: 'power-c19',
     name: 'IEC C19–C20',
     category: 'power',
-    compatiblePorts: ['c20'],
+    compatiblePorts: ['c19', 'c20'],
     carries: 'power',
     directional: true,
     diameterMm: 10,

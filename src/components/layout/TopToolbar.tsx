@@ -26,12 +26,15 @@ import {
 import { IconButton } from '@/components/ui/IconButton';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { Tooltip } from '@/components/ui/Tooltip';
+import {
+  exportProject,
+  requestProjectImport,
+} from '@/features/project/projectActions';
 import { useMenuStore } from '@/stores/menuStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useUIStore } from '@/stores/uiStore';
-import { toast } from '@/stores/toastStore';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { EditorTool, ThemePreference } from '@/types';
@@ -151,24 +154,13 @@ export function TopToolbar() {
         id: 'open',
         label: 'Open project…',
         icon: FolderOpen,
-        action: () =>
-          toast({
-            variant: 'info',
-            title: 'Project browser coming soon',
-            description: 'Cloud projects arrive with the Supabase milestone.',
-          }),
+        action: () => requestProjectImport(),
       },
       {
         id: 'export',
-        label: 'Export…',
+        label: 'Export project…',
         icon: Download,
-        action: () =>
-          toast({
-            variant: 'info',
-            title: 'Export coming soon',
-            description:
-              'PDF and image export ship with the reporting milestone.',
-          }),
+        action: () => void exportProject(),
       },
       { separator: true },
       {
@@ -273,22 +265,17 @@ export function TopToolbar() {
           </IconButton>
         </Tooltip>
         <Divider />
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.97 }}
-          onClick={() =>
-            toast({
-              variant: 'info',
-              title: 'Export coming soon',
-              description:
-                'PDF and image export ship with the reporting milestone.',
-            })
-          }
-          className="ml-0.5 flex h-7 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
-        >
-          <Download className="size-3.5" strokeWidth={2} />
-          Export
-        </motion.button>
+        <Tooltip label="Save the whole project as one file">
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => void exportProject()}
+            className="ml-0.5 flex h-7 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
+          >
+            <Download className="size-3.5" strokeWidth={2} />
+            Export
+          </motion.button>
+        </Tooltip>
       </div>
     </header>
   );

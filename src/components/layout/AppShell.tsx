@@ -9,6 +9,7 @@ import { ShortcutsDialog } from '@/features/overlays/ShortcutsDialog';
 import { ConfirmDeleteRackDialog } from '@/features/overlays/ConfirmDeleteRackDialog';
 import { ConfirmDeleteDeviceDialog } from '@/features/overlays/ConfirmDeleteDeviceDialog';
 import { ConnectionsDialog } from '@/features/overlays/ConnectionsDialog';
+import { ProjectImportDialog } from '@/features/project/ProjectImportDialog';
 
 /**
  * Global application chrome: toolbar on top, status bar at the bottom,
@@ -30,6 +31,7 @@ export function AppShell() {
       <ConfirmDeleteRackDialog />
       <ConfirmDeleteDeviceDialog />
       <ConnectionsDialog />
+      <ProjectImportDialog />
       <ContextMenuHost />
       <ToastHost />
     </div>

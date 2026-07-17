@@ -43,6 +43,8 @@ export interface CableInstance {
   /** Show the label chips at both ends in the viewport. */
   labelVisible?: boolean;
   notes?: string;
+  /** Free-form work instructions (installation, patching, teardown). */
+  instructions?: string;
   /** Documentation metadata (cable library). */
   manufacturer?: string;
   partNumber?: string;
@@ -111,6 +113,15 @@ interface CableState {
     id: string,
     patch: Partial<Omit<CableInstance, 'id' | 'source' | 'destination'>>,
   ) => void;
+  /**
+   * Persists repaired endpoint refs (endpoints are otherwise immutable).
+   * Used when resolution heals a ref that drifted through historic
+   * authoring saves, so the heal outlives this session.
+   */
+  repairEndpoints: (
+    id: string,
+    refs: { sourcePortRef?: string; destinationPortRef?: string },
+  ) => void;
   removeCable: (id: string) => void;
   /** Removes every cable touching a device; returns the removed cables. */
   removeForDevice: (deviceInstanceId: string) => CableInstance[];
@@ -166,6 +177,26 @@ export const useCableStore = create<CableState>()(
         set((s) => ({
           cables: s.cables.map((cable) =>
             cable.id === id ? { ...cable, ...patch } : cable,
+          ),
+        })),
+
+      repairEndpoints: (id, refs) =>
+        set((s) => ({
+          cables: s.cables.map((cable) =>
+            cable.id === id
+              ? {
+                  ...cable,
+                  source: refs.sourcePortRef
+                    ? { ...cable.source, portRef: refs.sourcePortRef }
+                    : cable.source,
+                  destination: refs.destinationPortRef
+                    ? {
+                        ...cable.destination,
+                        portRef: refs.destinationPortRef,
+                      }
+                    : cable.destination,
+                }
+              : cable,
           ),
         })),
 

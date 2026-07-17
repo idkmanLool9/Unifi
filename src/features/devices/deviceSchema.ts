@@ -50,7 +50,9 @@ export const PORT_TYPES = [
   'serial',
   'power',
   'dc',
+  'c13',
   'c14',
+  'c19',
   'c20',
   'other',
 ] as const;
@@ -264,7 +266,9 @@ export interface ModelTransform {
 /* ---- Capability metadata (declarative only — no behavior yet) ------- */
 
 export const POWER_CONNECTOR_TYPES = [
+  'c13',
   'c14',
+  'c19',
   'c20',
   'iec-lock',
   'nema',

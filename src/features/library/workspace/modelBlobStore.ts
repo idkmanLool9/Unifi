@@ -45,11 +45,48 @@ export async function loadModelBlob(deviceId: string): Promise<Blob | null> {
   return blob;
 }
 
+/** Every stored model, keyed by device id (project export). */
+export async function listModelBlobs(): Promise<
+  Array<{ deviceId: string; blob: Blob }>
+> {
+  const db = await openDb();
+  const entries = await new Promise<Array<{ deviceId: string; blob: Blob }>>(
+    (resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const store = tx.objectStore(STORE);
+      const keys = store.getAllKeys();
+      const values = store.getAll();
+      tx.oncomplete = () =>
+        resolve(
+          keys.result.map((key, i) => ({
+            deviceId: String(key),
+            blob: values.result[i] as Blob,
+          })),
+        );
+      tx.onerror = () => reject(tx.error);
+    },
+  );
+  db.close();
+  return entries;
+}
+
 export async function deleteModelBlob(deviceId: string): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).delete(deviceId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+/** Removes every stored model (project import replaces the set). */
+export async function clearModelBlobs(): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
