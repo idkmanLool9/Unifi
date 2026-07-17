@@ -123,6 +123,9 @@ export class ModelErrorBoundary extends Component<
 
 interface DeviceModelProps {
   definition: DeviceDefinition;
+  /** Mounted instance id (when rendered in the rack) — used by hardware
+   *  overlays that react to per-instance interaction state. */
+  instanceId?: string;
 }
 
 /**
@@ -132,7 +135,7 @@ interface DeviceModelProps {
  * universal import pipeline corrects orientation and origin of the GLB —
  * the source asset is never modified or resized arbitrarily.
  */
-export function DeviceModel({ definition }: DeviceModelProps) {
+export function DeviceModel({ definition, instanceId }: DeviceModelProps) {
   const url = deviceModelUrl(definition);
   const availability = useAssetAvailability(url);
 
@@ -141,7 +144,7 @@ export function DeviceModel({ definition }: DeviceModelProps) {
     return (
       <>
         <DevicePlaceholder definition={definition} />
-        <HardwareLayer definition={definition} mode="full" />
+        <HardwareLayer definition={definition} mode="full" instanceId={instanceId} />
       </>
     );
   }
@@ -162,6 +165,7 @@ export function DeviceModel({ definition }: DeviceModelProps) {
       <HardwareLayer
         definition={definition}
         mode={definition.modelDetail === 'chassis' ? 'full' : 'overlay'}
+        instanceId={instanceId}
       />
     </>
   );

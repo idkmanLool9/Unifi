@@ -197,7 +197,7 @@ function MountedDeviceView({
           label={`device ${definition.productName}`}
           fallback={<DevicePlaceholder definition={definition} />}
         >
-          <DeviceModel definition={definition} />
+          <DeviceModel definition={definition} instanceId={instance.id} />
         </ModelErrorBoundary>
       </group>
       {/* Parametric mounting hardware (outside the measured model group) */}

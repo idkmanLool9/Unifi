@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cableApproachPose,
   cableFocusPose,
+  CABLE_TOOL_MIN_DISTANCE,
   deviceFocusPose,
   faceDetailPose,
   MIN_CAMERA_DISTANCE,
@@ -27,6 +29,57 @@ describe('zoom limits', () => {
     expect(CAMERA.minDistance).toBeGreaterThan(0.01);
     expect(CAMERA.maxDistance).toBe(MAX_CAMERA_DISTANCE);
     expect(MIN_CAMERA_DISTANCE).toBe(CAMERA.minDistance);
+  });
+
+  it('dollys closer during cable work, but never through the hardware', () => {
+    expect(CABLE_TOOL_MIN_DISTANCE).toBeLessThan(CAMERA.minDistance);
+    // Must stay in front of the near-plane floor at that distance.
+    expect(CABLE_TOOL_MIN_DISTANCE).toBeGreaterThan(nearPlaneFor(CABLE_TOOL_MIN_DISTANCE));
+  });
+});
+
+describe('cable tool approach', () => {
+  const instance = { startU: 3, facing: 'front' as const };
+  const { position } = devicePlacement(proMax, 3, 'front', GEO);
+
+  it('glides toward the faceplate along the existing sight line', () => {
+    const camera: [number, number, number] = [1.5, 2.0, 3.0];
+    const pose = cableApproachPose(proMax, instance, GEO, 'front', CAMERA.fov, camera)!;
+    expect(pose).not.toBeNull();
+    // Target sits on the faceplate plane of the device.
+    expect(pose.target[1]).toBeCloseTo(position[1], 4);
+    expect(pose.target[2]).toBeGreaterThan(position[2]);
+    // The viewing angle is preserved: new position lies on the segment
+    // from the target toward the old camera position.
+    const to = (p: readonly number[]) => [
+      p[0] - pose.target[0],
+      p[1] - pose.target[1],
+      p[2] - pose.target[2],
+    ];
+    const a = to(camera);
+    const b = to(pose.position);
+    const cross = [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0],
+    ];
+    expect(Math.hypot(...cross)).toBeLessThan(1e-9);
+    // It stops at faceplate-framing range, not on top of a connector.
+    const standoff = dist(pose.position, pose.target);
+    expect(standoff).toBeGreaterThan(0.3);
+    expect(standoff).toBeLessThan(dist(camera, pose.target));
+  });
+
+  it('never yanks a camera that is already close enough', () => {
+    const near: [number, number, number] = [0.1, position[1], position[2] + 0.4];
+    expect(cableApproachPose(proMax, instance, GEO, 'front', CAMERA.fov, near)).toBeNull();
+  });
+
+  it('approaches the rear panel when the camera views from behind', () => {
+    const behind: [number, number, number] = [0.5, 1.5, -3.0];
+    const pose = cableApproachPose(proMax, instance, GEO, 'front', CAMERA.fov, behind)!;
+    expect(pose.target[2]).toBeLessThan(position[2]);
+    expect(pose.position[2]).toBeLessThan(pose.target[2]);
   });
 });
 

@@ -1,4 +1,5 @@
 import {
+  cableApproachPose,
   cableFocusPose,
   deviceFocusPose,
   faceDetailPose,
@@ -6,7 +7,7 @@ import {
   PORT_FOCUS_STANDOFF,
   type CameraPose,
 } from './cameraFocus';
-import { resolveEndpoint } from '@/features/cables/anchors';
+import { resolveEndpoint, type Vec3 } from '@/features/cables/anchors';
 import { getDevice } from '@/features/devices/deviceRegistry';
 import { railHeight } from '@/features/rack/rackConstants';
 import { deepestDeviceDepthMm, rackGeometryFor } from '@/features/rack/rackMath';
@@ -140,6 +141,30 @@ export function frameSelection(closeUp = false): void {
   }
   if (selection?.kind === 'cable') return focusCable(selection.cableId);
   fitRack();
+}
+
+/**
+ * Cable Tool activation: bring the selected device's panel face within
+ * easy connector-picking range, preserving the current viewing angle.
+ * No-op without a selected device, or when the camera is already close.
+ */
+export function approachCableWork(cameraPosition: Vec3): void {
+  const selection = useSelectionStore.getState().selection;
+  if (selection?.kind !== 'device') return;
+  const ctx = currentContext();
+  if (!ctx) return;
+  const instance = ctx.instances.find((i) => i.id === selection.instanceId);
+  const definition = instance && getDevice(instance.definitionId);
+  if (!instance || !definition) return;
+  const pose = cableApproachPose(
+    definition,
+    instance,
+    ctx.geometry,
+    ctx.rack.orientation,
+    ctx.fov,
+    cameraPosition,
+  );
+  if (pose) dispatch(pose);
 }
 
 /** Straight-on detail view of the rack's front or rear rail face. */

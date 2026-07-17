@@ -5,7 +5,7 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
 } from 'three';
-import type { Group } from 'three';
+import type { Color, Group } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Instance, Instances } from '@react-three/drei';
 import {
@@ -13,6 +13,7 @@ import {
   useCalibrationStore,
 } from './connectorCalibration';
 import {
+  etherlightingColor,
   resolveLeds,
   resolvePhysicalPorts,
   resolvePowerConnectors,
@@ -21,6 +22,8 @@ import {
   type PhysicalPort,
 } from './physicalPorts';
 import { MM_TO_M } from '@/features/rack/rackMath';
+import { useCableToolStore } from '@/stores/cableToolStore';
+import { useUIStore } from '@/stores/uiStore';
 import type { DeviceDefinition } from '../deviceSchema';
 
 /**
@@ -178,14 +181,30 @@ function LedsRenderer({ definition }: { definition: DeviceDefinition }) {
   );
 }
 
+/** Selection boost applied to a strip's emissive color (hover/source). */
+const STRIP_BOOST = 1.9;
+/** Time constant of the boost ease — ~95% settled in about 170ms. */
+const BOOST_TAU = 0.055;
+
 /**
  * Etherlighting: an emissive strip beneath every flagged port, colored
  * by the port's speed class via lighting.speedColors. Data-driven —
  * defaultMode 'static' renders steady, 'pulse' breathes the whole
  * strip set (one material uniform, no per-port cost), 'off' hides.
  * Future link-state simulation swaps colors without renderer changes.
+ *
+ * While the Cable Tool is live, hovering or arming one of this device's
+ * ports raises that strip's emissive intensity (smoothly eased) — the
+ * selection system enhances the existing lighting rather than painting
+ * a second effect over it.
  */
-function EtherlightingRenderer({ definition }: { definition: DeviceDefinition }) {
+function EtherlightingRenderer({
+  definition,
+  instanceId,
+}: {
+  definition: DeviceDefinition;
+  instanceId?: string;
+}) {
   const groupRef = useRef<Group>(null);
   const lighting = definition.lighting;
   // Re-derive once the GLB's real connector geometry is calibrated.
@@ -193,19 +212,11 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
 
   const strips = useMemo(() => {
     if (!lighting?.etherlighting) return [];
-    const speedKey = (gbps: number | undefined) =>
-      gbps === undefined
-        ? '1g'
-        : gbps >= 1
-          ? `${Math.round(gbps)}g`.replace('3g', '2.5g')
-          : `${gbps}g`;
     return resolvePhysicalPorts(definition)
-      .filter((p) => p.etherlighting && p.visible)
+      .filter((p) => p.visible)
       .map((p) => {
-        const key =
-          p.speedGbps !== undefined && p.speedGbps % 1 !== 0
-            ? `${p.speedGbps}g`
-            : speedKey(p.speedGbps);
+        const color = etherlightingColor(definition, p);
+        if (!color) return null;
         const calibrated = calibratedPort(definition.id, p.ref);
         return {
           ref: p.ref,
@@ -213,12 +224,10 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
           widthMm: calibrated?.widthMm ?? CONNECTOR_SIZES.rj45.widthMm,
           heightMm: calibrated?.heightMm ?? CONNECTOR_SIZES.rj45.heightMm,
           location: p.location,
-          color:
-            lighting.speedColors[key] ??
-            lighting.portHighlightColor ??
-            '#4c82f7',
+          color,
         };
-      });
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, lighting, calibrationVersion]);
 
@@ -226,7 +235,7 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
   const brightness = lighting?.brightness ?? 1;
 
   // Pulse breathes the whole overlay via group scale-invariant opacity —
-  // one uniform write per frame, zero per-port work.
+  // one uniform write per frame, zero per-port cost.
   const materialRef = useRef(
     new MeshBasicMaterial({
       color: '#ffffff',
@@ -235,10 +244,36 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
       opacity: brightness,
     }),
   );
-  useFrame(({ clock }) => {
-    if (mode !== 'pulse') return;
-    materialRef.current.opacity =
-      brightness * (0.55 + 0.45 * Math.sin(clock.elapsedTime * 2.4) ** 2);
+
+  // Per-strip emissive boost while the Cable Tool interacts with a port.
+  const stripRefs = useRef(new Map<string, { color: Color }>());
+  const boosts = useRef(new Map<string, number>());
+  useFrame(({ clock }, delta) => {
+    if (mode === 'pulse') {
+      materialRef.current.opacity =
+        brightness * (0.55 + 0.45 * Math.sin(clock.elapsedTime * 2.4) ** 2);
+    }
+    if (strips.length === 0) return;
+    const cableActive = useUIStore.getState().activeTool === 'cable';
+    const { hoverEnd, sourceEnd } = useCableToolStore.getState();
+    const k = 1 - Math.exp(-delta / BOOST_TAU);
+    for (const strip of strips) {
+      const el = stripRefs.current.get(strip.ref);
+      if (!el) continue;
+      const engaged =
+        cableActive &&
+        instanceId !== undefined &&
+        ((hoverEnd?.deviceInstanceId === instanceId &&
+          hoverEnd.portRef === strip.ref) ||
+          (sourceEnd?.deviceInstanceId === instanceId &&
+            sourceEnd.portRef === strip.ref));
+      const goal = engaged ? STRIP_BOOST : 1;
+      const current = boosts.current.get(strip.ref) ?? 1;
+      const next =
+        Math.abs(goal - current) < 0.01 ? goal : current + (goal - current) * k;
+      boosts.current.set(strip.ref, next);
+      el.color.set(strip.color).multiplyScalar(next);
+    }
   });
 
   if (strips.length === 0 || mode === 'off') return null;
@@ -254,6 +289,10 @@ function EtherlightingRenderer({ definition }: { definition: DeviceDefinition })
         {strips.map((strip) => (
           <Instance
             key={strip.ref}
+            ref={(el: unknown) => {
+              if (el) stripRefs.current.set(strip.ref, el as { color: Color });
+              else stripRefs.current.delete(strip.ref);
+            }}
             position={mm([
               strip.positionMm[0],
               strip.positionMm[1] - strip.heightMm / 2 - 1.6,
@@ -353,10 +392,12 @@ export interface HardwareLayerProps {
    * over GLBs that already model their physical connectors.
    */
   mode: 'full' | 'overlay';
+  /** Mounted instance id — lets Etherlighting react to the Cable Tool. */
+  instanceId?: string;
 }
 
 /** The device's physical hardware, in device-local space. */
-export function HardwareLayer({ definition, mode }: HardwareLayerProps) {
+export function HardwareLayer({ definition, mode, instanceId }: HardwareLayerProps) {
   return (
     <group>
       {mode === 'full' && (
@@ -367,7 +408,7 @@ export function HardwareLayer({ definition, mode }: HardwareLayerProps) {
           <FansRenderer definition={definition} />
         </>
       )}
-      <EtherlightingRenderer definition={definition} />
+      <EtherlightingRenderer definition={definition} instanceId={instanceId} />
     </group>
   );
 }

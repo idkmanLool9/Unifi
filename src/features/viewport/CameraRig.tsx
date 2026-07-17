@@ -3,9 +3,15 @@ import { PerspectiveCamera, Raycaster, Sphere, Vector2, Vector3 } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
-import { nearPlaneFor, nearPlaneNeedsUpdate } from './cameraFocus';
+import {
+  CABLE_TOOL_MIN_DISTANCE,
+  nearPlaneFor,
+  nearPlaneNeedsUpdate,
+} from './cameraFocus';
+import { approachCableWork } from './focusActions';
 import { useDragStore } from '@/stores/dragStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useUIStore } from '@/stores/uiStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import { rackGeometry, rackHeightFor } from '@/features/rack/rackMath';
@@ -122,6 +128,23 @@ export function CameraRig() {
     controls.polarRotateSpeed = orbitSpeed;
     controls.truckSpeed = 2 * panSpeed;
   }, [zoomSpeed, orbitSpeed, panSpeed, invertZoom, zoomToPointer]);
+
+  // Cable Tool: allow much closer dolly (individual contacts stay
+  // readable without clipping) and, on activation, glide the selected
+  // device's panel into comfortable picking range — same viewing angle,
+  // no snap, and the user keeps full control throughout.
+  const cableTool = useUIStore((s) => s.activeTool === 'cable');
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.minDistance = cableTool
+      ? CABLE_TOOL_MIN_DISTANCE
+      : CAMERA.minDistance;
+    if (cableTool) {
+      const p = controls.getPosition(new Vector3());
+      approachCableWork([p.x, p.y, p.z]);
+    }
+  }, [cableTool]);
 
   // Dynamic near plane: millimeter-scale near for connector close-ups,
   // conservative depth precision at rack range. The projection matrix

@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AdditiveBlending,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
-  EdgesGeometry,
+  Color,
   Group,
+  InstancedMesh,
   Line as ThreeLine,
   LineBasicMaterial,
+  Matrix4,
   MeshBasicMaterial,
   Plane,
-  PlaneGeometry,
+  Raycaster,
   Vector3,
 } from 'three';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
@@ -20,10 +23,15 @@ import {
   resolveEndpoint,
   type Vec3,
 } from './anchors';
-import { useCalibrationStore } from '@/features/devices/hardware/connectorCalibration';
+import {
+  calibratedPort,
+  useCalibrationStore,
+} from '@/features/devices/hardware/connectorCalibration';
+import { etherlightingColor } from '@/features/devices/hardware/physicalPorts';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
-import { getDevice } from '@/features/devices/deviceRegistry';
+import { deviceModelUrl, getDevice } from '@/features/devices/deviceRegistry';
+import { useAssetStore } from '@/stores/assetStore';
 import { useCableStore, type CableEnd } from '@/stores/cableStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -33,68 +41,58 @@ import type { PhysicalPort } from '@/features/devices/hardware/physicalPorts';
 /**
  * Cable Tool viewport layer. The connectors themselves are the
  * interaction surface: every physical port gets an invisible hit box
- * (slightly larger than the connector for forgiving picking) and a
- * visible highlight that exactly covers the connector opening —
- * GLB-calibrated where the model carries real connector geometry,
- * catalog-sized on procedural hardware. No detached markers.
+ * (slightly larger than the connector for forgiving picking, Figma
+ * handle style) and its cavity softly illuminates from the inside —
+ * one instanced additive volume seated in the real opening
+ * (GLB-calibrated where the model carries connector geometry,
+ * procedural inset elsewhere). No markers, sprites or outlines: the
+ * housing and bezel stay untouched, only the interior glows.
  *
- * Visual language: a faint breathing fill on connectable openings while
- * the tool idles, steady green fills on compatible destinations once a
- * source is armed, a solid fill + thin outline on the source and the
- * hovered port. Incompatible ports stay untouched (hover still explains
- * why). All geometry and materials are module-shared.
+ * Interaction states are pure emissive intensity, eased over ~170ms —
+ * a faint steady glow on connectable openings, brighter on compatible
+ * destinations once a source is armed, strongest on hover and on the
+ * armed source. Incompatible ports stay completely dark (hover still
+ * explains why). All geometry and materials are module-shared; colors
+ * animate per instance without allocating or re-rendering.
  */
 
-const UNIT_PLANE = new PlaneGeometry(1, 1);
 const UNIT_BOX = new BoxGeometry(1, 1, 1);
-const UNIT_EDGES = new EdgesGeometry(UNIT_PLANE);
 
 const HIT_MATERIAL = new MeshBasicMaterial({
   colorWrite: false,
   depthWrite: false,
   side: 2,
 });
-const MAT_IDLE = new MeshBasicMaterial({
-  color: '#4c82f7',
+/** Additive so the glow reads as light inside the cavity, not paint over
+ *  it — pins and cage walls stay visible through the illumination. */
+const GLOW_MATERIAL = new MeshBasicMaterial({
+  color: '#ffffff',
+  blending: AdditiveBlending,
   transparent: true,
-  opacity: 0.12,
-  toneMapped: false,
   depthWrite: false,
-  side: 2,
-});
-const MAT_COMPAT = new MeshBasicMaterial({
-  color: '#3fb970',
-  transparent: true,
-  opacity: 0.26,
   toneMapped: false,
-  depthWrite: false,
-  side: 2,
 });
-const MAT_SOURCE = new MeshBasicMaterial({
-  color: '#4c82f7',
-  transparent: true,
-  opacity: 0.5,
-  toneMapped: false,
-  depthWrite: false,
-  side: 2,
-});
-const MAT_HOVER = new MeshBasicMaterial({
-  color: '#7ea6ff',
-  transparent: true,
-  opacity: 0.5,
-  toneMapped: false,
-  depthWrite: false,
-  side: 2,
-});
-const OUTLINE_MATERIAL = new LineBasicMaterial({
-  color: '#9dbcff',
-  transparent: true,
-  opacity: 0.95,
-});
+
+/** Selection hue for ports without Etherlighting of their own. */
+const SELECTION_COLOR = '#3f7bff';
+/** How far the glow volume reaches into the connector cavity, meters. */
+const GLOW_DEPTH = 0.01;
+/** Emissive intensity per interaction state (relative to base color). */
+const INTENSITY = { none: 0, idle: 0.2, valid: 0.42, hover: 0.85, source: 1 };
+/** Time constant of the emissive ease — ~95% settled in about 170ms. */
+const EASE_TAU = 0.055;
+/** Hit boxes are ~20% larger than the visible opening (usability only). */
+const HIT_SCALE = 1.2;
+
+const TMP_COLOR = new Color();
+const TMP_MATRIX = new Matrix4();
+const BLACK = new Color(0, 0, 0);
 
 interface PortTarget {
   end: CableEnd;
   port: PhysicalPort;
+  /** `${instanceId}:${portRef}` — key into the compatibility map. */
+  key: string;
   /** Connector face center, rack-local meters. */
   position: Vec3;
   /** Cable anchor, rack-local meters. */
@@ -102,8 +100,15 @@ interface PortTarget {
   /** Visible opening size, meters. */
   widthM: number;
   heightM: number;
+  /** Glow volume footprint (the cavity, not the housing), meters. */
+  glowW: number;
+  glowH: number;
+  /** Rack-local z of the visible opening face. */
+  faceZ: number;
   /** Outward normal sign of the panel in rack-local space. */
   out: 1 | -1;
+  /** Base glow color: the port's Etherlighting hue, else selection blue. */
+  color: string;
   deviceName: string;
 }
 
@@ -124,16 +129,12 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
   const instances = useDeviceInstancesStore((s) => s.instances);
   const cables = useCableStore((s) => s.cables);
   const calibrationVersion = useCalibrationStore((s) => s.version);
+  const assetAvailability = useAssetStore((s) => s.availability);
   const sourceEnd = useCableToolStore((s) => s.sourceEnd);
   const setSource = useCableToolStore((s) => s.setSource);
   const setHover = useCableToolStore((s) => s.setHover);
   const completeTo = useCableToolStore((s) => s.completeTo);
   const [hovered, setHovered] = useState<PortTarget | null>(null);
-
-  // Breathe the idle fill: one shared material, one uniform per frame.
-  useFrame(({ clock }) => {
-    MAT_IDLE.opacity = 0.09 + 0.06 * Math.sin(clock.elapsedTime * 2.2) ** 2;
-  });
 
   const targets = useMemo(() => {
     const list: PortTarget[] = [];
@@ -141,56 +142,130 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
       if (!instance.visible) continue;
       const definition = getDevice(instance.definitionId);
       if (!definition) continue;
+      // Procedural connectors (placeholder / chassis models) protrude
+      // from the panel: their visible opening is the inset face, ~2.1mm
+      // proud. Calibrated GLB positions already sit on the real face.
+      const procedural =
+        definition.modelDetail === 'chassis' ||
+        assetAvailability[deviceModelUrl(definition)] !== 'available';
       for (const port of allPhysicalPorts(definition)) {
         if (!port.visible) continue;
         const resolved = resolveEndpoint(definition, instance, geometry, port.ref);
         if (!resolved) continue;
         const face = portFace(definition, port);
+        const calibrated = calibratedPort(definition.id, port.ref) !== null;
         const outwardLocal = port.location === 'front' ? 1 : -1;
         const flip = instance.facing === 'front' ? 1 : -1;
+        const out = (outwardLocal * flip) as 1 | -1;
+        const widthM = face.widthMm * MM_TO_M;
+        const heightM = face.heightMm * MM_TO_M;
+        // Lift of the opening face above the resolved surface plane.
+        const faceLift = calibrated ? 0.0002 : procedural ? 0.0022 : 0.0004;
         list.push({
           end: { deviceInstanceId: instance.id, portRef: port.ref },
           port,
+          key: `${instance.id}:${port.ref}`,
           position: resolved.surface,
           anchor: resolved.anchor,
-          widthM: face.widthMm * MM_TO_M,
-          heightM: face.heightMm * MM_TO_M,
-          out: (outwardLocal * flip) as 1 | -1,
+          widthM,
+          heightM,
+          // Procedural openings are the dark inset inside the bezel;
+          // GLB cavities span (almost) the whole connector body.
+          glowW: procedural ? widthM * 0.74 : widthM * 0.94,
+          glowH: procedural ? heightM * 0.6 : heightM * 0.94,
+          faceZ: resolved.surface[2] + out * faceLift,
+          out,
+          color: etherlightingColor(definition, port) ?? SELECTION_COLOR,
           deviceName: definition.productName,
         });
       }
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instances, geometry, calibrationVersion]);
+  }, [instances, geometry, calibrationVersion, assetAvailability]);
 
   // Compatibility of every port against the pending source (memoized —
   // recomputed only when the source or the cable set changes).
   const levels = useMemo(() => {
     const map = new Map<string, 'source' | 'valid' | 'invalid' | 'neutral'>();
     for (const target of targets) {
-      const key = `${target.end.deviceInstanceId}:${target.end.portRef}`;
       if (!sourceEnd) {
-        map.set(key, 'neutral');
+        map.set(target.key, 'neutral');
         continue;
       }
       if (
         sourceEnd.deviceInstanceId === target.end.deviceInstanceId &&
         sourceEnd.portRef === target.end.portRef
       ) {
-        map.set(key, 'source');
+        map.set(target.key, 'source');
         continue;
       }
       const result = checkPair(sourceEnd, target.end);
-      map.set(key, result && result.level !== 'invalid' ? 'valid' : 'invalid');
+      map.set(target.key, result && result.level !== 'invalid' ? 'valid' : 'invalid');
     }
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targets, sourceEnd, cables]);
 
-  const stateOf = (target: PortTarget) =>
-    levels.get(`${target.end.deviceInstanceId}:${target.end.portRef}`) ??
-    'neutral';
+  /* ---- cavity glow: one instanced mesh, per-port eased intensity ---- */
+
+  const glowRef = useRef<InstancedMesh>(null);
+  const intensities = useRef(new Float32Array(0));
+
+  // Instance transforms rebuild only when the target set changes. The
+  // glow volume's front face sits on the visible opening; the body
+  // reaches into the cavity, so the housing itself occludes whatever
+  // the opening doesn't reveal.
+  useEffect(() => {
+    const mesh = glowRef.current;
+    if (!mesh) return;
+    mesh.raycast = () => {}; // hit boxes own picking
+    targets.forEach((t, i) => {
+      TMP_MATRIX.makeScale(t.glowW, t.glowH, GLOW_DEPTH);
+      TMP_MATRIX.setPosition(
+        t.position[0],
+        t.position[1],
+        t.faceZ - t.out * (GLOW_DEPTH / 2),
+      );
+      mesh.setMatrixAt(i, TMP_MATRIX);
+      mesh.setColorAt(i, BLACK);
+    });
+    mesh.count = targets.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    intensities.current = new Float32Array(targets.length);
+  }, [targets]);
+
+  // Per-frame: ease every port's emissive intensity toward its state's
+  // target. Settled ports cost one comparison; nothing allocates.
+  useFrame((_, delta) => {
+    const mesh = glowRef.current;
+    if (!mesh || targets.length === 0) return;
+    const k = 1 - Math.exp(-delta / EASE_TAU);
+    let dirty = false;
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const state = levels.get(target.key) ?? 'neutral';
+      const goal =
+        state === 'invalid'
+          ? INTENSITY.none
+          : state === 'source'
+            ? INTENSITY.source
+            : hovered === target
+              ? INTENSITY.hover
+              : state === 'valid'
+                ? INTENSITY.valid
+                : INTENSITY.idle;
+      const current = intensities.current[i];
+      if (current === goal) continue;
+      const next =
+        Math.abs(goal - current) < 0.004 ? goal : current + (goal - current) * k;
+      intensities.current[i] = next;
+      mesh.setColorAt(i, TMP_COLOR.set(target.color).multiplyScalar(next));
+      dirty = true;
+    }
+    if (dirty && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  });
 
   const onClick = (target: PortTarget) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -231,78 +306,43 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
 
   return (
     <group>
-      {targets.map((target) => {
-        const state = stateOf(target);
-        const isHovered = hovered === target;
-        const highlightMaterial =
-          isHovered && state !== 'invalid'
-            ? MAT_HOVER
-            : state === 'source'
-              ? MAT_SOURCE
-              : state === 'valid'
-                ? MAT_COMPAT
-                : state === 'neutral'
-                  ? MAT_IDLE
-                  : null;
-        const rotationY = target.out === 1 ? 0 : Math.PI;
-        const surfaceZ = target.position[2] + target.out * 0.0012;
-        const key = `${target.end.deviceInstanceId}:${target.end.portRef}`;
+      {/* The illumination: one draw call for every connector cavity */}
+      <instancedMesh
+        key={targets.length}
+        ref={glowRef}
+        args={[UNIT_BOX, GLOW_MATERIAL, Math.max(targets.length, 1)]}
+        frustumCulled={false}
+      />
 
-        return (
-          <group key={key}>
-            {/* Forgiving invisible hit box, sized just past the opening */}
-            <mesh
-              geometry={UNIT_BOX}
-              material={HIT_MATERIAL}
-              position={[
-                target.position[0],
-                target.position[1],
-                target.position[2] + target.out * 0.003,
-              ]}
-              scale={[
-                target.widthM + 0.004,
-                target.heightM + 0.004,
-                0.008,
-              ]}
-              onClick={onClick(target)}
-              onDoubleClick={onDoubleClick(target)}
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                setHovered(target);
-                setHover(target.end);
-              }}
-              onPointerOut={() => {
-                setHovered((current) => (current === target ? null : current));
-                setHover(null);
-              }}
-            />
-            {/* Highlight exactly covering the connector opening */}
-            {highlightMaterial && (
-              <mesh
-                geometry={UNIT_PLANE}
-                material={highlightMaterial}
-                position={[target.position[0], target.position[1], surfaceZ]}
-                rotation={[0, rotationY, 0]}
-                scale={[target.widthM, target.heightM, 1]}
-              />
-            )}
-            {/* Thin outline on the armed source and the hovered opening */}
-            {(state === 'source' || (isHovered && state !== 'invalid')) && (
-              <lineSegments
-                geometry={UNIT_EDGES}
-                material={OUTLINE_MATERIAL}
-                position={[
-                  target.position[0],
-                  target.position[1],
-                  surfaceZ + target.out * 0.0006,
-                ]}
-                rotation={[0, rotationY, 0]}
-                scale={[target.widthM + 0.0015, target.heightM + 0.0015, 1]}
-              />
-            )}
-          </group>
-        );
-      })}
+      {/* Forgiving invisible hit boxes — the connector is the target */}
+      {targets.map((target) => (
+        <mesh
+          key={target.key}
+          geometry={UNIT_BOX}
+          material={HIT_MATERIAL}
+          position={[
+            target.position[0],
+            target.position[1],
+            target.position[2] + target.out * 0.003,
+          ]}
+          scale={[
+            target.widthM * HIT_SCALE,
+            target.heightM * HIT_SCALE,
+            0.008,
+          ]}
+          onClick={onClick(target)}
+          onDoubleClick={onDoubleClick(target)}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHovered(target);
+            setHover(target.end);
+          }}
+          onPointerOut={() => {
+            setHovered((current) => (current === target ? null : current));
+            setHover(null);
+          }}
+        />
+      ))}
 
       {/* Hover card: device, port, type, speed, PoE + compatibility */}
       {hovered && (
@@ -370,8 +410,9 @@ function PreviewCurve({
 }) {
   const groupRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);
-  const raycaster = useThree((s) => s.raycaster);
   const pointer = useThree((s) => s.pointer);
+  // Private raycaster: the shared one belongs to the event system.
+  const localRay = useMemo(() => new Raycaster(), []);
 
   const line = useMemo(() => {
     const geometry = new BufferGeometry();
@@ -384,7 +425,13 @@ function PreviewCurve({
       transparent: true,
       opacity: 0.85,
     });
-    return new ThreeLine(geometry, material);
+    const preview = new ThreeLine(geometry, material);
+    // Never raycast the preview: THREE.Line hits within a 1m threshold,
+    // and the line chases the pointer — inside the rack group (which
+    // owns hover handlers) it would out-prioritize every connector and
+    // deadlock port hovering while a source is armed.
+    preview.raycast = () => {};
+    return preview;
   }, []);
   useEffect(
     () => () => {
@@ -421,8 +468,8 @@ function PreviewCurve({
         camera.getWorldDirection(worldTarget).negate(),
         anchorWorld,
       );
-      raycaster.setFromCamera(pointer, camera);
-      if (raycaster.ray.intersectPlane(plane, worldTarget)) {
+      localRay.setFromCamera(pointer, camera);
+      if (localRay.ray.intersectPlane(plane, worldTarget)) {
         localTarget.copy(worldTarget);
         group.worldToLocal(localTarget);
         end = localTarget;

@@ -22,6 +22,13 @@ export interface CameraPose {
 export const MIN_CAMERA_DISTANCE = 0.06;
 /** Farthest the camera may dolly, meters. */
 export const MAX_CAMERA_DISTANCE = 60;
+/**
+ * Closest dolly distance while the Cable Tool is active — near enough
+ * to read individual RJ45 contacts without clipping into the chassis
+ * (the dynamic near plane bottoms out at 4mm). Normal limits return
+ * the moment the tool is left.
+ */
+export const CABLE_TOOL_MIN_DISTANCE = 0.015;
 
 /**
  * Distance-aware near plane: generous depth precision at rack range, a
@@ -85,6 +92,63 @@ export function deviceFocusPose(
   return {
     position: rackLocalToWorld(camera, orientation),
     target: rackLocalToWorld(target, orientation),
+  };
+}
+
+/**
+ * Camera approach when the Cable Tool activates with a device selected:
+ * glide toward the device's viewed panel face along the current sight
+ * line — the viewing angle is preserved, only the distance changes —
+ * stopping where the whole faceplate (and thus every connector) is
+ * comfortably pickable. Returns null when the camera is already close
+ * enough: the tool must never yank a camera the user placed
+ * deliberately.
+ */
+export function cableApproachPose(
+  definition: DeviceDefinition,
+  instance: { startU: number; facing: RackOrientation },
+  geometry: RackGeometry,
+  orientation: RackOrientation,
+  fovDeg: number,
+  cameraPosition: Vec3,
+): CameraPose | null {
+  const { position, rotationY } = devicePlacement(
+    definition,
+    instance.startU,
+    instance.facing,
+    geometry,
+  );
+  const center = rackLocalToWorld(position, orientation);
+  // World z-sign of the device's faceplate normal.
+  const frontOut =
+    (rotationY === 0 ? 1 : -1) * (orientation === 'front' ? 1 : -1);
+  // Approach whichever panel face the camera is already on.
+  const out =
+    (cameraPosition[2] - center[2]) * frontOut >= 0 ? frontOut : -frontOut;
+  const halfDepth = (definition.depthMm * MM_TO_M) / 2;
+  const target: Vec3 = [
+    center[0],
+    center[1],
+    center[2] + out * halfDepth,
+  ];
+
+  const span = Math.max(definition.widthMm, definition.heightMm * 4) * MM_TO_M;
+  const standoff = standoffForSpan(span, fovDeg, 1.2);
+  const offset: Vec3 = [
+    cameraPosition[0] - target[0],
+    cameraPosition[1] - target[1],
+    cameraPosition[2] - target[2],
+  ];
+  const distance = Math.hypot(offset[0], offset[1], offset[2]);
+  if (distance <= standoff * 1.5) return null;
+  const s = standoff / distance;
+  return {
+    position: [
+      target[0] + offset[0] * s,
+      target[1] + offset[1] * s,
+      target[2] + offset[2] * s,
+    ],
+    target,
   };
 }
 
