@@ -13,6 +13,7 @@ import type {
   LedDefinition,
   LedKind,
   PortDefinition,
+  PortEtherLighting,
   PortLocation,
   PortType,
 } from '@/features/devices/deviceSchema';
@@ -54,6 +55,8 @@ export interface AuthoredPort {
   exitDirMm?: Vec3;
   /** Preferred cable bend radius leaving this port, mm. */
   bendRadiusMm?: number;
+  /** Optional Etherlighting refinements (auto-lit regardless). */
+  etherLighting?: PortEtherLighting;
 }
 
 /** An authorable indicator LED (schema LedDefinition, defaults baked). */
@@ -157,6 +160,7 @@ export function portsFromDefinition(
       insertionMm: port.insertionMm,
       exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
       bendRadiusMm: port.bendRadiusMm,
+      etherLighting: port.etherLighting,
     };
   });
 }
@@ -255,6 +259,10 @@ export function toPortDefinition(port: AuthoredPort): PortDefinition {
     insertionMm: port.insertionMm,
     exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
     bendRadiusMm: port.bendRadiusMm,
+    etherLighting:
+      port.etherLighting && Object.keys(port.etherLighting).length > 0
+        ? port.etherLighting
+        : undefined,
   };
 }
 

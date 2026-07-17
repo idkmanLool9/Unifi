@@ -5,6 +5,7 @@ import {
   useAuthoringStore,
 } from './authoringStore';
 import { round2, type AuthoredPort, type Vec3 } from './authoringModel';
+import { ETHER_ANIMATION_MODES } from '@/features/devices/deviceSchema';
 import { useValidation } from './useValidation';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { PanelHeader } from '@/components/ui/PanelHeader';
@@ -344,7 +345,139 @@ function PortSections() {
           />
         </div>
       </CollapsibleSection>
+
+      <CollapsibleSection title="ETHERLIGHTING" defaultOpen={false}>
+        <PortEtherSection port={port} update={update} />
+      </CollapsibleSection>
     </>
+  );
+}
+
+/**
+ * Per-port Etherlighting overrides. Every port lights automatically —
+ * these fields only refine the global/device behavior, and clearing
+ * them returns the port to the inherited values.
+ */
+function PortEtherSection({
+  port,
+  update,
+}: {
+  port: AuthoredPort;
+  update: (patch: Partial<AuthoredPort>) => void;
+}) {
+  const override = port.etherLighting ?? {};
+  const patch = (next: Partial<typeof override>) => {
+    const merged = { ...override, ...next };
+    // Drop keys reset to undefined so 'inherited' stays inherited.
+    for (const key of Object.keys(merged) as Array<keyof typeof merged>) {
+      if (merged[key] === undefined) delete merged[key];
+    }
+    update({
+      etherLighting: Object.keys(merged).length > 0 ? merged : undefined,
+    });
+  };
+
+  return (
+    <div className="space-y-2.5">
+      <SwitchRow
+        label="Lit (inherits when on)"
+        checked={override.enabled !== false}
+        onChange={(on) => patch({ enabled: on ? undefined : false })}
+      />
+      <div className="space-y-1">
+        <span className="block text-xs text-secondary">Animation override</span>
+        <select
+          aria-label="Port animation override"
+          value={override.animationMode ?? ''}
+          onChange={(e) =>
+            patch({
+              animationMode: (e.target.value ||
+                undefined) as typeof override.animationMode,
+            })
+          }
+          className="h-7 w-full rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none"
+        >
+          <option value="">Inherit</option>
+          {ETHER_ANIMATION_MODES.filter((m) => m !== 'off').map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <span className="block text-xs text-secondary">Zones</span>
+        <div className="flex flex-wrap gap-1">
+          {(['full', 'top', 'bottom', 'left', 'right', 'corners', 'inner', 'outer'] as const).map(
+            (zone) => {
+              const zones = override.zones ?? [];
+              const active = zones.includes(zone);
+              return (
+                <button
+                  key={zone}
+                  type="button"
+                  onClick={() => {
+                    const next = active
+                      ? zones.filter((z) => z !== zone)
+                      : [...zones, zone];
+                    patch({ zones: next.length > 0 ? next : undefined });
+                  }}
+                  className={
+                    active
+                      ? 'rounded-full border border-accent/50 bg-accent/12 px-2 py-0.5 text-[10px] font-medium text-accent'
+                      : 'rounded-full border border-edge px-2 py-0.5 text-[10px] font-medium text-secondary hover:bg-raised'
+                  }
+                >
+                  {zone}
+                </button>
+              );
+            },
+          )}
+        </div>
+        <p className="text-[10px] leading-snug text-muted">
+          No selection inherits the global zones.
+        </p>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-secondary">Custom color</span>
+        <input
+          type="color"
+          aria-label="Port custom Etherlighting color"
+          value={override.customColor ?? '#4c82f7'}
+          onChange={(e) =>
+            patch({ customColor: e.target.value, colorMode: 'custom' })
+          }
+          className="h-6 w-10 cursor-pointer rounded border border-edge bg-transparent"
+        />
+      </div>
+      {override.customColor && (
+        <button
+          type="button"
+          onClick={() => patch({ customColor: undefined, colorMode: undefined })}
+          className="h-6 w-full rounded-lg border border-edge text-[10.5px] font-medium text-secondary transition-colors hover:bg-raised"
+        >
+          Clear custom color (inherit)
+        </button>
+      )}
+      <Slider
+        label="Brightness override"
+        value={override.brightness ?? 0.9}
+        min={0}
+        max={1.6}
+        step={0.05}
+        onChange={(brightness) => patch({ brightness })}
+        format={(v) => v.toFixed(2)}
+      />
+      <Slider
+        label="Glow radius"
+        value={override.glowRadius ?? 0.24}
+        min={0.08}
+        max={0.6}
+        step={0.02}
+        onChange={(glowRadius) => patch({ glowRadius })}
+        format={(v) => v.toFixed(2)}
+      />
+    </div>
   );
 }
 

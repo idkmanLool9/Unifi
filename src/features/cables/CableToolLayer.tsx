@@ -37,7 +37,8 @@ import {
   planManagedRoute,
 } from './engine/managedRouting';
 import { useRoutingRulesStore } from '@/stores/routingRulesStore';
-import { etherlightingColor } from '@/features/devices/hardware/physicalPorts';
+import { portGlowColor } from '@/features/devices/hardware/etherlighting/resolve';
+import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
 import { deviceModelUrl, getDevice } from '@/features/devices/deviceRegistry';
@@ -185,7 +186,11 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
           glowH: procedural ? heightM * 0.6 : heightM * 0.94,
           faceZ: resolved.surface[2] + out * faceLift,
           out,
-          color: etherlightingColor(definition, port) ?? SELECTION_COLOR,
+          color:
+            portGlowColor(
+              useEtherlightingStore.getState().settings,
+              port,
+            ) ?? SELECTION_COLOR,
           deviceName: definition.productName,
         });
       }

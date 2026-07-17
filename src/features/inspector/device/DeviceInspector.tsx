@@ -5,6 +5,7 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
 import { CableManagementSection } from './CableManagementSection';
+import { EtherlightingDeviceSection } from './EtherlightingDeviceSection';
 import { ConnectionsSection } from './ConnectionsSection';
 import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
@@ -155,6 +156,9 @@ export function DeviceInspector({
       <PlacementSection instance={instance} definition={definition} />
       {definition.cableManagement && (
         <CableManagementSection instance={instance} definition={definition} />
+      )}
+      {definition.ports.length > 0 && (
+        <EtherlightingDeviceSection definition={definition} />
       )}
       <ConnectionsSection instanceId={instance.id} />
       <HardwareSection definition={definition} />

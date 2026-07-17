@@ -2,6 +2,7 @@ import type {
   DeviceDefinition,
   LedDefinition,
   LedKind,
+  PortEtherLighting,
   PortLocation,
   PortType,
   PowerConnectorType,
@@ -48,6 +49,8 @@ export interface PhysicalPort {
   exitDirMm?: [number, number, number];
   /** Preferred cable bend radius leaving this port, mm. */
   bendRadiusMm?: number;
+  /** Optional Etherlighting refinements (auto-lit regardless). */
+  etherLighting?: PortEtherLighting;
 }
 
 export interface ResolvedLed {
@@ -156,6 +159,7 @@ export function resolvePhysicalPorts(
         insertionMm: group.insertionMm,
         exitDirMm: group.exitDirMm,
         bendRadiusMm: group.bendRadiusMm,
+        etherLighting: group.etherLighting,
       });
 
     if (group.positionMm) {
@@ -313,22 +317,3 @@ export function poeBudgetW(definition: DeviceDefinition): number | null {
   return fromGroups > 0 ? fromGroups : null;
 }
 
-/**
- * The Etherlighting color of a port, or null when the port isn't lit
- * (device without Etherlighting, unflagged port, or lighting turned
- * off). Single source of truth shared by the strip renderer and the
- * cable tool, so selection can enhance the existing lighting instead
- * of painting a second, competing effect over it.
- */
-export function etherlightingColor(
-  definition: DeviceDefinition,
-  port: PhysicalPort,
-): string | null {
-  const lighting = definition.lighting;
-  if (!lighting?.etherlighting || !port.etherlighting) return null;
-  if ((lighting.defaultMode ?? 'static') === 'off') return null;
-  const key = port.speedGbps === undefined ? '1g' : `${port.speedGbps}g`;
-  return (
-    lighting.speedColors[key] ?? lighting.portHighlightColor ?? '#4c82f7'
-  );
-}

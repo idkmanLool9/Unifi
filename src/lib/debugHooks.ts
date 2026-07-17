@@ -6,6 +6,8 @@ import { useUIStore } from '@/stores/uiStore';
 import { allDevices, getDevice } from '@/features/devices/deviceRegistry';
 import { allPhysicalPorts } from '@/features/cables/anchors';
 import { focusCable, focusPort } from '@/features/viewport/focusActions';
+import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
+import { usePortRuntimeStore } from '@/features/devices/hardware/etherlighting/portRuntimeStore';
 
 /**
  * Opt-in automation hooks: with `rfdebug` in the query string the core
@@ -26,5 +28,7 @@ export function installDebugHooks(): void {
     allPhysicalPorts,
     focusCable,
     focusPort,
+    etherlightingStore: useEtherlightingStore,
+    portRuntimeStore: usePortRuntimeStore,
   };
 }

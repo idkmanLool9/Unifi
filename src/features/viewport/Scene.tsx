@@ -1,5 +1,6 @@
 import { ContactShadows, Grid } from '@react-three/drei';
-import { EffectComposer, N8AO } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, N8AO } from '@react-three/postprocessing';
+import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
 import { SceneLighting } from './SceneLighting';
 import { CameraRig } from './CameraRig';
 import { StatsProbe } from './StatsProbe';
@@ -53,20 +54,46 @@ export function Scene({ theme }: SceneProps) {
         />
       )}
 
-      {aoEnabled && (
-        <EffectComposer multisampling={4}>
-          <N8AO
-            halfRes
-            quality="performance"
-            aoRadius={0.35}
-            intensity={2.6}
-            distanceFalloff={0.8}
-          />
-        </EffectComposer>
-      )}
+      <ScenePostprocessing aoEnabled={aoEnabled} />
 
       <CameraRig />
       <StatsProbe />
     </>
+  );
+}
+
+/**
+ * Post pipeline: ambient occlusion + Etherlighting bloom share one
+ * composer. HDR frame emissives (> 1) feed the bloom threshold, so lit
+ * ports get the soft halo of real RGB hardware.
+ */
+function ScenePostprocessing({ aoEnabled }: { aoEnabled: boolean }) {
+  const ether = useEtherlightingStore((s) => s.settings);
+  const bloomActive = ether.enabled && ether.enableBloom;
+  if (!aoEnabled && !bloomActive) return null;
+  return (
+    <EffectComposer multisampling={4}>
+      {aoEnabled ? (
+        <N8AO
+          halfRes
+          quality="performance"
+          aoRadius={0.35}
+          intensity={2.6}
+          distanceFalloff={0.8}
+        />
+      ) : (
+        <></>
+      )}
+      {bloomActive ? (
+        <Bloom
+          intensity={ether.bloomStrength}
+          luminanceThreshold={1}
+          luminanceSmoothing={0.35}
+          mipmapBlur
+        />
+      ) : (
+        <></>
+      )}
+    </EffectComposer>
   );
 }

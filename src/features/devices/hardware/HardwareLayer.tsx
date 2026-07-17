@@ -1,19 +1,12 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import {
   BoxGeometry,
   CylinderGeometry,
   MeshBasicMaterial,
   MeshStandardMaterial,
 } from 'three';
-import type { Color, Group } from 'three';
-import { useFrame } from '@react-three/fiber';
 import { Instance, Instances } from '@react-three/drei';
 import {
-  calibratedPort,
-  useCalibrationStore,
-} from './connectorCalibration';
-import {
-  etherlightingColor,
   resolveLeds,
   resolvePhysicalPorts,
   resolvePowerConnectors,
@@ -22,8 +15,7 @@ import {
   type PhysicalPort,
 } from './physicalPorts';
 import { MM_TO_M } from '@/features/rack/rackMath';
-import { useCableToolStore } from '@/stores/cableToolStore';
-import { useUIStore } from '@/stores/uiStore';
+import { EtherlightingLayer } from './etherlighting/EtherlightingLayer';
 import type { DeviceDefinition } from '../deviceSchema';
 
 /**
@@ -186,133 +178,6 @@ function LedsRenderer({ definition }: { definition: DeviceDefinition }) {
   );
 }
 
-/** Selection boost applied to a strip's emissive color (hover/source). */
-const STRIP_BOOST = 1.9;
-/** Time constant of the boost ease — ~95% settled in about 170ms. */
-const BOOST_TAU = 0.055;
-
-/**
- * Etherlighting: an emissive strip beneath every flagged port, colored
- * by the port's speed class via lighting.speedColors. Data-driven —
- * defaultMode 'static' renders steady, 'pulse' breathes the whole
- * strip set (one material uniform, no per-port cost), 'off' hides.
- * Future link-state simulation swaps colors without renderer changes.
- *
- * While the Cable Tool is live, hovering or arming one of this device's
- * ports raises that strip's emissive intensity (smoothly eased) — the
- * selection system enhances the existing lighting rather than painting
- * a second effect over it.
- */
-function EtherlightingRenderer({
-  definition,
-  instanceId,
-}: {
-  definition: DeviceDefinition;
-  instanceId?: string;
-}) {
-  const groupRef = useRef<Group>(null);
-  const lighting = definition.lighting;
-  // Re-derive once the GLB's real connector geometry is calibrated.
-  const calibrationVersion = useCalibrationStore((s) => s.version);
-
-  const strips = useMemo(() => {
-    if (!lighting?.etherlighting) return [];
-    return resolvePhysicalPorts(definition)
-      .filter((p) => p.visible)
-      .map((p) => {
-        const color = etherlightingColor(definition, p);
-        if (!color) return null;
-        const calibrated = calibratedPort(definition.id, p.ref);
-        return {
-          ref: p.ref,
-          positionMm: calibrated?.positionMm ?? p.positionMm,
-          widthMm: calibrated?.widthMm ?? CONNECTOR_SIZES.rj45.widthMm,
-          heightMm: calibrated?.heightMm ?? CONNECTOR_SIZES.rj45.heightMm,
-          location: p.location,
-          color,
-        };
-      })
-      .filter((s): s is NonNullable<typeof s> => s !== null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [definition, lighting, calibrationVersion]);
-
-  const mode = lighting?.defaultMode ?? 'static';
-  const brightness = lighting?.brightness ?? 1;
-
-  // Pulse breathes the whole overlay via group scale-invariant opacity —
-  // one uniform write per frame, zero per-port cost.
-  const materialRef = useRef(
-    new MeshBasicMaterial({
-      color: '#ffffff',
-      toneMapped: false,
-      transparent: true,
-      opacity: brightness,
-    }),
-  );
-
-  // Per-strip emissive boost while the Cable Tool interacts with a port.
-  const stripRefs = useRef(new Map<string, { color: Color }>());
-  const boosts = useRef(new Map<string, number>());
-  useFrame(({ clock }, delta) => {
-    if (mode === 'pulse') {
-      materialRef.current.opacity =
-        brightness * (0.55 + 0.45 * Math.sin(clock.elapsedTime * 2.4) ** 2);
-    }
-    if (strips.length === 0) return;
-    const cableActive = useUIStore.getState().activeTool === 'cable';
-    const { hoverEnd, sourceEnd } = useCableToolStore.getState();
-    const k = 1 - Math.exp(-delta / BOOST_TAU);
-    for (const strip of strips) {
-      const el = stripRefs.current.get(strip.ref);
-      if (!el) continue;
-      const engaged =
-        cableActive &&
-        instanceId !== undefined &&
-        ((hoverEnd?.deviceInstanceId === instanceId &&
-          hoverEnd.portRef === strip.ref) ||
-          (sourceEnd?.deviceInstanceId === instanceId &&
-            sourceEnd.portRef === strip.ref));
-      const goal = engaged ? STRIP_BOOST : 1;
-      const current = boosts.current.get(strip.ref) ?? 1;
-      const next =
-        Math.abs(goal - current) < 0.01 ? goal : current + (goal - current) * k;
-      boosts.current.set(strip.ref, next);
-      el.color.set(strip.color).multiplyScalar(next);
-    }
-  });
-
-  if (strips.length === 0 || mode === 'off') return null;
-
-  return (
-    <group ref={groupRef}>
-      <Instances
-        geometry={UNIT_BOX}
-        material={materialRef.current}
-        limit={strips.length}
-        frustumCulled={false}
-      >
-        {strips.map((strip) => (
-          <Instance
-            key={strip.ref}
-            ref={(el: unknown) => {
-              if (el) stripRefs.current.set(strip.ref, el as { color: Color });
-              else stripRefs.current.delete(strip.ref);
-            }}
-            position={mm([
-              strip.positionMm[0],
-              strip.positionMm[1] - strip.heightMm / 2 - 1.6,
-              strip.positionMm[2] +
-                (strip.location === 'front' ? 1.2 : -1.2),
-            ])}
-            scale={[strip.widthMm * MM_TO_M, 0.0022, 0.0008]}
-            color={strip.color}
-          />
-        ))}
-      </Instances>
-    </group>
-  );
-}
-
 /** Powered-off LCD glass with bezel; optional faint placeholder glow. */
 function DisplayRenderer({ definition }: { definition: DeviceDefinition }) {
   const display = definition.display;
@@ -413,7 +278,7 @@ export function HardwareLayer({ definition, mode, instanceId }: HardwareLayerPro
           <FansRenderer definition={definition} />
         </>
       )}
-      <EtherlightingRenderer definition={definition} instanceId={instanceId} />
+      <EtherlightingLayer definition={definition} instanceId={instanceId} />
     </group>
   );
 }

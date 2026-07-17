@@ -111,6 +111,8 @@ export interface PortDefinition {
   exitDirMm?: [number, number, number];
   /** Preferred cable bend radius leaving this port, mm. */
   bendRadiusMm?: number;
+  /** Optional Etherlighting refinements (never required to light). */
+  etherLighting?: PortEtherLighting;
 }
 
 export const LED_KINDS = [
@@ -163,6 +165,70 @@ export type LightingMode = (typeof LIGHTING_MODES)[number];
  * animation modes. Data only; the renderer interprets it, and future
  * link-state simulation plugs in without schema changes.
  */
+/* ---- Etherlighting metadata ------------------------------------------- */
+
+export const ETHER_ANIMATION_MODES = [
+  'static',
+  'breathing',
+  'pulse',
+  'wave',
+  'sweep',
+  'ping',
+  'ripple',
+  'rainbow',
+  'activity',
+  'traffic',
+  'off',
+] as const;
+export type EtherAnimationMode = (typeof ETHER_ANIMATION_MODES)[number];
+
+export const ETHER_COLOR_MODES = [
+  'speed',
+  'poe',
+  'activity',
+  'link',
+  'custom',
+  'manufacturer',
+  'gradient',
+  'multi-zone',
+] as const;
+export type EtherColorMode = (typeof ETHER_COLOR_MODES)[number];
+
+export const ETHER_ZONES = [
+  'top',
+  'bottom',
+  'left',
+  'right',
+  'full',
+  'corners',
+  'inner',
+  'outer',
+] as const;
+export type EtherZone = (typeof ETHER_ZONES)[number];
+
+/**
+ * Per-port Etherlighting overrides. Every authored port lights
+ * automatically — this block only REFINES the global/device values; it
+ * is never required for a port to participate.
+ */
+export interface PortEtherLighting {
+  enabled?: boolean;
+  /** Brightness override 0–2. */
+  brightness?: number;
+  animationMode?: EtherAnimationMode;
+  colorMode?: EtherColorMode;
+  customColor?: string;
+  poeColor?: string;
+  zones?: EtherZone[];
+  /** Glow band width override, fraction of the opening (0.05–1). */
+  glowRadius?: number;
+  transitionSpeed?: number;
+  supportsActivity?: boolean;
+  supportsPoE?: boolean;
+  supportsSpeedColors?: boolean;
+  supportsAnimations?: boolean;
+}
+
 export interface LightingCapabilities {
   /** RGB illumination ring around every Etherlighting-flagged RJ45 port. */
   etherlighting: boolean;
@@ -180,6 +246,8 @@ export interface LightingCapabilities {
   defaultMode?: LightingMode;
   /** Overall brightness multiplier 0–1 (default 1). */
   brightness?: number;
+  /** Device-level color mode override (global setting otherwise). */
+  colorMode?: EtherColorMode;
   /** Identifiers of future animated effects (not implemented yet). */
   effects: string[];
 }
@@ -725,6 +793,7 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
       entry.bendRadiusMm === undefined
         ? undefined
         : sub.number(entry, 'bendRadiusMm', { min: 1, max: 200 });
+    const etherLighting = parsePortEtherLighting(entry.etherLighting, sub);
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -749,10 +818,90 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         insertionMm,
         exitDirMm,
         bendRadiusMm,
+        etherLighting,
       });
     }
   });
   return ports;
+}
+
+function parsePortEtherLighting(
+  input: unknown,
+  checker: Checker,
+): PortEtherLighting | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('etherLighting', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const enabled = sub.optionalBoolean(input, 'enabled');
+  const brightness =
+    input.brightness === undefined
+      ? undefined
+      : sub.number(input, 'brightness', { min: 0, max: 2 });
+  const animationMode =
+    input.animationMode === undefined
+      ? undefined
+      : sub.oneOf(input, 'animationMode', ETHER_ANIMATION_MODES);
+  const colorMode =
+    input.colorMode === undefined
+      ? undefined
+      : sub.oneOf(input, 'colorMode', ETHER_COLOR_MODES);
+  const customColor =
+    input.customColor === undefined
+      ? undefined
+      : sub.string(input, 'customColor');
+  const poeColor =
+    input.poeColor === undefined ? undefined : sub.string(input, 'poeColor');
+  let zones: EtherZone[] | undefined;
+  if (input.zones !== undefined) {
+    if (
+      Array.isArray(input.zones) &&
+      input.zones.every(
+        (z): z is EtherZone =>
+          typeof z === 'string' && (ETHER_ZONES as readonly string[]).includes(z),
+      )
+    ) {
+      zones = input.zones;
+    } else {
+      sub.fail('zones', `entries must be one of: ${ETHER_ZONES.join(', ')}`);
+    }
+  }
+  const glowRadius =
+    input.glowRadius === undefined
+      ? undefined
+      : sub.number(input, 'glowRadius', { min: 0.05, max: 1 });
+  const transitionSpeed =
+    input.transitionSpeed === undefined
+      ? undefined
+      : sub.number(input, 'transitionSpeed', { min: 0.1, max: 5 });
+  const supportsActivity = sub.optionalBoolean(input, 'supportsActivity');
+  const supportsPoE = sub.optionalBoolean(input, 'supportsPoE');
+  const supportsSpeedColors = sub.optionalBoolean(input, 'supportsSpeedColors');
+  const supportsAnimations = sub.optionalBoolean(input, 'supportsAnimations');
+
+  if (sub.issues.length > 0) {
+    for (const issue of sub.issues) {
+      checker.fail(`etherLighting.${issue.path}`, issue.message);
+    }
+    return undefined;
+  }
+  return {
+    enabled,
+    brightness,
+    animationMode,
+    colorMode,
+    customColor,
+    poeColor,
+    zones,
+    glowRadius,
+    transitionSpeed,
+    supportsActivity,
+    supportsPoE,
+    supportsSpeedColors,
+    supportsAnimations,
+  };
 }
 
 function parseLighting(
@@ -823,6 +972,11 @@ function parseLighting(
       ? undefined
       : sub.number(input, 'brightness', { min: 0, max: 1 });
 
+  const colorMode =
+    input.colorMode === undefined
+      ? undefined
+      : sub.oneOf(input, 'colorMode', ETHER_COLOR_MODES);
+
   sub.issues.forEach(({ path, message }) =>
     checker.fail(`lighting.${path}`, message),
   );
@@ -835,6 +989,7 @@ function parseLighting(
     statusLed,
     defaultMode,
     brightness,
+    colorMode,
     effects,
   };
 }
