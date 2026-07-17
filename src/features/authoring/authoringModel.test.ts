@@ -195,7 +195,7 @@ describe('array + suggestions', () => {
         faceZMm: 147.5,
       },
     ];
-    const suggested = suggestPorts(proMax, detected);
+    const suggested = suggestPorts(detected);
     // 143.2mm / 17.9 catalog pitch → 8 slots + 1 SFP cage.
     expect(suggested.filter((p) => p.type === 'rj45').length).toBe(8);
     expect(suggested.filter((p) => p.type === 'sfp+').length).toBe(1);

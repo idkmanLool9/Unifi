@@ -105,14 +105,17 @@ export function portsFromDefinition(
   definition: DeviceDefinition,
 ): AuthoredPort[] {
   return resolvePhysicalPorts(definition).map((port) => {
+    // Data-port groups only carry PortType values (power connectors
+    // resolve through a separate pipeline and are not authored here).
+    const type = port.type as PortType;
     const calibrated = calibratedPort(definition.id, port.ref);
     const positionMm = calibrated?.positionMm ?? port.positionMm;
     const size: [number, number] = calibrated
       ? [calibrated.widthMm, calibrated.heightMm]
-      : (port.sizeMm ?? defaultSize(port.type));
+      : (port.sizeMm ?? defaultSize(type));
     return {
       id: sanitizeId(port.ref),
-      type: port.type,
+      type,
       label: port.label,
       location: port.location,
       positionMm: positionMm.map(round2) as Vec3,
@@ -191,6 +194,7 @@ export function definitionWithPorts(
             perPortLink: false,
             poeIndicator: false,
             speedColors: {},
+            effects: [],
           }
         : base.lighting,
   };
@@ -213,7 +217,6 @@ const CLASS_TYPE: Record<'copper' | 'sfp', PortType> = {
  * are only ever applied by an explicit user action.
  */
 export function suggestPorts(
-  definition: DeviceDefinition,
   detected: readonly DetectedConnector[],
 ): AuthoredPort[] {
   const suggestions: AuthoredPort[] = [];

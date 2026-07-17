@@ -305,7 +305,7 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
       set({ suggestions: null });
       return;
     }
-    const suggested = suggestPorts(definition, detected);
+    const suggested = suggestPorts(detected);
     // Only offer when the analysis would actually add information — a
     // port set that already matches the detected count (calibration
     // baked it in, or the developer authored it) needs no suggestion.

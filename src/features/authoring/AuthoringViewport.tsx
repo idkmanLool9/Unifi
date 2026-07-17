@@ -6,7 +6,6 @@ import {
   MathUtils,
   MeshBasicMaterial,
   Object3D,
-  Vector3,
 } from 'three';
 import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber';
 import {
