@@ -178,6 +178,57 @@ export function MountingHardware({ definition, geometry }: MountingHardwareProps
           />
         ))}
 
+      {/* Telescoping rear brackets: L-angles bridging the tail of a
+          shallow chassis to the rear rail plane, with a bolted rear
+          flange — adjustable rear rails, exactly as installed in a
+          real rack. */}
+      {solution.rearSupport === 'telescoping' &&
+        ([1, -1] as const).map((side) => {
+          const gapM = solution.rearGapMm * MM_TO_M;
+          const overlapM = Math.min(0.05, halfD); // grip under the chassis
+          const barLen = gapM + overlapM;
+          const barMidZ = -halfD + overlapM / 2 - gapM / 2;
+          return (
+            <group key={`telescope-${side}`}>
+              {/* Horizontal seat carrying the chassis side */}
+              <mesh
+                position={[
+                  side * (halfW - RAIL_SEAT_M / 2 + RAIL_GAUGE_M),
+                  -halfH - RAIL_GAUGE_M / 2,
+                  barMidZ,
+                ]}
+                castShadow
+                receiveShadow
+                material={materials.zinc}
+              >
+                <boxGeometry args={[RAIL_SEAT_M, RAIL_GAUGE_M, barLen]} />
+              </mesh>
+              {/* Vertical lip along the chassis side */}
+              <mesh
+                position={[
+                  side * (halfW + RAIL_GAUGE_M / 2),
+                  -halfH + RAIL_LIP_M / 2 - RAIL_GAUGE_M,
+                  barMidZ,
+                ]}
+                castShadow
+                material={materials.zinc}
+              >
+                <boxGeometry args={[RAIL_GAUGE_M, RAIL_LIP_M, barLen]} />
+              </mesh>
+              {/* Rear flange bolted to the rear rails */}
+              <Ear
+                side={side}
+                z={-halfD - gapM}
+                halfW={halfW}
+                units={units}
+                thicknessM={thicknessM}
+                material={materials.steel}
+                bolts
+              />
+            </group>
+          );
+        })}
+
       {/* Full-length side support rails from front to rear rail plane */}
       {solution.rearSupport === 'support-rails' &&
         ([1, -1] as const).map((side) => (

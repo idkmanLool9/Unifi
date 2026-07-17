@@ -59,7 +59,12 @@ export function resolveMechanical(
 }
 
 /** How the rear of a mounted device is physically carried. */
-export type RearSupport = 'rear-ears' | 'support-rails' | 'shelf' | 'none';
+export type RearSupport =
+  | 'rear-ears'
+  | 'support-rails'
+  | 'telescoping'
+  | 'shelf'
+  | 'none';
 
 /** Rear brackets reach the rear rails when the tail is within this gap. */
 export const REAR_EAR_REACH_MM = 25;
@@ -110,6 +115,11 @@ export function solveMounting(
     rearSupport = 'rear-ears';
   } else if (rearGapMm > 0 && geometry.profile.supportRails) {
     rearSupport = 'support-rails';
+  } else if (rearGapMm > 0) {
+    // Shallow chassis on deep rails: telescoping rear brackets bridge
+    // the tail to the rear rail plane — the standard integrator fix,
+    // so short devices still "reach the back of the rack".
+    rearSupport = 'telescoping';
   } else {
     rearSupport = 'none';
   }

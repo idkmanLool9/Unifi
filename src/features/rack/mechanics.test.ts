@@ -91,9 +91,13 @@ describe('solveMounting', () => {
     expect(solution.rearGapMm).toBeCloseTo(800 - 286, 0);
   });
 
-  it('front-ear cantilever when the profile has no rear support', () => {
+  it('telescoping rear brackets when the profile has no support rails', () => {
     const geometry = rackGeometry('open-frame-700'); // supportRails: false
-    expect(solveMounting(rackDevice, geometry).rearSupport).toBe('none');
+    const solution = solveMounting(rackDevice, geometry);
+    // A shallow chassis on deeper rails still reaches the rear plane —
+    // bridged by adjustable telescoping brackets, never left dangling.
+    expect(solution.rearSupport).toBe('telescoping');
+    expect(solution.rearGapMm).toBeGreaterThan(0);
   });
 
   it('integrated ears suppress the parametric ones', () => {

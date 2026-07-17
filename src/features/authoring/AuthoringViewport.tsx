@@ -345,6 +345,8 @@ HOLE_GEOMETRY.rotateX(Math.PI / 2);
 
 /** EIA-310 hole offsets inside one U, mm from the U boundary. */
 const EIA_HOLES_MM = [6.35, 22.225, 38.1];
+/** Lateral hole-column centerline, meters from the rack center (EIA). */
+const EIA_HOLE_X = 0.23255;
 
 /**
  * A minimal pair of front mounting rails with true EIA-310 hole
@@ -364,7 +366,7 @@ function RailGauge({
   const bottomU = Math.max(1, baseU - 1);
   const y0 = geometry.railBaseYM + (bottomU - 1) * U_METERS;
   const height = span * U_METERS;
-  const railX = geometry.railSpacingM / 2;
+  const railX = EIA_HOLE_X;
   const z = geometry.frontRailZ;
 
   const holes: Vec3[] = [];
