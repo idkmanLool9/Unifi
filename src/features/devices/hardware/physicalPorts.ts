@@ -40,6 +40,8 @@ export interface PhysicalPort {
   etherlighting: boolean;
   /** Where a cable plug attaches, mm (future routing terminates here). */
   anchorMm: [number, number, number];
+  /** Authored opening size override, mm (calibration still wins). */
+  sizeMm?: [number, number];
 }
 
 export interface ResolvedLed {
@@ -139,6 +141,7 @@ export function resolvePhysicalPorts(
           positionMm[1] + anchor[1],
           positionMm[2] + anchor[2],
         ],
+        sizeMm: group.sizeMm,
       });
 
     if (group.positionMm) {

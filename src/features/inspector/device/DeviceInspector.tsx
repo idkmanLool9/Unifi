@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, PencilRuler, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
@@ -154,7 +155,8 @@ export function DeviceInspector({
       <ConnectionsSection instanceId={instance.id} />
       <HardwareSection definition={definition} />
       <SpecsSection definition={definition} />
-      <div className="px-3 py-3">
+      <AuthorPortsButton definitionId={definition.id} />
+      <div className="px-3 pb-3">
         <button
           type="button"
           onClick={() => requestRemoveDevice(instance.id)}
@@ -165,5 +167,22 @@ export function DeviceInspector({
         </button>
       </div>
     </>
+  );
+}
+
+/** Developer entry into the Device Authoring mode for this definition. */
+function AuthorPortsButton({ definitionId }: { definitionId: string }) {
+  const navigate = useNavigate();
+  return (
+    <div className="px-3 pt-3 pb-1">
+      <button
+        type="button"
+        onClick={() => navigate(`/author?device=${definitionId}`)}
+        className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+      >
+        <PencilRuler className="size-3.5" strokeWidth={1.75} />
+        Author ports…
+      </button>
+    </div>
   );
 }

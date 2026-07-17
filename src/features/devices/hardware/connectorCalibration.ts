@@ -327,10 +327,21 @@ export function calibrateFromModel(
   if (cache.has(definition.id)) return;
   const bounds = meshBoundsLocal(model, transform);
   const detected = detectConnectors(bounds, definition);
-  const calibrated = calibratePorts(definition, detected);
+  detectionCache.set(definition.id, detected);
+  // Hand-authored metadata is ground truth: detection stays available
+  // for the authoring tool's suggestions, but never overrides positions.
+  const calibrated = definition.portsAuthored
+    ? new Map<string, CalibratedPort>()
+    : calibratePorts(definition, detected);
   cache.set(definition.id, calibrated);
-  if (calibrated.size > 0) useCalibrationStore.getState().bump();
+  useCalibrationStore.getState().bump();
 }
+
+/** Raw connector detection for a loaded model (authoring suggestions). */
+const detectionCache = new Map<string, DetectedConnector[]>();
+export const detectedConnectors = (
+  definitionId: string,
+): DetectedConnector[] => detectionCache.get(definitionId) ?? [];
 
 /** Calibrated position/size for a port ref, or null (metadata rules). */
 export const calibratedPort = (

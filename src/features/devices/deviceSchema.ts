@@ -87,6 +87,12 @@ export interface PortDefinition {
   etherlighting?: boolean;
   /** Cable anchor offset from the port center, mm (future routing). */
   anchorMm?: [number, number, number];
+  /**
+   * Authored interaction bounds: visible opening width × height, mm.
+   * Overrides the connector catalog size (calibration still wins when a
+   * GLB carries detectable connector geometry).
+   */
+  sizeMm?: [number, number];
 }
 
 export const LED_KINDS = [
@@ -383,6 +389,11 @@ export interface DeviceDefinition {
   modelDetail?: 'full' | 'chassis';
   /** Vertical trim from the U boundary, in millimeters. */
   mountingOffsetMm: number;
+  /**
+   * Set by the Device Authoring mode: every port was placed by hand, so
+   * GLB connector calibration must never override these positions.
+   */
+  portsAuthored?: boolean;
   ports: PortDefinition[];
   leds: LedDefinition[];
   lighting?: LightingCapabilities;
@@ -606,6 +617,14 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         : isVec3(entry.anchorMm)
           ? entry.anchorMm
           : sub.fail('anchorMm', 'must be [x, y, z] numbers');
+    const sizeMm =
+      entry.sizeMm === undefined
+        ? undefined
+        : Array.isArray(entry.sizeMm) &&
+            entry.sizeMm.length === 2 &&
+            entry.sizeMm.every((v) => typeof v === 'number' && v > 0)
+          ? (entry.sizeMm as [number, number])
+          : sub.fail('sizeMm', 'must be [width, height] positive numbers');
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -626,6 +645,7 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         poeBudgetW,
         etherlighting,
         anchorMm,
+        sizeMm,
       });
     }
   });
@@ -1140,6 +1160,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
     input.modelDetail === undefined
       ? undefined
       : c.oneOf(input, 'modelDetail', ['full', 'chassis'] as const);
+  const portsAuthored = c.optionalBoolean(input, 'portsAuthored');
   const ports = parsePorts(input.ports, c);
   const leds = parseLeds(input.leds, c);
   const lighting = parseLighting(input.lighting, c);
@@ -1182,6 +1203,7 @@ export function validateDeviceDefinition(input: unknown): DefinitionResult {
       modelTransform,
       modelDetail,
       mountingOffsetMm,
+      portsAuthored,
       ports,
       leds,
       lighting,

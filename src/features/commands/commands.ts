@@ -12,6 +12,7 @@ import {
   Magnet,
   Monitor,
   Moon,
+  PencilLine,
   RotateCcw,
   Save,
   Search,
@@ -22,9 +23,12 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
+import { router } from '@/app/router';
 import { faceDetail, frameSelection } from '@/features/viewport/focusActions';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useOverlayStore } from '@/stores/overlayStore';
 import { useRackStore } from '@/stores/rackStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useViewportStore } from '@/stores/viewportStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
@@ -102,6 +106,27 @@ export const COMMANDS: readonly Command[] = [
     keywords: 'remove clear',
     disabled: () => useRackStore.getState().rack === null,
     run: () => useOverlayStore.getState().setConfirmDeleteRackOpen(true),
+  },
+
+  // Developer tools
+  {
+    id: 'devices.author-ports',
+    label: 'Author Device Ports…',
+    group: 'Devices',
+    icon: PencilLine,
+    keywords: 'authoring editor metadata glb connector port placement',
+    run: () => {
+      // Author the selected device when one is selected.
+      const selection = useSelectionStore.getState().selection;
+      const instance =
+        selection?.kind === 'device'
+          ? useDeviceInstancesStore
+              .getState()
+              .instances.find((i) => i.id === selection.instanceId)
+          : undefined;
+      const query = instance ? `?device=${instance.definitionId}` : '';
+      void router.navigate(`/author${query}`);
+    },
   },
 
   // Cables

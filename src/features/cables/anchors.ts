@@ -64,8 +64,8 @@ export function portFace(
   const size = CONNECTOR_SIZES[port.type];
   return {
     positionMm: port.positionMm,
-    widthMm: size.widthMm,
-    heightMm: size.heightMm,
+    widthMm: port.sizeMm?.[0] ?? size.widthMm,
+    heightMm: port.sizeMm?.[1] ?? size.heightMm,
   };
 }
 

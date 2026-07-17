@@ -33,7 +33,7 @@ const DRACO_DECODER_PATH = assetUrl('draco/');
  * model itself is never scaled or modified — dimension deviations are
  * reported as warnings.
  */
-function LoadedModel({
+export function LoadedModel({
   url,
   definition,
 }: {
