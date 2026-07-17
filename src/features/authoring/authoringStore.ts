@@ -22,8 +22,10 @@ import {
 import { getDevice, registerDevice } from '@/features/devices/deviceRegistry';
 import {
   validateDeviceDefinition,
+  type DeviceDefinition,
   type PortType,
 } from '@/features/devices/deviceSchema';
+import { useAuthoredDevicesStore } from '@/stores/authoredDevicesStore';
 import { toast } from '@/stores/toastStore';
 
 /**
@@ -356,7 +358,48 @@ export const useAuthoringStore = create<AuthoringState>()((set, get) => ({
     // Authored positions are ground truth from now on.
     primeCalibration(base.id, new Map());
     useCalibrationStore.getState().bump();
+    // Persist in this browser: the definition re-applies on every load.
+    useAuthoredDevicesStore
+      .getState()
+      .saveDefinition(result.value.id, JSON.parse(metadataJson(result.value)));
+    // Dev server: also write straight into public/devices in the repo.
+    if (import.meta.env.DEV) void writeToDevServer(result.value);
     set({ dirty: false });
+    toast({
+      variant: 'success',
+      title: 'Ports saved',
+      description: `${result.value.productName} now loads with this layout everywhere in this browser.`,
+    });
     return true;
   },
 }));
+
+/**
+ * Writes the authored metadata into the repository via the dev-server
+ * endpoint. Static deployments have no such endpoint — the SPA fallback
+ * answers with HTML and this resolves silently; browser persistence
+ * already covered the save.
+ */
+async function writeToDevServer(definition: DeviceDefinition): Promise<void> {
+  try {
+    const response = await fetch('/__rackforge/save-device', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        path: `${definition.manufacturer}/${definition.slug}`,
+        metadata: JSON.parse(metadataJson(definition)),
+      }),
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as { ok?: boolean; file?: string };
+    if (data.ok && data.file) {
+      toast({
+        variant: 'info',
+        title: 'Written to repository',
+        description: data.file,
+      });
+    }
+  } catch {
+    // No dev endpoint (static hosting) — nothing to do.
+  }
+}

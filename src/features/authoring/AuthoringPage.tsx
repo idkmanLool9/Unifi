@@ -9,7 +9,11 @@ import { useAuthoringStore } from './authoringStore';
 import { useAuthoringShortcuts } from './useAuthoringShortcuts';
 import { ContextMenuHost } from '@/components/ui/ContextMenuHost';
 import { ToastHost } from '@/components/ui/ToastHost';
-import { allDevices, getDevice } from '@/features/devices/deviceRegistry';
+import {
+  allDevices,
+  getDevice,
+  useRegistryStore,
+} from '@/features/devices/deviceRegistry';
 import { useCalibrationStore } from '@/features/devices/hardware/connectorCalibration';
 
 /**
@@ -47,6 +51,17 @@ export function AuthoringPage() {
     else state.refreshSuggestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calibrationVersion]);
+
+  // Definitions also land asynchronously at startup (external metadata,
+  // then browser-persisted authored devices). Re-derive the session so
+  // the editor always shows the definition that actually won — again,
+  // never over unsaved edits.
+  const registryVersion = useRegistryStore((s) => s.version);
+  useEffect(() => {
+    const state = useAuthoringStore.getState();
+    if (state.deviceId && !state.dirty) state.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registryVersion]);
 
   // Guard against losing unsaved authoring work on tab close.
   useEffect(() => {

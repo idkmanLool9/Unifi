@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  FileDown,
   Grid3x3,
   Magnet,
   MousePointer2,
@@ -98,24 +99,15 @@ export function AuthoringTopBar() {
     );
   };
 
-  const onSave = () => {
-    if (!definition) return;
-    if (save()) {
-      downloadMetadata();
-      toast({
-        variant: 'success',
-        title: 'Ports saved',
-        description:
-          'Definition updated for this session — metadata.json downloaded. Drop it into public/devices/… to make it permanent.',
-      });
-    }
-  };
+  // save() persists everywhere itself (registry + browser storage +
+  // repo write-through on the dev server) and reports via toasts.
+  const onSave = () => void save();
 
-  const downloadMetadata = () => {
+  /** Optional manual export for sharing a metadata.json elsewhere. */
+  const exportMetadata = () => {
     const state = useAuthoringStore.getState();
     const base = state.deviceId ? getDevice(state.deviceId) : undefined;
     if (!base) return;
-    // The registry now holds the authored definition (save() ran first).
     const json = JSON.stringify(base, null, 2) + '\n';
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -124,6 +116,11 @@ export function AuthoringTopBar() {
     link.download = 'metadata.json';
     link.click();
     URL.revokeObjectURL(url);
+    toast({
+      variant: 'info',
+      title: 'metadata.json exported',
+      description: 'Saving already persists automatically — this file is for sharing.',
+    });
   };
 
   return (
@@ -209,6 +206,16 @@ export function AuthoringTopBar() {
           <Undo2 className="size-3.5" strokeWidth={1.8} />
           Preview in Rack
         </button>
+        <Tooltip label="Export metadata.json (optional — saving persists automatically)">
+          <button
+            type="button"
+            aria-label="Export metadata.json"
+            onClick={exportMetadata}
+            className="flex size-7 items-center justify-center rounded-lg border border-edge bg-background/40 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
+          >
+            <FileDown className="size-3.5" strokeWidth={1.8} />
+          </button>
+        </Tooltip>
         <button
           type="button"
           onClick={onSave}

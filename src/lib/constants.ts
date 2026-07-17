@@ -13,6 +13,9 @@ export const VIEW_SETTINGS_STORE_KEY = 'rackforge-view';
 /** localStorage key for the persisted rack document. */
 export const RACK_STORE_KEY = 'rackforge-rack';
 
+/** Persisted hand-authored device definitions (Device Authoring mode). */
+export const AUTHORED_DEVICES_STORE_KEY = 'rackforge-authored-devices';
+
 /** Camera defaults for the editor viewport. */
 export const CAMERA = {
   position: [8, 6, 10] as const,
