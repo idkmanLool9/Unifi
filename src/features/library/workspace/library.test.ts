@@ -6,7 +6,7 @@ import {
   sortEntries,
   EMPTY_FILTERS,
 } from './libraryIndex';
-import { buildDraftDefinition, readZip } from './packageImport';
+import { buildDraftDefinition, classifyZip, readZip } from './packageImport';
 import { GENERIC_DEVICES } from '@/features/devices/definitions/generic';
 import { UBIQUITI_DEVICES } from '@/features/devices/definitions/ubiquiti';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
@@ -214,5 +214,45 @@ describe('zip reader', () => {
     await expect(readZip(new Uint8Array(64).buffer)).rejects.toThrow(
       /valid ZIP/,
     );
+  });
+});
+
+describe('zip content classification', () => {
+  const entry = (name: string) => ({ name, data: new Uint8Array(0) });
+
+  it('recognizes an OBJ package with MTL and textures', () => {
+    const c = classifyZip([
+      entry('keystone-panel/panel.obj'),
+      entry('keystone-panel/panel.mtl'),
+      entry('keystone-panel/base_color.png'),
+      entry('keystone-panel/normal.jpg'),
+    ]);
+    expect(c.objEntry?.name).toBe('keystone-panel/panel.obj');
+    expect(c.hasMtl).toBe(true);
+    expect(c.imageCount).toBe(2);
+    expect(c.glbEntry).toBeUndefined();
+    expect(c.metadataEntry).toBeUndefined();
+  });
+
+  it('prefers an authored bundle (metadata + glb) and ignores junk', () => {
+    const c = classifyZip([
+      entry('__MACOSX/._model.glb'),
+      entry('.DS_Store'),
+      entry('device/metadata.json'),
+      entry('device/model.glb'),
+    ]);
+    expect(c.metadataEntry?.name).toBe('device/metadata.json');
+    expect(c.glbEntry?.name).toBe('device/model.glb');
+    // Resource-fork and dotfile entries never count as real content.
+    expect(c.imageCount).toBe(0);
+    expect(c.objEntry).toBeUndefined();
+  });
+
+  it('reports an empty package as having nothing importable', () => {
+    const c = classifyZip([entry('readme.txt')]);
+    expect(c.metadataEntry).toBeUndefined();
+    expect(c.glbEntry).toBeUndefined();
+    expect(c.objEntry).toBeUndefined();
+    expect(c.imageCount).toBe(0);
   });
 });

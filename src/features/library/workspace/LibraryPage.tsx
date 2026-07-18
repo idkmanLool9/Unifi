@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Import, Library } from 'lucide-react';
+import { ArrowLeft, Import, Library, Upload } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { ContextMenuHost } from '@/components/ui/ContextMenuHost';
 import { ToastHost } from '@/components/ui/ToastHost';
@@ -36,6 +36,14 @@ export function LibraryPage() {
   const pinnedIds = useLibraryMetaStore((s) => s.pinnedIds);
   const collections = useLibraryMetaStore((s) => s.collections);
   const [importOpen, setImportOpen] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  // Nested dragenter/leave events fire per child; a depth counter keeps
+  // the overlay steady until the pointer truly leaves the window.
+  const dragDepth = useRef(0);
+
+  const isFileDrag = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer.types).includes('Files');
 
   const results = useMemo(() => {
     let scoped = entries;
@@ -77,7 +85,37 @@ export function LibraryPage() {
     : undefined;
 
   return (
-    <div className="flex h-dvh flex-col bg-canvas text-primary">
+    <div
+      className="relative flex h-dvh flex-col bg-canvas text-primary"
+      onDragEnter={(e) => {
+        if (!isFileDrag(e)) return;
+        e.preventDefault();
+        dragDepth.current += 1;
+        setDragActive(true);
+      }}
+      onDragOver={(e) => {
+        if (isFileDrag(e)) e.preventDefault();
+      }}
+      onDragLeave={(e) => {
+        if (!isFileDrag(e)) return;
+        dragDepth.current -= 1;
+        if (dragDepth.current <= 0) {
+          dragDepth.current = 0;
+          setDragActive(false);
+        }
+      }}
+      onDrop={(e) => {
+        if (!isFileDrag(e)) return;
+        e.preventDefault();
+        dragDepth.current = 0;
+        setDragActive(false);
+        const file = e.dataTransfer.files?.[0] ?? null;
+        if (file) {
+          setDroppedFile(file);
+          setImportOpen(true);
+        }
+      }}
+    >
       {/* Top bar */}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-edge bg-surface px-3">
         <button
@@ -123,7 +161,26 @@ export function LibraryPage() {
         {selected && <LibraryPreviewPanel key={selected.id} entry={selected} />}
       </div>
 
-      <ImportDeviceDialog open={importOpen} onClose={() => setImportOpen(false)} />
+      {dragActive && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-canvas/70 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-accent bg-surface px-10 py-8 text-accent">
+            <Upload className="size-8" strokeWidth={1.5} />
+            <span className="text-sm font-semibold">Drop to import a device</span>
+            <span className="text-xs text-secondary">
+              GLB, GLTF, OBJ, FBX or a ZIP package
+            </span>
+          </div>
+        </div>
+      )}
+
+      <ImportDeviceDialog
+        open={importOpen}
+        initialFile={droppedFile}
+        onClose={() => {
+          setImportOpen(false);
+          setDroppedFile(null);
+        }}
+      />
       <ContextMenuHost />
       <ToastHost />
     </div>
