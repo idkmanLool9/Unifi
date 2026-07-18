@@ -16,35 +16,34 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     modelNumber: 'PP-24K',
     category: 'accessories',
     rackUnits: 1,
-    depthMm: 40,
+    depthMm: 73,
     weightKg: 0.9,
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '1U feed-through keystone panel — a flat silver plate with 24 empty keystone openings punched through both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
+      '1U unloaded keystone patch panel — a silver steel faceplate with 24 keystone openings and a formed rear cable-management tray. Snap-in keystones patch at the front; permanent cabling dresses to the rear bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
+    // Port positions aligned to the shipped GLB: openings span x −202…+202
+    // on the front faceplate (z≈36mm), 24 across at ~16.83mm pitch. The
+    // rear ports sit at the back of the tray so cables run out the rear.
     ports: [
       {
         id: 'keystone',
         type: 'keystone',
         count: 24,
         label: 'Front 1–24',
-        positionMm: [-205.8, 0, 20],
-        pitchMm: 17.9,
+        positionMm: [-193.6, 0, 35],
+        pitchMm: 16.83,
       },
-      // The same openings punched through the rear face of the plate, so
-      // permanent/building cabling terminates here exactly as on a real
-      // feed-through panel. Aligned to the front openings; cables exit
-      // straight out the back.
       {
         id: 'keystone-rear',
         type: 'keystone',
         count: 24,
         label: 'Rear 1–24',
         location: 'rear',
-        positionMm: [-205.8, 0, -6],
-        pitchMm: 17.9,
+        positionMm: [-193.6, 0, -35],
+        pitchMm: 16.83,
       },
     ],
     // Silver brushed-metal finish so it colour-matches Ubiquiti Pro gear
