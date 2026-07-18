@@ -18,7 +18,13 @@ import { ConnectionsSection } from './ConnectionsSection';
 import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
 import { requestRemoveDevice } from '@/features/devices/removeDeviceAction';
-import { getDevice } from '@/features/devices/deviceRegistry';
+import {
+  getDevice,
+  isBuiltinDevice,
+  resetDeviceToBuiltin,
+} from '@/features/devices/deviceRegistry';
+import { useAuthoredDevicesStore } from '@/stores/authoredDevicesStore';
+import { toast } from '@/stores/toastStore';
 import { CATEGORY_LABELS } from '@/features/library/catalog';
 import {
   rotatedFootprintMm,
@@ -291,6 +297,7 @@ export function DeviceInspector({
       <HardwareSection definition={definition} />
       <SpecsSection definition={definition} />
       <AuthorPortsButton definitionId={definition.id} />
+      <ResetToDefaultButton definitionId={definition.id} />
       <div className="px-3 pb-3">
         <button
           type="button"
@@ -302,6 +309,40 @@ export function DeviceInspector({
         </button>
       </div>
     </>
+  );
+}
+
+/**
+ * Reverts a built-in device to its shipped definition, dropping a saved
+ * "Author ports" copy kept in this browser. Only shown when such an
+ * override exists for a built-in — the escape hatch when a stale saved
+ * copy (e.g. old dimensions or a removed model) masks the current
+ * catalog version.
+ */
+function ResetToDefaultButton({ definitionId }: { definitionId: string }) {
+  const hasOverride = useAuthoredDevicesStore(
+    (s) => s.definitions[definitionId] !== undefined,
+  );
+  const removeDefinition = useAuthoredDevicesStore((s) => s.removeDefinition);
+  if (!hasOverride || !isBuiltinDevice(definitionId)) return null;
+
+  const reset = () => {
+    removeDefinition(definitionId);
+    resetDeviceToBuiltin(definitionId);
+    toast({ variant: 'success', title: 'Reset to catalog default' });
+  };
+
+  return (
+    <div className="px-3 pt-1 pb-1">
+      <button
+        type="button"
+        onClick={reset}
+        className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+      >
+        <RotateCcw className="size-3.5" strokeWidth={1.75} />
+        Reset to catalog default
+      </button>
+    </div>
   );
 }
 

@@ -99,6 +99,29 @@ export function registerDevice(definition: DeviceDefinition): void {
   useRegistryStore.getState().bump();
 }
 
+/** The pristine built-in definition for an id, if it ships with the app. */
+const BUILTIN_BY_ID = new Map(BUILTIN_DEFINITIONS.map((d) => [d.id, d]));
+
+export const builtinDevice = (id: string): DeviceDefinition | undefined =>
+  BUILTIN_BY_ID.get(id);
+
+/** True when a device id ships as a built-in (may be overridden live). */
+export const isBuiltinDevice = (id: string): boolean => BUILTIN_BY_ID.has(id);
+
+/**
+ * Restores a built-in device to its shipped definition, discarding any
+ * live override (authored save, dropped-in metadata). No-op for ids that
+ * aren't built-ins. Callers also clear the persisted authored copy so the
+ * reset survives a reload.
+ */
+export function resetDeviceToBuiltin(id: string): boolean {
+  const builtin = BUILTIN_BY_ID.get(id);
+  if (!builtin) return false;
+  registry.set(id, builtin);
+  useRegistryStore.getState().bump();
+  return true;
+}
+
 interface DeviceManifest {
   devices: string[];
 }
