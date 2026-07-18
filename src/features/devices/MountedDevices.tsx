@@ -9,22 +9,20 @@ import {
   EyeOff,
   FlipHorizontal2,
   MousePointer2,
+  RotateCw,
   Trash2,
 } from 'lucide-react';
 import { DeviceModel, ModelErrorBoundary } from './DeviceModel';
 import { DevicePlaceholder } from './DevicePlaceholder';
 import { MountingHardware } from './MountingHardware';
+import { instancePose } from './instancePose';
 import { getDevice, useRegistryStore } from './deviceRegistry';
 import { armDrag } from '@/features/dragdrop/DragController';
 import { focusDevice } from '@/features/viewport/focusActions';
 import { requestRemoveDevice } from './removeDeviceAction';
 import { shouldSuppressClick } from '@/stores/dragStore';
 import { RackSelection } from '@/features/rack/RackSelection';
-import {
-  devicePlacement,
-  MM_TO_M,
-  type RackGeometry,
-} from '@/features/rack/rackMath';
+import { MM_TO_M, type RackGeometry } from '@/features/rack/rackMath';
 import { VIEWPORT_THEME } from '@/features/viewport/viewportTheme';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useMenuStore } from '@/stores/menuStore';
@@ -34,7 +32,7 @@ import type { PlacedDevice } from '@/features/rack/rackMath';
 import type { ResolvedTheme } from '@/types';
 
 function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
-  const { moveDevice, setFacing, setVisible } =
+  const { moveDevice, setFacing, setVisible, rotateOnShelf } =
     useDeviceInstancesStore.getState();
   const definition = getDevice(instance.definitionId);
   const name = definition?.productName ?? 'Device';
@@ -46,6 +44,55 @@ function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
     }
   };
 
+  const placementItems = instance.surface
+    ? [
+        {
+          id: 'rotate',
+          label: 'Rotate 90°',
+          icon: RotateCw,
+          action: () => {
+            const result = rotateOnShelf(
+              instance.id,
+              (instance.surface?.rotationDeg ?? 0) + 90,
+            );
+            if (!result.ok) {
+              toast({
+                variant: 'warning',
+                title: 'Can’t rotate device',
+                description: result.message,
+              });
+            }
+          },
+        },
+      ]
+    : [
+        {
+          id: 'move-up',
+          label: 'Move up 1U',
+          icon: ArrowUp,
+          action: () => tryMove(1),
+        },
+        {
+          id: 'move-down',
+          label: 'Move down 1U',
+          icon: ArrowDown,
+          action: () => tryMove(-1),
+        },
+        {
+          id: 'facing',
+          label:
+            instance.facing === 'front'
+              ? 'Mount rear-facing'
+              : 'Mount front-facing',
+          icon: FlipHorizontal2,
+          action: () =>
+            setFacing(
+              instance.id,
+              instance.facing === 'front' ? 'rear' : 'front',
+            ),
+        },
+      ];
+
   useMenuStore.getState().openMenu(x, y, [
     {
       id: 'inspect',
@@ -54,26 +101,7 @@ function openDeviceMenu(x: number, y: number, instance: PlacedDevice) {
       action: () => useSelectionStore.getState().selectDevice(instance.id),
     },
     { separator: true },
-    {
-      id: 'move-up',
-      label: 'Move up 1U',
-      icon: ArrowUp,
-      action: () => tryMove(1),
-    },
-    {
-      id: 'move-down',
-      label: 'Move down 1U',
-      icon: ArrowDown,
-      action: () => tryMove(-1),
-    },
-    {
-      id: 'facing',
-      label:
-        instance.facing === 'front' ? 'Mount rear-facing' : 'Mount front-facing',
-      icon: FlipHorizontal2,
-      action: () =>
-        setFacing(instance.id, instance.facing === 'front' ? 'rear' : 'front'),
-    },
+    ...placementItems,
     {
       id: 'visibility',
       label: instance.visible ? 'Hide device' : 'Show device',
@@ -111,6 +139,7 @@ function MountedDeviceView({
   const selectDevice = useSelectionStore((s) => s.selectDevice);
 
   const definition = getDevice(instance.definitionId);
+  const instances = useDeviceInstancesStore((s) => s.instances);
 
   useEffect(() => {
     if (!hovered) return;
@@ -122,12 +151,9 @@ function MountedDeviceView({
 
   if (!definition || !instance.visible) return null;
 
-  const { position, rotationY } = devicePlacement(
-    definition,
-    instance.startU,
-    instance.facing,
-    geometry,
-  );
+  const pose = instancePose(instance, instances, geometry);
+  if (!pose) return null;
+  const { position, rotationY } = pose;
   const w = definition.widthMm * MM_TO_M;
   const h = definition.heightMm * MM_TO_M;
   const d = definition.depthMm * MM_TO_M;
@@ -200,8 +226,12 @@ function MountedDeviceView({
           <DeviceModel definition={definition} instanceId={instance.id} />
         </ModelErrorBoundary>
       </group>
-      {/* Parametric mounting hardware (outside the measured model group) */}
-      <MountingHardware definition={definition} geometry={geometry} />
+      {/* Parametric mounting hardware (outside the measured model group).
+          Devices standing on a real shelf need none — the shelf carries
+          them. */}
+      {!instance.surface && (
+        <MountingHardware definition={definition} geometry={geometry} />
+      )}
       {DEBUG_BOUNDS_ENABLED && (
         <DebugBounds
           target={modelRef}

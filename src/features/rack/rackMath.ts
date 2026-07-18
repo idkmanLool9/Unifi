@@ -206,6 +206,23 @@ export function devicePlacement(
   };
 }
 
+/**
+ * Free placement on a shelf deck. The child stands on the shelf's
+ * surface at a millimeter offset from the deck center, rotated by an
+ * arbitrary yaw — it moves with the shelf and never occupies rack
+ * units of its own.
+ */
+export interface SurfacePlacement {
+  /** Instance id of the shelf this device stands on. */
+  shelfId: string;
+  /** Offset across the shelf width, mm from the deck center. */
+  xMm: number;
+  /** Offset along the shelf depth, mm from the deck center (+ front). */
+  zMm: number;
+  /** Yaw on the deck, degrees (0 = facing the same way as the shelf). */
+  rotationDeg: number;
+}
+
 /** A mounted device as stored — kept minimal and serializable. */
 export interface PlacedDevice {
   id: string;
@@ -213,6 +230,185 @@ export interface PlacedDevice {
   startU: number;
   facing: RackOrientation;
   visible: boolean;
+  /** Present when the device stands on a shelf instead of the rails. */
+  surface?: SurfacePlacement;
+}
+
+/** A world pose every placement path resolves to. */
+export interface DevicePose {
+  position: [number, number, number];
+  rotationY: number;
+}
+
+/* ---- shelf-surface placement ------------------------------------------ */
+
+/** Deck top above the shelf chassis bottom (plate + clearance), mm. */
+export const SHELF_DECK_TOP_MM = 6.2;
+/** Rubber-foot lift of a desktop device standing on the deck, mm. */
+export const SHELF_CHILD_LIFT_MM = 3;
+
+/** True for shelf accessories that expose a placement surface. */
+export const isShelfDefinition = (definition: DeviceDefinition): boolean =>
+  definition.accessoryKind === 'cantilever-shelf' ||
+  definition.accessoryKind === 'fixed-shelf';
+
+/** Usable deck area of a shelf (skirts and folds excluded), mm. */
+export const shelfDeckRect = (
+  shelf: DeviceDefinition,
+): { wMm: number; dMm: number } => ({
+  wMm: shelf.widthMm - 14,
+  dMm: shelf.depthMm * 0.92,
+});
+
+/** Axis-aligned footprint of a device yawed on the deck, mm. */
+export function rotatedFootprintMm(
+  widthMm: number,
+  depthMm: number,
+  rotationDeg: number,
+): { wMm: number; dMm: number } {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  return {
+    wMm: widthMm * cos + depthMm * sin,
+    dMm: widthMm * sin + depthMm * cos,
+  };
+}
+
+/** World pose of a device standing on a shelf. */
+export function surfaceDevicePlacement(
+  definition: DeviceDefinition,
+  surface: SurfacePlacement,
+  shelfDefinition: DeviceDefinition,
+  shelfInstance: Pick<PlacedDevice, 'startU' | 'facing'>,
+  geometry: RackGeometry,
+): DevicePose {
+  const shelf = devicePlacement(
+    shelfDefinition,
+    shelfInstance.startU,
+    shelfInstance.facing,
+    geometry,
+  );
+  const deckTopY =
+    shelf.position[1] +
+    (-shelfDefinition.heightMm / 2 + SHELF_DECK_TOP_MM) * MM_TO_M;
+  // Deck-local offset rotated through the shelf's own yaw.
+  const cos = Math.cos(shelf.rotationY);
+  const sin = Math.sin(shelf.rotationY);
+  const xM = surface.xMm * MM_TO_M;
+  const zM = surface.zMm * MM_TO_M;
+  return {
+    position: [
+      shelf.position[0] + cos * xM + sin * zM,
+      deckTopY + (SHELF_CHILD_LIFT_MM + definition.heightMm / 2) * MM_TO_M,
+      shelf.position[2] + -sin * xM + cos * zM,
+    ],
+    rotationY: shelf.rotationY + (surface.rotationDeg * Math.PI) / 180,
+  };
+}
+
+export type SurfaceResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+/**
+ * Validates standing a device on a shelf: the device must be
+ * non-rackmount hardware, its (rotated) footprint must fit the usable
+ * deck, and it must not overlap other devices on the same shelf.
+ */
+export function validateSurfacePlacement(
+  definition: DeviceDefinition,
+  surface: SurfacePlacement,
+  shelfDefinition: DeviceDefinition,
+  siblings: ReadonlyArray<{
+    instance: PlacedDevice;
+    definition: DeviceDefinition;
+  }>,
+  ignoreInstanceId?: string,
+): SurfaceResult {
+  if (definition.mountingStandard === 'eia-310') {
+    return {
+      ok: false,
+      message: `${definition.productName} is rack-mount hardware — mount it on the rails instead of a shelf.`,
+    };
+  }
+  const deck = shelfDeckRect(shelfDefinition);
+  const foot = rotatedFootprintMm(
+    definition.widthMm,
+    definition.depthMm,
+    surface.rotationDeg,
+  );
+  if (
+    Math.abs(surface.xMm) + foot.wMm / 2 > deck.wMm / 2 ||
+    Math.abs(surface.zMm) + foot.dMm / 2 > deck.dMm / 2
+  ) {
+    return {
+      ok: false,
+      message: `${definition.productName} would hang over the edge of the shelf.`,
+    };
+  }
+  for (const sibling of siblings) {
+    if (sibling.instance.id === ignoreInstanceId) continue;
+    const other = sibling.instance.surface;
+    if (!other || other.shelfId !== surface.shelfId) continue;
+    const otherFoot = rotatedFootprintMm(
+      sibling.definition.widthMm,
+      sibling.definition.depthMm,
+      other.rotationDeg,
+    );
+    if (
+      Math.abs(surface.xMm - other.xMm) < (foot.wMm + otherFoot.wMm) / 2 &&
+      Math.abs(surface.zMm - other.zMm) < (foot.dMm + otherFoot.dMm) / 2
+    ) {
+      return {
+        ok: false,
+        message: `That spot collides with ${sibling.definition.productName} on the same shelf.`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * First free spot for a device on a shelf, scanning left to right and
+ * front to back on a small grid. Null when nothing fits.
+ */
+export function findFreeShelfSpot(
+  definition: DeviceDefinition,
+  shelfDefinition: DeviceDefinition,
+  shelfId: string,
+  siblings: ReadonlyArray<{
+    instance: PlacedDevice;
+    definition: DeviceDefinition;
+  }>,
+): SurfacePlacement | null {
+  const deck = shelfDeckRect(shelfDefinition);
+  const stepMm = 10;
+  for (let z = 0; z <= deck.dMm / 2; z += stepMm) {
+    for (const zSign of z === 0 ? [1] : [1, -1]) {
+      for (let x = 0; x <= deck.wMm / 2; x += stepMm) {
+        for (const xSign of x === 0 ? [1] : [-1, 1]) {
+          const candidate: SurfacePlacement = {
+            shelfId,
+            xMm: xSign * x,
+            zMm: zSign * z,
+            rotationDeg: 0,
+          };
+          if (
+            validateSurfacePlacement(
+              definition,
+              candidate,
+              shelfDefinition,
+              siblings,
+            ).ok
+          ) {
+            return candidate;
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 
 export type PlacementFailure =
@@ -247,6 +443,9 @@ export function buildOccupancy(ctx: PlacementContext): (string | null)[] {
     () => null,
   );
   for (const instance of ctx.instances) {
+    // Shelf children live on their shelf's surface — the shelf itself
+    // owns the rack units.
+    if (instance.surface) continue;
     const definition = ctx.getDefinition(instance.definitionId);
     if (!definition) continue;
     for (let u = instance.startU; u < instance.startU + definition.rackUnits; u++) {

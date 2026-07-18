@@ -33,6 +33,7 @@ import {
 } from './routing';
 import { useRoutingRulesStore } from '@/stores/routingRulesStore';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { poseForEndpoint } from '@/features/devices/instancePose';
 import { focusCable } from '@/features/viewport/focusActions';
 import { railHeight, U_METERS } from '@/features/rack/rackConstants';
 import { MM_TO_M, type PlacedDevice, type RackGeometry } from '@/features/rack/rackMath';
@@ -212,12 +213,14 @@ function CableMesh({
       srcInstance,
       geometry,
       cable.source.portRef,
+      poseForEndpoint(srcInstance, instances, geometry),
     );
     const destination = resolveEndpoint(
       dstDefinition,
       dstInstance,
       geometry,
       cable.destination.portRef,
+      poseForEndpoint(dstInstance, instances, geometry),
     );
     if (!source || !destination) return null;
 

@@ -10,6 +10,7 @@ import {
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { resolveEndpoint, type Vec3 } from './anchors';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { poseForEndpoint } from '@/features/devices/instancePose';
 import { useCableStore, type CableInstance } from '@/stores/cableStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useSelectionStore } from '@/stores/selectionStore';
@@ -88,7 +89,13 @@ function WaypointHandles({
       const instance = instances.find((i) => i.id === end.deviceInstanceId);
       const definition = instance && getDevice(instance.definitionId);
       if (!instance || !definition) return null;
-      const resolved = resolveEndpoint(definition, instance, geometry, end.portRef);
+      const resolved = resolveEndpoint(
+        definition,
+        instance,
+        geometry,
+        end.portRef,
+        poseForEndpoint(instance, instances, geometry),
+      );
       if (!resolved) return null;
       ends.push(resolved.anchor);
     }

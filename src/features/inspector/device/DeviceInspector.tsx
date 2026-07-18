@@ -1,8 +1,16 @@
 import { useState } from 'react';
-import { Minus, PencilRuler, Plus, Trash2 } from 'lucide-react';
+import {
+  Minus,
+  PencilRuler,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { Slider } from '@/components/ui/Slider';
 import { Switch } from '@/components/ui/Switch';
 import { CableManagementSection } from './CableManagementSection';
 import { EtherlightingDeviceSection } from './EtherlightingDeviceSection';
@@ -10,10 +18,15 @@ import { ConnectionsSection } from './ConnectionsSection';
 import { HardwareSection } from './HardwareSection';
 import { InfoRow } from '../InfoRow';
 import { requestRemoveDevice } from '@/features/devices/removeDeviceAction';
+import { getDevice } from '@/features/devices/deviceRegistry';
 import { CATEGORY_LABELS } from '@/features/library/catalog';
+import {
+  rotatedFootprintMm,
+  shelfDeckRect,
+  type PlacedDevice,
+} from '@/features/rack/rackMath';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
-import type { PlacedDevice } from '@/features/rack/rackMath';
 import type { RackOrientation } from '@/types';
 
 const FACING_OPTIONS: ReadonlyArray<{
@@ -38,6 +51,116 @@ function ProductSection({ definition }: { definition: DeviceDefinition }) {
           Mounted
         </span>
       </InfoRow>
+    </CollapsibleSection>
+  );
+}
+
+/** Placement controls for a device standing on a shelf: slide it
+ *  across the deck, rotate it, and see which shelf carries it. */
+function ShelfPlacementSection({
+  instance,
+  definition,
+}: {
+  instance: PlacedDevice;
+  definition: DeviceDefinition;
+}) {
+  const moveOnShelf = useDeviceInstancesStore((s) => s.moveOnShelf);
+  const rotateOnShelf = useDeviceInstancesStore((s) => s.rotateOnShelf);
+  const setVisible = useDeviceInstancesStore((s) => s.setVisible);
+  const shelfInstance = useDeviceInstancesStore((s) =>
+    s.instances.find((i) => i.id === instance.surface?.shelfId),
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const surface = instance.surface!;
+  const shelfDefinition = shelfInstance && getDevice(shelfInstance.definitionId);
+  const deck = shelfDefinition ? shelfDeckRect(shelfDefinition) : null;
+  const foot = rotatedFootprintMm(
+    definition.widthMm,
+    definition.depthMm,
+    surface.rotationDeg,
+  );
+  const boundX = deck ? Math.max(0, (deck.wMm - foot.wMm) / 2) : 0;
+  const boundZ = deck ? Math.max(0, (deck.dMm - foot.dMm) / 2) : 0;
+
+  const report = (result: { ok: boolean } & { message?: string }) =>
+    setError(result.ok ? null : (result.message ?? null));
+
+  return (
+    <CollapsibleSection title="Placement">
+      <div className="space-y-2.5">
+        <InfoRow label="Standing on">
+          {shelfDefinition?.productName ?? 'Shelf'} · U{instance.startU}
+        </InfoRow>
+        <Slider
+          label="Across the shelf"
+          value={surface.xMm}
+          min={-Math.round(boundX)}
+          max={Math.round(boundX)}
+          step={1}
+          onChange={(xMm) => report(moveOnShelf(instance.id, xMm, surface.zMm))}
+          format={(v) => `${Math.round(v)} mm`}
+        />
+        <Slider
+          label="Front to back"
+          value={surface.zMm}
+          min={-Math.round(boundZ)}
+          max={Math.round(boundZ)}
+          step={1}
+          onChange={(zMm) => report(moveOnShelf(instance.id, surface.xMm, zMm))}
+          format={(v) => `${Math.round(v)} mm`}
+        />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-secondary">Rotation</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Rotate 90 degrees counter-clockwise"
+              onClick={() =>
+                report(rotateOnShelf(instance.id, surface.rotationDeg + 90))
+              }
+              className="flex size-6 items-center justify-center rounded-md border border-edge text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+            >
+              <RotateCcw className="size-3" strokeWidth={2} />
+            </button>
+            <span className="min-w-[44px] text-center text-[11px] font-medium text-primary tabular-nums">
+              {surface.rotationDeg}°
+            </span>
+            <button
+              type="button"
+              aria-label="Rotate 90 degrees clockwise"
+              onClick={() =>
+                report(rotateOnShelf(instance.id, surface.rotationDeg - 90))
+              }
+              className="flex size-6 items-center justify-center rounded-md border border-edge text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+            >
+              <RotateCw className="size-3" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+        <Slider
+          label="Fine rotation"
+          value={surface.rotationDeg}
+          min={0}
+          max={355}
+          step={5}
+          onChange={(deg) => report(rotateOnShelf(instance.id, deg))}
+          format={(v) => `${Math.round(v)}°`}
+        />
+        {error && (
+          <p className="rounded-lg bg-danger/10 px-2.5 py-1.5 text-[11px] leading-snug text-danger">
+            {error}
+          </p>
+        )}
+        <div className="flex h-7 items-center justify-between">
+          <span className="text-xs text-secondary">Visible</span>
+          <Switch
+            label="Device visible"
+            checked={instance.visible}
+            onChange={(visible) => setVisible(instance.id, visible)}
+          />
+        </div>
+      </div>
     </CollapsibleSection>
   );
 }
@@ -153,7 +276,11 @@ export function DeviceInspector({
   return (
     <>
       <ProductSection definition={definition} />
-      <PlacementSection instance={instance} definition={definition} />
+      {instance.surface ? (
+        <ShelfPlacementSection instance={instance} definition={definition} />
+      ) : (
+        <PlacementSection instance={instance} definition={definition} />
+      )}
       {definition.cableManagement && (
         <CableManagementSection instance={instance} definition={definition} />
       )}

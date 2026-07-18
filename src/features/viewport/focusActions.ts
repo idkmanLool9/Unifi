@@ -9,6 +9,7 @@ import {
 } from './cameraFocus';
 import { resolveEndpoint, type Vec3 } from '@/features/cables/anchors';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { poseForEndpoint } from '@/features/devices/instancePose';
 import { railHeight } from '@/features/rack/rackConstants';
 import { deepestDeviceDepthMm, rackGeometryFor } from '@/features/rack/rackMath';
 import { useCableStore, type CableEnd } from '@/stores/cableStore';
@@ -91,7 +92,13 @@ export function focusPort(end: CableEnd, closeUp = false): void {
   const instance = ctx.instances.find((i) => i.id === end.deviceInstanceId);
   const definition = instance && getDevice(instance.definitionId);
   if (!instance || !definition) return fitRack();
-  const endpoint = resolveEndpoint(definition, instance, ctx.geometry, end.portRef);
+  const endpoint = resolveEndpoint(
+    definition,
+    instance,
+    ctx.geometry,
+    end.portRef,
+    poseForEndpoint(instance, ctx.instances, ctx.geometry),
+  );
   if (!endpoint) return fitRack();
   dispatch(
     portFocusPose(
@@ -113,7 +120,13 @@ export function focusCable(cableId: string): void {
       const instance = ctx.instances.find((i) => i.id === end.deviceInstanceId);
       const definition = instance && getDevice(instance.definitionId);
       return instance && definition
-        ? resolveEndpoint(definition, instance, ctx.geometry, end.portRef)
+        ? resolveEndpoint(
+            definition,
+            instance,
+            ctx.geometry,
+            end.portRef,
+            poseForEndpoint(instance, ctx.instances, ctx.geometry),
+          )
         : null;
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);

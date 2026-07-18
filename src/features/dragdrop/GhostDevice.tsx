@@ -4,9 +4,16 @@ import { useFrame } from '@react-three/fiber';
 import { DeviceModel } from '@/features/devices/DeviceModel';
 import { MountingHardware } from '@/features/devices/MountingHardware';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { instancePose } from '@/features/devices/instancePose';
 import { U_METERS, RACK_DIMS } from '@/features/rack/rackConstants';
-import { devicePlacement, uSlotY, type RackGeometry } from '@/features/rack/rackMath';
-import { useDragStore } from '@/stores/dragStore';
+import {
+  devicePlacement,
+  uSlotY,
+  type DevicePose,
+  type RackGeometry,
+} from '@/features/rack/rackMath';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
+import { useDragStore, type DragTarget } from '@/stores/dragStore';
 
 /**
  * Real-time ghost preview inside the rack group. Renders the actual
@@ -32,6 +39,43 @@ export function GhostDevice({ geometry }: { geometry: RackGeometry }) {
   const target = useDragStore((s) => s.target);
   if (!source || !target) return null;
   return <GhostBody geometry={geometry} definitionId={source.definitionId} />;
+}
+
+/** Pose the drop would produce: rails snap, or a spot on a shelf deck. */
+function ghostPose(
+  definitionId: string,
+  target: DragTarget,
+  drag: { source: { kind: string; instanceId?: string } | null },
+  geometry: RackGeometry,
+): DevicePose | null {
+  const definition = getDevice(definitionId);
+  if (!definition) return null;
+  if (target.surface) {
+    const instances = useDeviceInstancesStore.getState().instances;
+    const rotationDeg =
+      (drag.source?.kind === 'instance' &&
+        instances.find((i) => i.id === drag.source?.instanceId)?.surface
+          ?.rotationDeg) ||
+      0;
+    return instancePose(
+      {
+        id: '__ghost__',
+        definitionId,
+        startU: target.startU,
+        facing: target.facing,
+        visible: true,
+        surface: {
+          shelfId: target.surface.shelfId,
+          xMm: target.surface.xMm,
+          zMm: target.surface.zMm,
+          rotationDeg,
+        },
+      },
+      instances,
+      geometry,
+    );
+  }
+  return devicePlacement(definition, target.startU, target.facing, geometry);
 }
 
 function GhostBody({
@@ -97,12 +141,9 @@ function GhostBody({
       }
     });
 
-    const { position, rotationY } = devicePlacement(
-      definition,
-      drag.target.startU,
-      drag.target.facing,
-      geometry,
-    );
+    const pose = ghostPose(definition.id, drag.target, drag, geometry);
+    if (!pose) return;
+    const { position, rotationY } = pose;
     if (!placedOnce.current) {
       group.position.set(...position);
       group.rotation.y = rotationY;
@@ -125,9 +166,24 @@ function GhostBody({
           <MountingHardware definition={definition} geometry={geometry} />
         </group>
       </group>
-      <RailSpanAccents geometry={geometry} definitionUnits={definition.rackUnits} material={accentMaterial} />
+      <RailSpanAccentsWhenOnRails
+        geometry={geometry}
+        definitionUnits={definition.rackUnits}
+        material={accentMaterial}
+      />
     </>
   );
+}
+
+/** Rail accents only apply to rail drops — shelf spots have no U span. */
+function RailSpanAccentsWhenOnRails(props: {
+  geometry: RackGeometry;
+  definitionUnits: number;
+  material: MeshStandardMaterial;
+}) {
+  const onShelf = useDragStore((s) => s.target?.surface !== undefined);
+  if (onShelf) return null;
+  return <RailSpanAccents {...props} />;
 }
 
 /** Translucent bars over the rails marking the occupied U range. */

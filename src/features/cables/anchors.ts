@@ -6,7 +6,12 @@ import {
   CONNECTOR_SIZES,
   type PhysicalPort,
 } from '@/features/devices/hardware/physicalPorts';
-import { devicePlacement, MM_TO_M, type RackGeometry } from '@/features/rack/rackMath';
+import {
+  devicePlacement,
+  MM_TO_M,
+  type DevicePose,
+  type RackGeometry,
+} from '@/features/rack/rackMath';
 import type { DeviceDefinition } from '@/features/devices/deviceSchema';
 import type { RackOrientation } from '@/types';
 
@@ -94,30 +99,42 @@ export function portFace(
   };
 }
 
-/** Rotates a device-local point by the device's facing yaw (0 or π). */
-const faceLocal = (
-  point: Vec3,
-  rotationY: number,
-): Vec3 => {
-  if (rotationY === 0) return point;
-  // Facing 'rear' is exactly π: (x, z) -> (-x, -z).
-  return [-point[0], point[1], -point[2]];
+/** cos/sin with float noise snapped away, so the right angles every
+ *  rack pose is built from (0, ±π/2, π) stay bit-exact. */
+const exactTrig = (rotationY: number): { cos: number; sin: number } => {
+  const cos = Math.cos(rotationY);
+  const sin = Math.sin(rotationY);
+  return {
+    cos: Math.abs(cos) < 1e-12 ? 0 : cos,
+    sin: Math.abs(sin) < 1e-12 ? 0 : sin,
+  };
 };
 
-/** A device-local mm point lifted into rack-local meters. */
+/** Rotates a device-local point by the device's world yaw. Facing
+ *  'rear' is exactly π; devices on shelves carry arbitrary yaw. */
+const yawLocal = (point: Vec3, rotationY: number): Vec3 => {
+  if (rotationY === 0) return point;
+  const { cos, sin } = exactTrig(rotationY);
+  return [
+    cos * point[0] + sin * point[2],
+    point[1],
+    -sin * point[0] + cos * point[2],
+  ];
+};
+
+/** A device-local mm point lifted into rack-local meters. Pass `pose`
+ *  for devices whose placement isn't rail-derived (shelf children). */
 export function deviceLocalToRackLocal(
   pointMm: Vec3,
   definition: DeviceDefinition,
   instance: { startU: number; facing: RackOrientation },
   geometry: RackGeometry,
+  pose?: DevicePose,
 ): Vec3 {
-  const { position, rotationY } = devicePlacement(
-    definition,
-    instance.startU,
-    instance.facing,
-    geometry,
-  );
-  const local = faceLocal(
+  const { position, rotationY } =
+    pose ??
+    devicePlacement(definition, instance.startU, instance.facing, geometry);
+  const local = yawLocal(
     [pointMm[0] * MM_TO_M, pointMm[1] * MM_TO_M, pointMm[2] * MM_TO_M],
     rotationY,
   );
@@ -139,12 +156,14 @@ export interface ResolvedEndpoint {
 }
 
 /** Resolves a port ref on a placed device to world-attachable points.
- *  GLB-calibrated connector positions override metadata when present. */
+ *  GLB-calibrated connector positions override metadata when present.
+ *  Pass `pose` for shelf-standing devices (arbitrary yaw). */
 export function resolveEndpoint(
   definition: DeviceDefinition,
   instance: { startU: number; facing: RackOrientation },
   geometry: RackGeometry,
   portRef: string,
+  pose?: DevicePose,
 ): ResolvedEndpoint | null {
   const port = findPhysicalPort(definition, portRef);
   if (!port) return null;
@@ -164,23 +183,27 @@ export function resolveEndpoint(
       ]
     : port.anchorMm;
 
+  const resolvedPose =
+    pose ??
+    devicePlacement(definition, instance.startU, instance.facing, geometry);
   const surface = deviceLocalToRackLocal(
     positionMm,
     definition,
     instance,
     geometry,
+    resolvedPose,
   );
   const anchor = deviceLocalToRackLocal(
     anchorMm,
     definition,
     instance,
     geometry,
+    resolvedPose,
   );
-  const flip = instance.facing === 'front' ? 1 : -1;
 
   // The exit is port-local: authored direction wins, default is straight
   // out of the face; the port's authored rotation swings it, then the
-  // facing yaw (x/z flip) lifts it into rack space.
+  // device's world yaw lifts it into rack space.
   let localExit: Vec3 = [0, 0, outwardLocal];
   if (port.exitDirMm) {
     const [ex, ey, ez] = port.exitDirMm;
@@ -188,11 +211,12 @@ export function resolveEndpoint(
     if (length > 1e-6) localExit = [ex / length, ey / length, ez / length];
   }
   const rotated = rotatePortVector(localExit, port.rotationDeg);
-  // `+ 0` keeps flipped zero components from becoming -0.
+  const { cos, sin } = exactTrig(resolvedPose.rotationY);
+  // `+ 0` keeps rotated zero components from becoming -0.
   const exitDir: Vec3 = [
-    flip * rotated[0] + 0,
+    cos * rotated[0] + sin * rotated[2] + 0,
     rotated[1] + 0,
-    flip * rotated[2] + 0,
+    -sin * rotated[0] + cos * rotated[2] + 0,
   ];
   return {
     port,

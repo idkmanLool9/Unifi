@@ -24,6 +24,8 @@ import {
   resolveEndpoint,
   type Vec3,
 } from './anchors';
+import { plugQuaternion } from './Rj45Plug';
+import { poseForEndpoint } from '@/features/devices/instancePose';
 import {
   calibratedPort,
   useCalibrationStore,
@@ -97,6 +99,8 @@ const HIT_SCALE = 1.2;
 
 const TMP_COLOR = new Color();
 const TMP_MATRIX = new Matrix4();
+const TMP_POS = new Vector3();
+const TMP_SCALE = new Vector3();
 const BLACK = new Color(0, 0, 0);
 
 interface PortTarget {
@@ -114,10 +118,13 @@ interface PortTarget {
   /** Glow volume footprint (the cavity, not the housing), meters. */
   glowW: number;
   glowH: number;
-  /** Rack-local z of the visible opening face. */
-  faceZ: number;
-  /** Outward normal sign of the panel in rack-local space. */
-  out: 1 | -1;
+  /** Unit outward normal of the opening in rack-local space —
+   *  arbitrary for devices standing (rotated) on shelves. */
+  exitDir: Vec3;
+  /** Center of the visible opening face, rack-local meters. */
+  facePos: Vec3;
+  /** Orients +Z-built marker geometry along exitDir. */
+  quaternion: ReturnType<typeof plugQuaternion>;
   /** Base glow color: the port's Etherlighting hue, else selection blue. */
   color: string;
   deviceName: string;
@@ -159,19 +166,24 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
       const procedural =
         definition.modelDetail === 'chassis' ||
         assetAvailability[deviceModelUrl(definition)] !== 'available';
+      const pose = poseForEndpoint(instance, instances, geometry);
       for (const port of allPhysicalPorts(definition)) {
         if (!port.visible) continue;
-        const resolved = resolveEndpoint(definition, instance, geometry, port.ref);
+        const resolved = resolveEndpoint(
+          definition,
+          instance,
+          geometry,
+          port.ref,
+          pose,
+        );
         if (!resolved) continue;
         const face = portFace(definition, port);
         const calibrated = calibratedPort(definition.id, port.ref) !== null;
-        const outwardLocal = port.location === 'front' ? 1 : -1;
-        const flip = instance.facing === 'front' ? 1 : -1;
-        const out = (outwardLocal * flip) as 1 | -1;
         const widthM = face.widthMm * MM_TO_M;
         const heightM = face.heightMm * MM_TO_M;
         // Lift of the opening face above the resolved surface plane.
         const faceLift = calibrated ? 0.0002 : procedural ? 0.0022 : 0.0004;
+        const exitDir = resolved.exitDir;
         list.push({
           end: { deviceInstanceId: instance.id, portRef: port.ref },
           port,
@@ -184,8 +196,13 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
           // GLB cavities span (almost) the whole connector body.
           glowW: procedural ? widthM * 0.74 : widthM * 0.94,
           glowH: procedural ? heightM * 0.6 : heightM * 0.94,
-          faceZ: resolved.surface[2] + out * faceLift,
-          out,
+          exitDir,
+          facePos: [
+            resolved.surface[0] + exitDir[0] * faceLift,
+            resolved.surface[1] + exitDir[1] * faceLift,
+            resolved.surface[2] + exitDir[2] * faceLift,
+          ],
+          quaternion: plugQuaternion(exitDir),
           color:
             portGlowColor(
               useEtherlightingStore.getState().settings,
@@ -236,11 +253,14 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
     if (!mesh) return;
     mesh.raycast = () => {}; // hit boxes own picking
     targets.forEach((t, i) => {
-      TMP_MATRIX.makeScale(t.glowW, t.glowH, GLOW_DEPTH);
-      TMP_MATRIX.setPosition(
-        t.position[0],
-        t.position[1],
-        t.faceZ - t.out * (GLOW_DEPTH / 2),
+      TMP_MATRIX.compose(
+        TMP_POS.set(
+          t.facePos[0] - t.exitDir[0] * (GLOW_DEPTH / 2),
+          t.facePos[1] - t.exitDir[1] * (GLOW_DEPTH / 2),
+          t.facePos[2] - t.exitDir[2] * (GLOW_DEPTH / 2),
+        ),
+        t.quaternion,
+        TMP_SCALE.set(t.glowW, t.glowH, GLOW_DEPTH),
       );
       mesh.setMatrixAt(i, TMP_MATRIX);
       mesh.setColorAt(i, BLACK);
@@ -329,12 +349,12 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
     const src = {
       surface: source.position,
       anchor: source.anchor,
-      exitDir: [0, 0, source.out] as Vec3,
+      exitDir: source.exitDir,
     };
     const dst = {
       surface: hovered.position,
       anchor: hovered.anchor,
-      exitDir: [0, 0, hovered.out] as Vec3,
+      exitDir: hovered.exitDir,
     };
     const typeId = hoverInfo.reason.suggestedTypes[0];
     const spec = typeId ? CABLE_CATALOG[typeId] : undefined;
@@ -397,10 +417,11 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
           geometry={UNIT_BOX}
           material={HIT_MATERIAL}
           position={[
-            target.position[0],
-            target.position[1],
-            target.position[2] + target.out * 0.003,
+            target.position[0] + target.exitDir[0] * 0.003,
+            target.position[1] + target.exitDir[1] * 0.003,
+            target.position[2] + target.exitDir[2] * 0.003,
           ]}
+          quaternion={target.quaternion}
           scale={[
             target.widthM * HIT_SCALE,
             target.heightM * HIT_SCALE,
@@ -424,9 +445,9 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
       {hovered && (
         <Html
           position={[
-            hovered.position[0],
+            hovered.position[0] + hovered.exitDir[0] * 0.004,
             hovered.position[1] + hovered.heightM / 2 + 0.02,
-            hovered.position[2] + hovered.out * 0.004,
+            hovered.position[2] + hovered.exitDir[2] * 0.004,
           ]}
           center
           style={{ pointerEvents: 'none', whiteSpace: 'nowrap' }}
@@ -666,8 +687,14 @@ function hoverAnchor(end: CableEnd, geometry: RackGeometry): Vec3 | null {
     .instances.find((i) => i.id === end.deviceInstanceId);
   const definition = instance ? getDevice(instance.definitionId) : undefined;
   if (!instance || !definition) return null;
+  const instances = useDeviceInstancesStore.getState().instances;
   return (
-    resolveEndpoint(definition, instance, geometry, end.portRef)?.anchor ??
-    null
+    resolveEndpoint(
+      definition,
+      instance,
+      geometry,
+      end.portRef,
+      poseForEndpoint(instance, instances, geometry),
+    )?.anchor ?? null
   );
 }

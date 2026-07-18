@@ -31,6 +31,8 @@ export interface DragTarget {
   rackId: string;
   startU: number;
   facing: RackOrientation;
+  /** Present when dropping onto a shelf deck instead of the rails. */
+  surface?: { shelfId: string; xMm: number; zMm: number };
 }
 
 export interface DropOutcome {
@@ -142,6 +144,33 @@ export const useDragStore = create<DragState>()((set, get) => ({
       target.startU === endU
         ? `U${target.startU}`
         : `U${target.startU}–U${endU}`;
+
+    // Shelf drops: stand the device on the deck at the pointed spot.
+    if (target.surface) {
+      const { shelfId, xMm, zMm } = target.surface;
+      const result =
+        source.kind === 'instance' && !source.duplicate
+          ? devices.moveToShelf(source.instanceId, shelfId, xMm, zMm)
+          : devices.addDeviceToShelf(source.definitionId, shelfId, xMm, zMm);
+      if (!result.ok) {
+        toast({
+          variant: 'warning',
+          title: 'Can’t place on shelf',
+          description: result.message,
+        });
+        return finish({ committed: false });
+      }
+      useSelectionStore.getState().selectDevice(result.instanceId);
+      toast({
+        variant: 'success',
+        title:
+          source.kind === 'instance' && !source.duplicate
+            ? `${name} moved`
+            : `${name} placed`,
+        description: `Standing on the shelf at ${range}.`,
+      });
+      return finish({ committed: true, instanceId: result.instanceId });
+    }
 
     if (source.kind === 'instance' && !source.duplicate) {
       const result = devices.moveDevice(source.instanceId, target.startU);

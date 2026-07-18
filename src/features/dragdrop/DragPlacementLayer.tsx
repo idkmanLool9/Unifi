@@ -3,9 +3,23 @@ import { Mesh, Raycaster, Vector2, Vector3 } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { chooseSlot, snapStartU } from './snapping';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { instancePose } from '@/features/devices/instancePose';
 import { railHeight, RACK_DIMS } from '@/features/rack/rackConstants';
-import { type RackGeometry } from '@/features/rack/rackMath';
-import { placementContext, useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
+import {
+  isShelfDefinition,
+  rotatedFootprintMm,
+  shelfDeckRect,
+  validateSurfacePlacement,
+  MM_TO_M,
+  SHELF_DECK_TOP_MM,
+  type RackGeometry,
+  type SurfacePlacement,
+} from '@/features/rack/rackMath';
+import {
+  placementContext,
+  shelfChildren,
+  useDeviceInstancesStore,
+} from '@/stores/deviceInstancesStore';
 import { useDragStore } from '@/stores/dragStore';
 import type { RackConfig, RackOrientation } from '@/types';
 
@@ -47,6 +61,32 @@ function PlacementSurfaces({ rack, geometry }: DragPlacementLayerProps) {
   const frontRef = useRef<Mesh>(null);
   const rearRef = useRef<Mesh>(null);
   const heldStartU = useRef<number | null>(null);
+  const shelfMeshes = useRef(new Map<string, Mesh>());
+  const instances = useDeviceInstancesStore((s) => s.instances);
+
+  // One raycast quad per mounted shelf deck (desktop devices only land
+  // on shelves; rack gear ignores these and snaps to the rails).
+  const shelves = useMemo(
+    () =>
+      instances
+        .map((instance) => {
+          const definition = getDevice(instance.definitionId);
+          if (!definition || !isShelfDefinition(definition)) return null;
+          const pose = instancePose(instance, instances, geometry);
+          if (!pose) return null;
+          const deck = shelfDeckRect(definition);
+          return {
+            id: instance.id,
+            pose,
+            deckW: deck.wMm * MM_TO_M,
+            deckD: deck.dMm * MM_TO_M,
+            deckLocalY:
+              (-definition.heightMm / 2 + SHELF_DECK_TOP_MM) * MM_TO_M,
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null),
+    [instances, geometry],
+  );
 
   const railH = railHeight(rack.units);
   const planeW = RACK_DIMS.opening + 2 * CATCH_MARGIN_X;
@@ -78,6 +118,97 @@ function PlacementSurfaces({ rack, geometry }: DragPlacementLayerProps) {
       -((drag.pointer.y - rect.top) / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(ndc, camera);
+
+    // Desktop (non-rack) hardware lands on shelf decks when the pointer
+    // is over one; the rails remain the fallback surface.
+    if (definition.mountingStandard !== 'eia-310' && shelfMeshes.current.size > 0) {
+      const deckHits = raycaster.intersectObjects(
+        [...shelfMeshes.current.values()],
+        false,
+      );
+      const deckHit = deckHits[0];
+      if (deckHit) {
+        const shelfId = deckHit.object.userData.shelfId as string;
+        const state = useDeviceInstancesStore.getState();
+        const shelfInstance = state.instances.find((i) => i.id === shelfId);
+        const shelfDefinition =
+          shelfInstance && getDevice(shelfInstance.definitionId);
+        if (shelfInstance && shelfDefinition) {
+          local.copy(deckHit.point);
+          deckHit.object.parent!.worldToLocal(local);
+          const stepMm = drag.precise ? 1 : 5;
+          const source = drag.source;
+          const rotationDeg =
+            source.kind === 'instance'
+              ? (state.instances.find((i) => i.id === source.instanceId)
+                  ?.surface?.rotationDeg ?? 0)
+              : 0;
+          const deck = shelfDeckRect(shelfDefinition);
+          const foot = rotatedFootprintMm(
+            definition.widthMm,
+            definition.depthMm,
+            rotationDeg,
+          );
+          const clampAxis = (valueMm: number, spanMm: number) => {
+            const half = Math.max(0, spanMm / 2);
+            return Math.min(half, Math.max(-half, valueMm));
+          };
+          const xMm =
+            Math.round(
+              clampAxis(local.x / MM_TO_M, deck.wMm - foot.wMm) / stepMm,
+            ) * stepMm;
+          const zMm =
+            Math.round(
+              clampAxis(local.z / MM_TO_M, deck.dMm - foot.dMm) / stepMm,
+            ) * stepMm;
+          const surface: SurfacePlacement = {
+            shelfId,
+            xMm,
+            zMm,
+            rotationDeg,
+          };
+          const ignoreId =
+            drag.source.kind === 'instance' && !drag.source.duplicate
+              ? drag.source.instanceId
+              : undefined;
+          const check = validateSurfacePlacement(
+            definition,
+            surface,
+            shelfDefinition,
+            shelfChildren(state.instances, shelfId),
+            ignoreId,
+          );
+          const validation = check.ok
+            ? ({ ok: true, startU: shelfInstance.startU } as const)
+            : ({
+                ok: false,
+                reason: 'occupied',
+                message: check.message,
+              } as const);
+          const target = drag.target;
+          if (
+            !target?.surface ||
+            target.surface.shelfId !== shelfId ||
+            target.surface.xMm !== xMm ||
+            target.surface.zMm !== zMm ||
+            drag.validation?.ok !== validation.ok
+          ) {
+            drag.setTarget(
+              {
+                rackId: rack.id,
+                startU: shelfInstance.startU,
+                facing: shelfInstance.facing,
+                surface: { shelfId, xMm, zMm },
+              },
+              validation,
+            );
+          }
+          heldStartU.current = null;
+          return;
+        }
+      }
+    }
+
     const hits = raycaster.intersectObjects([front, rear], false);
     const hit = hits[0];
 
@@ -121,6 +252,7 @@ function PlacementSurfaces({ rack, geometry }: DragPlacementLayerProps) {
     const target = drag.target;
     if (
       !target ||
+      target.surface !== undefined ||
       target.startU !== chosenU ||
       target.facing !== facing ||
       target.rackId !== rack.id ||
@@ -139,6 +271,27 @@ function PlacementSurfaces({ rack, geometry }: DragPlacementLayerProps) {
               for Mesh.raycast; colorWrite/depthWrite keep it invisible). */}
           <meshBasicMaterial side={2} colorWrite={false} depthWrite={false} />
         </mesh>
+      ))}
+      {/* Shelf deck catch surfaces (desktop hardware lands here). */}
+      {shelves.map((shelf) => (
+        <group
+          key={shelf.id}
+          position={shelf.pose.position}
+          rotation={[0, shelf.pose.rotationY, 0]}
+        >
+          <mesh
+            position={[0, shelf.deckLocalY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            userData={{ shelfId: shelf.id }}
+            ref={(mesh) => {
+              if (mesh) shelfMeshes.current.set(shelf.id, mesh);
+              else shelfMeshes.current.delete(shelf.id);
+            }}
+          >
+            <planeGeometry args={[shelf.deckW, shelf.deckD]} />
+            <meshBasicMaterial side={2} colorWrite={false} depthWrite={false} />
+          </mesh>
+        </group>
       ))}
     </group>
   );
