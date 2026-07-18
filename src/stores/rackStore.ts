@@ -30,7 +30,7 @@ export const useRackStore = create<RackState>()(
           railMode: 'auto',
           railSpacingMm: defaultRailSpacingMm(getProfile(DEFAULT_PROFILE_ID)),
           units,
-          finish: 'graphite',
+          finish: 'steel',
           orientation: 'front',
           showUnitNumbers: true,
           showRearPosts: true,
@@ -47,11 +47,14 @@ export const useRackStore = create<RackState>()(
     }),
     {
       name: RACK_STORE_KEY,
-      version: 3,
+      version: 4,
       partialize: (s) => ({ rack: s.rack }),
       // v1 racks predate rack profiles: adopt the default open frame at
       // the legacy 700mm rail spacing. v2 racks predate rail modes: keep
-      // their spacing by staying manual.
+      // their spacing by staying manual. v3→v4: the default finish became
+      // the Ubiquiti-matched silver, so racks still on the old dark
+      // default adopt it (deliberately picked finishes are unaffected —
+      // this only lifts the legacy default).
       migrate: (persisted) => {
         const state = persisted as { rack?: RackConfig | null };
         if (state?.rack && state.rack.profileId === undefined) {
@@ -63,6 +66,9 @@ export const useRackStore = create<RackState>()(
         }
         if (state?.rack && state.rack.railMode === undefined) {
           state.rack = { ...state.rack, railMode: 'manual' };
+        }
+        if (state?.rack && state.rack.finish === 'graphite') {
+          state.rack = { ...state.rack, finish: 'steel' };
         }
         return state;
       },

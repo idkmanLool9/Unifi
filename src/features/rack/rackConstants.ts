@@ -71,13 +71,15 @@ export const RACK_FINISHES: Record<RackFinishId, RackFinish> = {
   },
   steel: {
     id: 'steel',
-    label: 'Steel',
+    label: 'Silver',
     painted: false,
-    frame: '#9aa1a9',
-    upright: '#bfc5cc',
-    ink: 'rgba(22, 26, 32, 0.62)',
-    hole: '#4e555e',
-    swatch: '#b4bac2',
+    // Brushed aluminium tuned to the Ubiquiti device silver so the frame
+    // reads as one family with the gear mounted in it.
+    frame: '#b7bcc3',
+    upright: '#ccd0d6',
+    ink: 'rgba(22, 26, 32, 0.6)',
+    hole: '#464c54',
+    swatch: '#c9cdd3',
   },
   sand: {
     id: 'sand',
