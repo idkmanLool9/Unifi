@@ -139,35 +139,35 @@ export function DeviceModel({ definition, instanceId }: DeviceModelProps) {
   const url = deviceModelUrl(definition);
   const availability = useAssetAvailability(url);
 
-  if (availability !== 'available') {
-    // Placeholder chassis + the full metadata-driven hardware layer.
-    return (
-      <>
-        <DevicePlaceholder definition={definition} />
-        <HardwareLayer definition={definition} mode="full" instanceId={instanceId} />
-      </>
-    );
-  }
+  // The complete parametric device: placeholder chassis + every
+  // metadata-driven hardware system (ports, LEDs, displays, fans). This
+  // is used when there is no GLB, AND as the error fallback when a GLB is
+  // expected but fails to load — deleted, 404 behind a stale cache, or
+  // corrupt — so a device never degrades to a bare chassis with no ports.
+  const fullDevice = (
+    <>
+      <DevicePlaceholder definition={definition} />
+      <HardwareLayer definition={definition} mode="full" instanceId={instanceId} />
+    </>
+  );
+
+  if (availability !== 'available') return fullDevice;
 
   // GLBs marked 'chassis' get the full hardware layer; detailed models
   // ('full', the default) only receive additive overlays (Etherlighting).
+  // Both the model and its overlay live inside the error boundary, so a
+  // failed load swaps in the full parametric device — not a bare chassis.
   return (
-    <>
-      <ModelErrorBoundary
-        key={url}
-        label={`model ${url}`}
-        fallback={<DevicePlaceholder definition={definition} />}
-      >
-        <Suspense fallback={<DevicePlaceholder definition={definition} />}>
-          <LoadedModel url={url} definition={definition} />
-        </Suspense>
-      </ModelErrorBoundary>
+    <ModelErrorBoundary key={url} label={`model ${url}`} fallback={fullDevice}>
+      <Suspense fallback={<DevicePlaceholder definition={definition} />}>
+        <LoadedModel url={url} definition={definition} />
+      </Suspense>
       <HardwareLayer
         definition={definition}
         mode={definition.modelDetail === 'chassis' ? 'full' : 'overlay'}
         instanceId={instanceId}
       />
-    </>
+    </ModelErrorBoundary>
   );
 }
 
