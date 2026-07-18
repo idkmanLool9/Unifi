@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { BoxGeometry, Group, MathUtils, Mesh } from 'three';
 import {
   calibratePorts,
   detectConnectors,
+  meshBoundsLocal,
   primeCalibration,
   type MeshBoundsMm,
 } from './connectorCalibration';
@@ -47,6 +49,45 @@ const PRO_MAX_BOUNDS: MeshBoundsMm[] = [
 ];
 
 afterEach(() => primeCalibration(proMax.id, null));
+
+describe('meshBoundsLocal yaw handling', () => {
+  /** 20×10×10 mm box centered at (50, 0, 30) mm in raw model space. */
+  const model = () => {
+    const root = new Group();
+    const mesh = new Mesh(new BoxGeometry(0.02, 0.01, 0.01));
+    mesh.position.set(0.05, 0, 0.03);
+    root.add(mesh);
+    return root;
+  };
+  const transform = (yawDeg: number) => ({
+    scale: 1,
+    rotationDeg: [0, yawDeg, 0] as [number, number, number],
+    offsetMm: [0, 0, 0] as [number, number, number],
+  });
+  /** Ground truth: the render rotates the mesh center by Ry(yaw). */
+  const rendered = (yawDeg: number): [number, number] => {
+    const t = MathUtils.degToRad(yawDeg);
+    return [
+      50 * Math.cos(t) + 30 * Math.sin(t),
+      -50 * Math.sin(t) + 30 * Math.cos(t),
+    ];
+  };
+
+  it.each([90, -90, 180, 0])(
+    'matches the rendered transform for a %d° yaw',
+    (yawDeg) => {
+      const [bounds] = meshBoundsLocal(model(), transform(yawDeg));
+      const [ex, ez] = rendered(yawDeg);
+      expect(bounds.centerMm[0]).toBeCloseTo(ex, 4);
+      expect(bounds.centerMm[1]).toBeCloseTo(0, 4);
+      expect(bounds.centerMm[2]).toBeCloseTo(ez, 4);
+      // Odd quarter turns swap the horizontal extents.
+      const swapped = Math.abs(yawDeg) === 90;
+      expect(bounds.sizeMm[0]).toBeCloseTo(swapped ? 10 : 20, 4);
+      expect(bounds.sizeMm[2]).toBeCloseTo(swapped ? 20 : 10, 4);
+    },
+  );
+});
 
 describe('connector detection', () => {
   it('finds the three RJ45 bank strips and both SFP cages', () => {

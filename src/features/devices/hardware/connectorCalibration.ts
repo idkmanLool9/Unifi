@@ -57,6 +57,8 @@ export function meshBoundsLocal(
     typeof transform.scale === 'number'
       ? [transform.scale, transform.scale, transform.scale]
       : transform.scale;
+  // Number of +90° yaw steps the render applies (rotationDeg[1] / 90,
+  // normalized into [0, 4)).
   const yawQuarter =
     Math.round(((transform.rotationDeg[1] % 360) + 360) / 90) % 4;
 
@@ -73,17 +75,9 @@ export function meshBoundsLocal(
     let min: number[] = [b.min.x * scale[0], b.min.y * scale[1], b.min.z * scale[2]];
     let max: number[] = [b.max.x * scale[0], b.max.y * scale[1], b.max.z * scale[2]];
     for (let q = 0; q < yawQuarter; q++) {
-      // yaw -90 per step maps (x, z) -> (-z, x); re-sort the box.
-      const nextMin = [
-        Math.min(-min[2], -max[2]),
-        min[1],
-        Math.min(min[0], max[0]),
-      ];
-      const nextMax = [
-        Math.max(-min[2], -max[2]),
-        max[1],
-        Math.max(min[0], max[0]),
-      ];
+      // One +90° yaw step maps (x, z) -> (z, -x); re-sort the box.
+      const nextMin = [min[2], min[1], -max[0]];
+      const nextMax = [max[2], max[1], -min[0]];
       min = nextMin;
       max = nextMax;
     }

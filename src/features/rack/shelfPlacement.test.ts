@@ -194,7 +194,7 @@ describe('occupancy and cables with shelf children', () => {
     expect(endpoint.exitDir[0]).toBeCloseTo(1, 5);
     expect(Math.abs(endpoint.exitDir[2])).toBeLessThan(1e-5);
     // And the port's world position rotates with the chassis: the WAN
-    // port (device-local x = -40) lands offset along +Z from center.
-    expect(endpoint.surface[2] - pose.position[2]).toBeGreaterThan(0.03);
+    // port (device-local x = +40) lands offset along -Z from center.
+    expect(endpoint.surface[2] - pose.position[2]).toBeLessThan(-0.03);
   });
 });

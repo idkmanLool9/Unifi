@@ -344,32 +344,49 @@ export const UBIQUITI_DEVICES: DeviceDefinition[] = [
     description:
       'Compact cloud gateway for small networks — 2.5GbE WAN, four GbE LAN ports and full UniFi application support. Desktop form factor, sits on a rack shelf.',
     tags: ['gateway', 'cloud gateway', 'desktop', 'router', 'unifi'],
+    // The shipped GLB is authored with the port face toward -X and the
+    // width along Z; +90° yaw brings the ports onto the +Z front face,
+    // then the offset centers the measured bounds on the origin.
+    modelTransform: {
+      scale: 1,
+      rotationDeg: [0, 90, 0],
+      offsetMm: [-0.83, -15.34, -0.38],
+    },
+    // Physical layout mirrors the shipped GLB: LAN 1-4 left to right,
+    // the 2.5G WAN as the rightmost RJ45, USB-C power on the far right.
     ports: [
-      {
-        id: 'wan',
-        type: 'rj45',
-        count: 1,
-        label: 'WAN 2.5G',
-        location: 'front',
-        positionMm: [-40, 0, 63.7],
-        speedGbps: 2.5,
-        etherlighting: true,
-      },
       {
         id: 'lan',
         type: 'rj45',
         count: 4,
         label: 'LAN',
         location: 'front',
-        positionMm: [-12, 0, 63.7],
+        positionMm: [-43.5, 0, 63.7],
         pitchMm: 18.5,
         speedGbps: 1,
+        etherlighting: true,
+      },
+      {
+        id: 'wan',
+        type: 'rj45',
+        count: 1,
+        label: 'WAN 2.5G',
+        location: 'front',
+        positionMm: [40, 0, 63.7],
+        speedGbps: 2.5,
         etherlighting: true,
       },
     ],
     power: {
       connectors: [
-        { id: 'usbc', type: 'external-adapter', count: 1, location: 'rear', label: 'USB-C power' },
+        {
+          id: 'usbc',
+          type: 'external-adapter',
+          count: 1,
+          location: 'front',
+          positionMm: [46, 0, 63.7],
+          label: 'USB-C power',
+        },
       ],
       sources: ['ac'],
     },
