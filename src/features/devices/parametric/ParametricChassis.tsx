@@ -676,31 +676,33 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
           </>
         );
       }
-      // Cantilever shelf: perforated deck at the BOTTOM of the unit
-      // (devices sit on it), a full-height front face between the
-      // ears, and tapered side gussets standing on the deck — tall at
-      // the front, sloping to a thin rear tail.
+      // Cantilever shelf: perforated deck at the BOTTOM of the unit,
+      // starting flush at the faceplate so the whole depth is usable
+      // surface. The front is OPEN — just a shallow folded lip under
+      // the deck's leading edge (like the real hardware) — with the
+      // tapered side gussets carrying the load.
       const deckT = 0.0022;
       const deckBase = (-spec.heightMm / 2 + 4) * MM;
       const deckY = deckT / 2;
       const earW = (spec.ears?.widthMm ?? 0) * MM;
-      const apronH = spec.heightMm * MM - 0.005;
+      const deckLen = d * 0.97;
+      const deckZ = d / 2 - 0.001 - deckLen / 2;
       return (
         <group position={[0, deckBase, 0]}>
-          <mesh position={[0, deckY, -d * 0.02]} material={face} castShadow receiveShadow>
-            <boxGeometry args={[w * 0.985, deckT, d * 0.94]} />
+          <mesh position={[0, deckY, deckZ]} material={face} castShadow receiveShadow>
+            <boxGeometry args={[w * 0.985, deckT, deckLen]} />
           </mesh>
           {spec.deck!.perforated && <DeckPerforation spec={spec} yM={deckY + deckT / 2 + 0.0003} />}
           {spec.deck!.slotsMm.map((slot, i) => (
             <DeckSlot key={i} slot={slot} yM={deckY + deckT / 2 + 0.0004} />
           ))}
-          {/* Front face rising from the deck between the mounting ears */}
+          {/* Shallow lip folding down from the deck's leading edge */}
           <mesh
-            position={[0, apronH / 2, d / 2 - 0.0015]}
+            position={[0, deckY - 0.0075, d / 2 - 0.0015]}
             material={face}
             castShadow
           >
-            <boxGeometry args={[w - 2 * earW - 0.002, apronH, 0.003]} />
+            <boxGeometry args={[w - 2 * earW - 0.002, 0.015, 0.003]} />
           </mesh>
           {/* Tapered side gussets (full height front, thin rear tail).
               Orientation is baked into the geometry: tall edge at its
@@ -710,7 +712,7 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
               key={s}
               geometry={skirtGeometry(spec.heightMm, spec.depthMm)}
               material={body}
-              position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckBase, d * 0.47]}
+              position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckBase, d * 0.485]}
               castShadow
             />
           ))}

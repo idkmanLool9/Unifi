@@ -236,8 +236,10 @@ export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
   const badgeSpots = freeIntervals(occupied, badgeLane, usableHalf);
   const badgeHome = badgeSpots.find(([a]) => a <= -usableHalf + 2) ?? widest(badgeSpots);
   const badgeH = Math.min(7, h * 0.2);
+  // Blank panels stay clean; shelves have no front face to print on
+  // (their front is the open deck edge).
   const badge =
-    kind === 'blank-panel' || badgeHome === null
+    kind === 'blank-panel' || kind === 'shelf' || badgeHome === null
       ? null
       : { xMm: badgeHome[0] + 4, yMm: badgeLane.yMm, heightMm: badgeH };
   const label =

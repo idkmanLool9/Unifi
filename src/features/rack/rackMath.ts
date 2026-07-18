@@ -93,7 +93,7 @@ export const rackHeightFor = (
 export type RailMode = 'auto' | 'manual';
 
 /** Working room behind a mounted shelf (cables of shelf devices), mm. */
-export const SHELF_REAR_CLEARANCE_MM = 140;
+export const SHELF_REAR_CLEARANCE_MM = 60;
 
 /** Deepest mounted device in millimeters, or null for an empty rack.
  *  Shelves demand extra rear clearance so the auto-sized rack never
