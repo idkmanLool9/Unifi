@@ -16,35 +16,32 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     modelNumber: 'PP-24K',
     category: 'accessories',
     rackUnits: 1,
-    depthMm: 77,
+    depthMm: 40,
     weightKg: 0.9,
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '1U keystone patch panel with 24 snap-in jack openings and an integrated rear cable-management tray.',
+      '1U keystone patch panel — 24 snap-in jacks with pass-through bodies terminated at the rear, plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
-    // Ships a real 3D model. The source GLB is 19"-wide but modeled ~1.35U
-    // tall (it bundles a rear cable tray), so a rack-width scale plus a
-    // small height compression to a clean 1U are baked into the asset's
-    // root node; the identity transform pins that in place so the auto
-    // importer's centering can't drift it.
-    modelTransform: {
-      scale: 1,
-      rotationDeg: [0, 0, 0],
-      offsetMm: [0, 0, 0],
-    },
     ports: [
       {
         id: 'keystone',
         type: 'keystone',
         count: 24,
         label: 'Keystone 1–24',
-        positionMm: [-205.8, 0, 37],
+        positionMm: [-205.8, 0, 20],
         pitchMm: 17.9,
       },
     ],
-    presentation: { faceplate: 'network', tone: 'dark', portsLabel: '24 openings' },
+    // Silver brushed-metal finish so it colour-matches Ubiquiti Pro gear
+    // (Dream Machine Pro, Pro Max) it typically shares a rack with.
+    presentation: {
+      faceplate: 'network',
+      tone: 'metal',
+      portsLabel: '24 openings',
+      styleKey: 'ubiquiti',
+    },
   }),
   defineDevice({
     id: 'gen-patch-48',

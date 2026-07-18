@@ -134,6 +134,18 @@ describe('manufacturer style presets', () => {
     expect(styleFor('Acme Networks', 'dark').id).toBe('generic-dark');
     expect(styleFor('Acme Networks', 'metal').id).toBe('generic-metal');
   });
+
+  it('presentation.styleKey adopts another brand finish', () => {
+    // The generic 24-port patch panel colour-matches Ubiquiti Pro gear.
+    const panel = generic('gen-patch-24');
+    expect(panel.presentation.styleKey).toBe('ubiquiti');
+    const spec = buildChassisSpec(panel);
+    expect(spec.style.id).toBe('ubiquiti');
+    // Without the override it would resolve to the generic finish.
+    expect(styleFor(panel.manufacturerName, panel.presentation.tone).id).toBe(
+      'generic-metal',
+    );
+  });
 });
 
 /* ---- chassis spec ----------------------------------------------------- */

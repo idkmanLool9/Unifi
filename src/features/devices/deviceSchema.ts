@@ -518,6 +518,13 @@ export interface DevicePresentation {
   portsLabel?: string;
   speedLabel?: string;
   poe?: boolean;
+  /**
+   * Adopt another manufacturer's parametric finish (colors, metal,
+   * finish, corner radius). Lets a generic accessory colour-match the
+   * gear it lives with — e.g. a patch panel styled like Ubiquiti Pro
+   * kit. Falls back to the device's own manufacturer when omitted.
+   */
+  styleKey?: string;
 }
 
 export interface DeviceDefinition {
@@ -1470,6 +1477,7 @@ function parsePresentation(
       : sub.oneOf(input, 'badge', ['popular', 'new'] as const);
   const portsLabel = sub.optionalString(input, 'portsLabel');
   const speedLabel = sub.optionalString(input, 'speedLabel');
+  const styleKey = sub.optionalString(input, 'styleKey');
   const poe =
     input.poe === undefined
       ? undefined
@@ -1486,6 +1494,7 @@ function parsePresentation(
     portsLabel,
     speedLabel,
     poe,
+    styleKey,
   };
 }
 

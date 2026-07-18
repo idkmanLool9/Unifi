@@ -208,7 +208,12 @@ const EAR_WIDTH_MM = 16;
 
 export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
   const kind = inferDeviceKind(definition);
-  const style = styleFor(definition.manufacturerName, definition.presentation.tone);
+  // A device may adopt another brand's finish (presentation.styleKey) to
+  // colour-match the gear it lives with; otherwise its own manufacturer.
+  const style = styleFor(
+    definition.presentation.styleKey ?? definition.manufacturerName,
+    definition.presentation.tone,
+  );
   const w = definition.widthMm;
   const h = definition.heightMm;
   const d = definition.depthMm;
