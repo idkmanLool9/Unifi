@@ -14,10 +14,13 @@ import { Switch } from '@/components/ui/Switch';
 import { useImportReportStore } from '@/features/devices/import/importReportStore';
 import {
   LED_KINDS,
+  PORT_LED_CORNERS,
   PORT_TYPES,
   type LedKind,
+  type PortLedCorner,
   type PortType,
 } from '@/features/devices/deviceSchema';
+import { PORT_LED_DEFAULTS } from '@/features/devices/hardware/physicalPorts';
 
 /**
  * Right inspector — category-driven. Every field writes straight into
@@ -331,6 +334,10 @@ function PortSections() {
         </div>
       </CollapsibleSection>
 
+      <CollapsibleSection title="PORT LED">
+        <PortLedSection port={port} update={update} />
+      </CollapsibleSection>
+
       <CollapsibleSection title="VISUAL" defaultOpen={false}>
         <div className="space-y-2.5">
           <SwitchRow
@@ -354,6 +361,96 @@ function PortSections() {
         <PortEtherSection port={port} update={update} />
       </CollapsibleSection>
     </>
+  );
+}
+
+/**
+ * The port's built-in indicator LED: the small rectangular link light
+ * in the bezel corner of a real jack — not a chassis status dot. Off by
+ * default; enabling it stamps one onto this port at the chosen corner.
+ */
+function PortLedSection({
+  port,
+  update,
+}: {
+  port: AuthoredPort;
+  update: (patch: Partial<AuthoredPort>) => void;
+}) {
+  const led = port.led;
+  return (
+    <div className="space-y-2">
+      <SwitchRow
+        label="Port LED"
+        checked={led !== undefined}
+        onChange={(on) =>
+          update({
+            led: on
+              ? {
+                  color: PORT_LED_DEFAULTS.color,
+                  corner: PORT_LED_DEFAULTS.corner,
+                }
+              : undefined,
+          })
+        }
+      />
+      {led && (
+        <>
+          <Row label="Color">
+            <input
+              type="color"
+              value={led.color ?? PORT_LED_DEFAULTS.color}
+              onChange={(e) => update({ led: { ...led, color: e.target.value } })}
+              className="h-6 w-full cursor-pointer rounded-md border border-edge bg-background/40"
+            />
+          </Row>
+          <Row label="Corner">
+            <select
+              value={led.corner ?? PORT_LED_DEFAULTS.corner}
+              onChange={(e) =>
+                update({
+                  led: { ...led, corner: e.target.value as PortLedCorner },
+                })
+              }
+              className={inputClass}
+            >
+              {PORT_LED_CORNERS.map((c) => (
+                <option key={c} value={c}>
+                  {c.replace('-', ' ')}
+                </option>
+              ))}
+            </select>
+          </Row>
+          <div className="grid grid-cols-2 gap-1">
+            <Row label="Width">
+              <NumField
+                value={led.widthMm ?? PORT_LED_DEFAULTS.widthMm}
+                suffix="mm"
+                onCommit={(v) =>
+                  update({
+                    led: { ...led, widthMm: Math.max(0.5, Math.min(12, v)) },
+                  })
+                }
+              />
+            </Row>
+            <Row label="Height">
+              <NumField
+                value={led.heightMm ?? PORT_LED_DEFAULTS.heightMm}
+                suffix="mm"
+                onCommit={(v) =>
+                  update({
+                    led: { ...led, heightMm: Math.max(0.5, Math.min(12, v)) },
+                  })
+                }
+              />
+            </Row>
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted">
+            Rendered as the jack's built-in link light, inside the bezel
+            at the chosen corner — every port keeps its own LED.
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 

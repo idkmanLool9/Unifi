@@ -98,6 +98,11 @@ export interface ChassisSpec {
   } | null;
   /** Base shape for open (non-box, non-panel) accessories. */
   openBody: 'deck' | 'tray' | 'raceway' | 'bar' | 'frame' | null;
+  /**
+   * Rear cable-support bar behind patch panels: a horizontal tube on
+   * standoff arms that carries the weight of the terminated cables.
+   */
+  rearBar: { spanMm: number; yMm: number; zMm: number } | null;
 }
 
 /* ---- geometry helpers -------------------------------------------------- */
@@ -411,6 +416,12 @@ export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
     }
   }
 
+  /* Rear cable-support bar: below the keystone terminations. */
+  const rearBar: ChassisSpec['rearBar'] =
+    (kind === 'patch-panel' || kind === 'fiber-panel') && occupied.length > 0
+      ? { spanMm: w - 64, yMm: -h / 2 + 6, zMm: -d / 2 + 6 }
+      : null;
+
   /* Cable management furniture from the authored management spec. */
   const cm = definition.cableManagement;
   let fingers: ChassisSpec['fingers'] = null;
@@ -520,5 +531,6 @@ export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
     brush,
     deck,
     openBody,
+    rearBar,
   };
 }

@@ -115,6 +115,28 @@ export interface PortDefinition {
   bendRadiusMm?: number;
   /** Optional Etherlighting refinements (never required to light). */
   etherLighting?: PortEtherLighting;
+  /** Link/activity indicator window in the port bezel (per port). */
+  led?: PortLedDefinition;
+}
+
+export const PORT_LED_CORNERS = [
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+] as const;
+export type PortLedCorner = (typeof PORT_LED_CORNERS)[number];
+
+/**
+ * A per-port indicator LED — the small rectangular link/activity window
+ * built into real RJ45 bezels (not a standalone chassis LED). Every
+ * port of the group gets one, at the chosen corner of its opening.
+ */
+export interface PortLedDefinition {
+  color?: string;
+  corner?: PortLedCorner;
+  widthMm?: number;
+  heightMm?: number;
 }
 
 export const LED_KINDS = [
@@ -798,6 +820,7 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         ? undefined
         : sub.number(entry, 'bendRadiusMm', { min: 1, max: 200 });
     const etherLighting = parsePortEtherLighting(entry.etherLighting, sub);
+    const led = parsePortLed(entry.led, sub);
     sub.issues.forEach(({ path, message }) =>
       checker.fail(`ports[${i}].${path}`, message),
     );
@@ -823,10 +846,38 @@ function parsePorts(input: unknown, checker: Checker): PortDefinition[] {
         exitDirMm,
         bendRadiusMm,
         etherLighting,
+        led,
       });
     }
   });
   return ports;
+}
+
+function parsePortLed(
+  input: unknown,
+  checker: Checker,
+): PortLedDefinition | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) {
+    checker.fail('led', 'must be an object');
+    return undefined;
+  }
+  const sub = new Checker();
+  const color = sub.optionalString(input, 'color');
+  const corner =
+    input.corner === undefined
+      ? undefined
+      : sub.oneOf(input, 'corner', PORT_LED_CORNERS);
+  const widthMm =
+    input.widthMm === undefined
+      ? undefined
+      : sub.number(input, 'widthMm', { min: 0.5, max: 12 });
+  const heightMm =
+    input.heightMm === undefined
+      ? undefined
+      : sub.number(input, 'heightMm', { min: 0.5, max: 12 });
+  sub.issues.forEach(({ path, message }) => checker.fail(`led.${path}`, message));
+  return { color, corner, widthMm, heightMm };
 }
 
 function parsePortEtherLighting(

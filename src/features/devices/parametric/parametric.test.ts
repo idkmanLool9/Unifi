@@ -180,6 +180,16 @@ describe('chassis spec builder', () => {
     expect(p48.patchRows.length).toBeGreaterThan(p24.patchRows.length - 1);
   });
 
+  it('loaded patch panels carry a rear cable-support bar; blanks do not', () => {
+    const p24 = buildChassisSpec(generic('gen-patch-24'));
+    expect(p24.rearBar).not.toBeNull();
+    // Behind the plate, inside the chassis depth, spanning between ears.
+    expect(p24.rearBar!.zMm).toBeLessThan(0);
+    expect(Math.abs(p24.rearBar!.zMm)).toBeLessThanOrEqual(p24.depthMm / 2);
+    expect(p24.rearBar!.spanMm).toBeLessThan(p24.widthMm);
+    expect(buildChassisSpec(generic('gen-blank-1u')).rearBar).toBeNull();
+  });
+
   it('brush panels carry a brush strip', () => {
     const spec = buildChassisSpec(generic('gen-brush-1u'));
     expect(spec.brush).not.toBeNull();

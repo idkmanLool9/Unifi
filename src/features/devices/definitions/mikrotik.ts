@@ -78,15 +78,6 @@ export const MIKROTIK_DEVICES: DeviceDefinition[] = [
     description:
       'Five-port gigabit desktop router with SFP and PoE-out on port 5. RouterOS L4 — a compact lab-and-branch workhorse that lives on a rack shelf.',
     tags: ['router', 'desktop', 'sfp', 'routeros'],
-    // The shipped GLB (antenna router) carries its axis fix and spec-width
-    // scale baked into the root node; this offset seats the body on the
-    // shelf (bounds include the antennas, so auto-centering would sink
-    // the chassis) and puts the port edge flush with the faceplate.
-    modelTransform: {
-      scale: 1,
-      rotationDeg: [0, 0, 0],
-      offsetMm: [0.22, 1.58, 5.42],
-    },
     ports: [
       {
         id: 'ether',

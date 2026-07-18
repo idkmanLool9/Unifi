@@ -10,7 +10,9 @@ import {
   resolveLeds,
   resolvePhysicalPorts,
   resolvePowerConnectors,
+  rotatePortVector,
   CONNECTOR_SIZES,
+  PORT_LED_DEFAULTS,
   type PhysicalConnectorType,
   type PhysicalPort,
 } from './physicalPorts';
@@ -85,6 +87,13 @@ const BEZEL_COLORS: Partial<Record<PhysicalConnectorType, string>> = {
 };
 const INSET_COLOR = '#0b0d10';
 
+/** Rear pass-through body of a keystone jack, mm from the panel face. */
+const KEYSTONE_BODY = { widthMm: 15.5, heightMm: 18.5, depthMm: 26 };
+/** Termination cap (punch-down cover) on the back of a keystone body. */
+const KEYSTONE_CAP = { widthMm: 17.5, heightMm: 20, depthMm: 5 };
+const KEYSTONE_BODY_COLOR = '#1d2126';
+const KEYSTONE_CAP_COLOR = '#33547a';
+
 /** Bezel + inset boxes for one connector, in device-local mm. */
 function connectorParts(port: PhysicalPort): Part[] {
   const { widthMm: w, heightMm: h } = CONNECTOR_SIZES[port.type];
@@ -92,7 +101,7 @@ function connectorParts(port: PhysicalPort): Part[] {
   const rotationY = port.location === 'front' ? 0 : Math.PI;
   const [x, y, z] = port.positionMm;
   const color = BEZEL_COLORS[port.type] ?? '#3b4148';
-  return [
+  const parts: Part[] = [
     {
       positionMm: [x, y, z + out * 0.6],
       sizeMm: [w, h, 2.6],
@@ -106,6 +115,27 @@ function connectorParts(port: PhysicalPort): Part[] {
       color: INSET_COLOR,
     },
   ];
+  // A keystone jack is a pass-through module: its snap-in body and
+  // termination cap protrude from the back of the plate it clicks into.
+  if (port.type === 'keystone') {
+    const body = KEYSTONE_BODY;
+    const cap = KEYSTONE_CAP;
+    parts.push(
+      {
+        positionMm: [x, y, z - out * (1 + body.depthMm / 2)],
+        sizeMm: [body.widthMm, body.heightMm, body.depthMm],
+        rotationY,
+        color: KEYSTONE_BODY_COLOR,
+      },
+      {
+        positionMm: [x, y, z - out * (1 + body.depthMm + cap.depthMm / 2)],
+        sizeMm: [cap.widthMm, cap.heightMm, cap.depthMm],
+        rotationY,
+        color: KEYSTONE_CAP_COLOR,
+      },
+    );
+  }
+  return parts;
 }
 
 const mm = (v: [number, number, number]): [number, number, number] => [
@@ -142,6 +172,69 @@ function ConnectorsRenderer({ definition }: { definition: DeviceDefinition }) {
           scale={mm(part.sizeMm)}
           rotation={[0, part.rotationY, 0]}
           color={part.color}
+        />
+      ))}
+    </Instances>
+  );
+}
+
+/**
+ * Per-port link/activity LEDs: the small rectangular windows built into
+ * real RJ45 bezels, rendered at the authored corner of each opening.
+ */
+function PortLedsRenderer({ definition }: { definition: DeviceDefinition }) {
+  const leds = useMemo(
+    () =>
+      resolvePhysicalPorts(definition)
+        .filter((p) => p.visible && p.led)
+        .map((p) => {
+          const led = p.led!;
+          const [w, h] = p.sizeMm ?? [
+            CONNECTOR_SIZES[p.type].widthMm,
+            CONNECTOR_SIZES[p.type].heightMm,
+          ];
+          const lw = led.widthMm ?? PORT_LED_DEFAULTS.widthMm;
+          const lh = led.heightMm ?? PORT_LED_DEFAULTS.heightMm;
+          const corner = led.corner ?? PORT_LED_DEFAULTS.corner;
+          const sx = corner.endsWith('right') ? 1 : -1;
+          const sy = corner.startsWith('top') ? 1 : -1;
+          const out = p.location === 'front' ? 1 : -1;
+          // The window sits in the bezel band between the opening inset
+          // and the bezel edge; the offset swings with the port roll.
+          const local = rotatePortVector(
+            [sx * (w / 2 - lw / 2 - 0.7), sy * (h / 2 - lh / 2 - 0.5), 0],
+            p.rotationDeg,
+          );
+          return {
+            ref: p.ref,
+            positionMm: [
+              p.positionMm[0] + local[0],
+              p.positionMm[1] + local[1],
+              p.positionMm[2] + local[2] + out * 2.1,
+            ] as [number, number, number],
+            sizeMm: [lw, lh, 0.9] as [number, number, number],
+            rotationY: p.location === 'front' ? 0 : Math.PI,
+            color: led.color ?? PORT_LED_DEFAULTS.color,
+          };
+        }),
+    [definition],
+  );
+
+  if (leds.length === 0) return null;
+  return (
+    <Instances
+      geometry={UNIT_BOX}
+      material={EMISSIVE_MATERIAL}
+      limit={leds.length}
+      frustumCulled={false}
+    >
+      {leds.map((led) => (
+        <Instance
+          key={led.ref}
+          position={mm(led.positionMm)}
+          scale={mm(led.sizeMm)}
+          rotation={[0, led.rotationY, 0]}
+          color={led.color}
         />
       ))}
     </Instances>
@@ -273,6 +366,7 @@ export function HardwareLayer({ definition, mode, instanceId }: HardwareLayerPro
       {mode === 'full' && (
         <>
           <ConnectorsRenderer definition={definition} />
+          <PortLedsRenderer definition={definition} />
           <LedsRenderer definition={definition} />
           <DisplayRenderer definition={definition} />
           <FansRenderer definition={definition} />

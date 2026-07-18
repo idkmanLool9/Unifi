@@ -3,6 +3,7 @@ import type {
   LedDefinition,
   LedKind,
   PortEtherLighting,
+  PortLedDefinition,
   PortLocation,
   PortType,
   PowerConnectorType,
@@ -51,6 +52,8 @@ export interface PhysicalPort {
   bendRadiusMm?: number;
   /** Optional Etherlighting refinements (auto-lit regardless). */
   etherLighting?: PortEtherLighting;
+  /** Per-port indicator LED window (rendered in the bezel corner). */
+  led?: PortLedDefinition;
 }
 
 export interface ResolvedLed {
@@ -97,6 +100,14 @@ export const CONNECTOR_SIZES: Record<
   'poe-in': { widthMm: 15, heightMm: 13, pitchMm: 17.9 },
   'external-adapter': { widthMm: 12, heightMm: 12, pitchMm: 20 },
   other: { widthMm: 14, heightMm: 12, pitchMm: 18 },
+};
+
+/** Default look of a per-port indicator LED window. */
+export const PORT_LED_DEFAULTS = {
+  color: '#3ff06e',
+  corner: 'top-right' as const,
+  widthMm: 3.4,
+  heightMm: 1.7,
 };
 
 /** Faceplate side margin for auto-laid-out ports. */
@@ -209,6 +220,7 @@ export function resolvePhysicalPorts(
         exitDirMm: group.exitDirMm,
         bendRadiusMm: group.bendRadiusMm,
         etherLighting: group.etherLighting,
+        led: group.led,
       });
 
     if (group.positionMm) {

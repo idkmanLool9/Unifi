@@ -15,6 +15,7 @@ import type {
   LedKind,
   PortDefinition,
   PortEtherLighting,
+  PortLedDefinition,
   PortLocation,
   PortType,
 } from '@/features/devices/deviceSchema';
@@ -58,6 +59,8 @@ export interface AuthoredPort {
   bendRadiusMm?: number;
   /** Optional Etherlighting refinements (auto-lit regardless). */
   etherLighting?: PortEtherLighting;
+  /** Per-port indicator LED window (bezel corner link/activity light). */
+  led?: PortLedDefinition;
 }
 
 /** An authorable indicator LED (schema LedDefinition, defaults baked). */
@@ -190,6 +193,7 @@ export function portsFromDefinition(
       exitDirMm: port.exitDirMm ? ([...port.exitDirMm] as Vec3) : undefined,
       bendRadiusMm: port.bendRadiusMm,
       etherLighting: port.etherLighting,
+      led: port.led ? { ...port.led } : undefined,
     };
   });
 }
@@ -292,6 +296,7 @@ export function toPortDefinition(port: AuthoredPort): PortDefinition {
       port.etherLighting && Object.keys(port.etherLighting).length > 0
         ? port.etherLighting
         : undefined,
+    led: port.led ? { ...port.led } : undefined,
   };
 }
 

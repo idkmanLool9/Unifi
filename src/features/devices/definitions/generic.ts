@@ -21,7 +21,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      'Unloaded 1U keystone patch panel with 24 addressable openings.',
+      '1U keystone patch panel — 24 snap-in jacks with pass-through bodies terminated at the rear, plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -50,7 +50,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      'Unloaded 2U keystone patch panel with 48 addressable openings in two rows.',
+      '2U keystone patch panel — 48 snap-in jacks in two rows, pass-through bodies terminated at the rear, plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -370,6 +370,72 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     power: {
       connectors: [
         { id: 'dc', type: 'dc', count: 1, location: 'rear', label: 'DC jack' },
+      ],
+      sources: ['ac'],
+    },
+    presentation: { faceplate: 'network', tone: 'dark' },
+  }),
+  defineDevice({
+    id: 'gen-wifi-router',
+    slug: 'wifi-router',
+    manufacturer: 'generic',
+    manufacturerName: 'Generic',
+    productName: 'Wireless Router',
+    modelNumber: 'AC1200',
+    category: 'routing',
+    rackUnits: 1,
+    widthMm: 231,
+    heightMm: 35,
+    depthMm: 147,
+    mountingStandard: 'none',
+    weightKg: 0.55,
+    powerConsumptionWatts: 10,
+    maximumPowerWatts: 15,
+    description:
+      'Dual-band AC wireless router with four external antennas, gigabit WAN and four-port LAN switch. Full-size desktop unit for shelf mounting.',
+    tags: ['router', 'wifi', 'wireless', 'desktop', 'antenna'],
+    // The shipped GLB is fully canonical: axis fix, full-size scale
+    // (width -> 231 mm), LED face toward +Z and the antenna/port edge at
+    // the rear are all baked into the asset's root matrix. The explicit
+    // identity transform pins that in place — auto-derivation would
+    // center the bounds (which include the tall antennas) and sink the
+    // chassis through the shelf deck.
+    modelTransform: {
+      scale: 1,
+      rotationDeg: [0, 0, 0],
+      offsetMm: [0, 0, 0],
+    },
+    ports: [
+      {
+        id: 'wan',
+        type: 'rj45',
+        count: 1,
+        label: 'WAN',
+        location: 'rear',
+        positionMm: [-51.5, -2, -73.5],
+        speedGbps: 1,
+      },
+      {
+        id: 'lan',
+        type: 'rj45',
+        count: 4,
+        label: 'LAN',
+        location: 'rear',
+        positionMm: [-17, -2, -73.5],
+        pitchMm: 23,
+        speedGbps: 1,
+      },
+    ],
+    power: {
+      connectors: [
+        {
+          id: 'dc',
+          type: 'dc',
+          count: 1,
+          location: 'rear',
+          positionMm: [-77, -2, -73.5],
+          label: 'DC jack',
+        },
       ],
       sources: ['ac'],
     },

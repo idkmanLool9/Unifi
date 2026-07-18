@@ -54,6 +54,36 @@ describe('validateDeviceDefinition', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('parses per-port LED windows and rejects bad corners', () => {
+    const ok = validateDeviceDefinition({
+      ...VALID_INPUT,
+      ports: [
+        {
+          id: 'lan',
+          type: 'rj45',
+          count: 8,
+          led: { color: '#3ff06e', corner: 'top-right', widthMm: 3.4 },
+        },
+      ],
+    });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.value.ports[0].led).toMatchObject({
+        color: '#3ff06e',
+        corner: 'top-right',
+        widthMm: 3.4,
+      });
+    }
+
+    const bad = validateDeviceDefinition({
+      ...VALID_INPUT,
+      ports: [
+        { id: 'lan', type: 'rj45', count: 8, led: { corner: 'middle' } },
+      ],
+    });
+    expect(bad.ok).toBe(false);
+  });
+
   it('reports each missing or invalid field with its path', () => {
     const result = validateDeviceDefinition({
       ...VALID_INPUT,

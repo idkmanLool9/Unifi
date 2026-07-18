@@ -430,6 +430,42 @@ function PatchRows({ spec }: { spec: ChassisSpec }) {
   );
 }
 
+/**
+ * Rear cable-support bar of a patch panel: a horizontal tube on two
+ * standoff arms reaching back from the plate, carrying the terminated
+ * cables' weight — the signature silhouette of a loaded keystone panel.
+ */
+function RearBar({ spec }: { spec: ChassisSpec }) {
+  const bar = spec.rearBar!;
+  const material = chassisMaterial(spec.style.body, spec.style.finish, 'body');
+  const plateZ = (spec.depthMm / 2 - 2) * MM;
+  const armLen = plateZ - bar.zMm * MM;
+  return (
+    <group position={[0, bar.yMm * MM, 0]}>
+      {/* The tube itself, lying across the width */}
+      <mesh
+        material={material}
+        position={[0, 0, bar.zMm * MM]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.0042, 0.0042, bar.spanMm * MM, 14]} />
+      </mesh>
+      {/* Standoff arms from the plate to the bar */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          material={material}
+          position={[side * (bar.spanMm / 2) * MM, 0, bar.zMm * MM + armLen / 2]}
+          castShadow
+        >
+          <boxGeometry args={[0.003, 0.011, armLen]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 /** Cable-management fingers (+ optional cover) along one axis. */
 function Fingers({ spec, detailed }: { spec: ChassisSpec; detailed: boolean }) {
   const f = spec.fingers!;
@@ -801,6 +837,7 @@ function ChassisLevel({
       {spec.handles.length > 0 && <Handles spec={spec} />}
       {spec.feetMm.length > 0 && <Feet spec={spec} />}
       {spec.patchRows.length > 0 && <PatchRows spec={spec} />}
+      {spec.rearBar && <RearBar spec={spec} />}
       {spec.fingers && <Fingers spec={spec} detailed={detailed} />}
       {spec.rings.length > 0 && <Rings spec={spec} />}
       {spec.brush && (

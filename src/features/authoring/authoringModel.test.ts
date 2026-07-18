@@ -165,6 +165,28 @@ describe('authoring model', () => {
     primeCalibration(parsed.value.id, null);
   });
 
+  it('round-trips the per-port LED through save and reload', () => {
+    const ports = [
+      port({ id: 'lan-1', led: { color: '#ffb020', corner: 'bottom-right' } }),
+    ];
+    const parsed = validateDeviceDefinition(
+      JSON.parse(metadataJson(definitionWithPorts(proMax, ports))),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.ports.find((p) => p.id === 'lan-1')?.led).toMatchObject({
+      color: '#ffb020',
+      corner: 'bottom-right',
+    });
+    // Reloading into the editor keeps the LED on the authored port.
+    primeCalibration(parsed.value.id, null);
+    const reloaded = portsFromDefinition(parsed.value);
+    expect(reloaded.find((p) => p.id === 'lan-1')?.led).toMatchObject({
+      color: '#ffb020',
+      corner: 'bottom-right',
+    });
+  });
+
   it('adds a minimal lighting block when authored ports use Etherlighting', () => {
     const base = { ...proMax, lighting: undefined };
     const authored = definitionWithPorts(base, [port({ etherlighting: true })]);

@@ -59,6 +59,27 @@ describe('resolvePhysicalPorts', () => {
     expect(portRef('lan', 2)).toBe('lan[2]');
   });
 
+  it('carries the per-port LED definition onto every port of the group', () => {
+    const device = defineDevice({
+      ...base,
+      ports: [
+        {
+          id: 'lan',
+          type: 'rj45',
+          count: 3,
+          positionMm: [-30, 0, 150],
+          pitchMm: 18,
+          led: { color: '#ffb020', corner: 'bottom-left' },
+        },
+      ],
+    });
+    const ports = resolvePhysicalPorts(device);
+    expect(ports).toHaveLength(3);
+    for (const port of ports) {
+      expect(port.led).toEqual({ color: '#ffb020', corner: 'bottom-left' });
+    }
+  });
+
   it('auto-lays-out unpositioned groups across the faceplate without overlap', () => {
     const device = defineDevice({
       ...base,
