@@ -78,7 +78,10 @@ export const RACK_FINISHES: Record<RackFinishId, RackFinish> = {
     frame: '#b7bcc3',
     upright: '#ccd0d6',
     ink: 'rgba(22, 26, 32, 0.6)',
-    hole: '#464c54',
+    // Cage-nut holes: a light recess on the silver rail. The strip is
+    // drawn unlit, so a dark hole colour reads black against the bright
+    // lit frame — keep it a soft grey so the mounting rail stays silver.
+    hole: '#9aa0a8',
     swatch: '#c9cdd3',
   },
   sand: {

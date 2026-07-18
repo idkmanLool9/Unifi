@@ -41,8 +41,9 @@ export function createRailTexture(
   const height = units * PX_PER_U;
   const { canvas, ctx } = makeCanvas(RAIL_W, height);
 
-  // ~12.7mm square hole on a ~58mm flange strip.
-  const holeSize = 28;
+  // ~12.7mm square hole on a ~58mm flange strip. Kept compact so silver
+  // rail shows between the three holes rather than merging into a band.
+  const holeSize = 22;
   const holeCenterX = mirror ? RAIL_W - 26 : 26;
   const numberX = mirror ? RAIL_W - 78 : 78;
 
@@ -66,8 +67,9 @@ export function createRailTexture(
       ctx.beginPath();
       ctx.roundRect(x, y, holeSize, holeSize, 4);
       ctx.fill();
-      // Shadowed top lip
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      // Shadowed top lip (soft, so it doesn't read as a black band on a
+      // bright silver rail)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
       ctx.beginPath();
       ctx.roundRect(x, y, holeSize, 5, 4);
       ctx.fill();
