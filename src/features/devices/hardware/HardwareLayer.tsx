@@ -87,9 +87,14 @@ const BEZEL_COLORS: Partial<Record<PhysicalConnectorType, string>> = {
 };
 const INSET_COLOR = '#0b0d10';
 
-/** Pass-through body of a keystone jack, mm from the panel face. Reaches
- *  back to where the rear RJ45 opening sits (see gen-patch-* rear ports). */
-const KEYSTONE_BODY = { widthMm: 15.5, heightMm: 18.5, depthMm: 26 };
+/**
+ * Pass-through body of a keystone jack, mm from the panel face. It
+ * protrudes behind the plate and its back face lands on the rear RJ45
+ * opening, so the rear jack clearly stands proud of the panel and is
+ * easy to see and click. Kept in sync with the rear port z on the
+ * gen-patch-* panels: rearOpeningZ = frontZ − (1 + depthMm) = 20 − 33 = −13.
+ */
+const KEYSTONE_BODY = { widthMm: 15.5, heightMm: 18.5, depthMm: 32 };
 const KEYSTONE_BODY_COLOR = '#1d2126';
 
 /** Bezel + inset boxes for one connector, in device-local mm. */
