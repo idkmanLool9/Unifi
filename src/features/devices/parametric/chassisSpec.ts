@@ -399,27 +399,11 @@ export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
         ]
       : [];
 
-  /* Patch panels: one recessed band behind each keystone row. */
+  /* A real keystone panel is a flat metal plate — the openings are
+   * punched straight through it, with no dark recessed band behind them.
+   * The openings carry their own shallow silver frame + shadowed hole
+   * (see HardwareLayer), so the plate stays clean silver end to end. */
   const patchRows: RectMm[] = [];
-  if (kind === 'patch-panel' || kind === 'fiber-panel') {
-    const rowYs = new Map<number, { minX: number; maxX: number; hMm: number }>();
-    for (const rect of occupied) {
-      const key = Math.round(rect.yMm);
-      const row = rowYs.get(key) ?? { minX: Infinity, maxX: -Infinity, hMm: 0 };
-      row.minX = Math.min(row.minX, rect.xMm - rect.wMm / 2);
-      row.maxX = Math.max(row.maxX, rect.xMm + rect.wMm / 2);
-      row.hMm = Math.max(row.hMm, rect.hMm);
-      rowYs.set(key, row);
-    }
-    for (const [yMm, row] of rowYs) {
-      patchRows.push({
-        xMm: (row.minX + row.maxX) / 2,
-        yMm,
-        wMm: row.maxX - row.minX + 14,
-        hMm: row.hMm + 7,
-      });
-    }
-  }
 
   /* Rear cable-support bar: below the keystone terminations. */
   const rearBar: ChassisSpec['rearBar'] =

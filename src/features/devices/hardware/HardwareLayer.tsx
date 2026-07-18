@@ -18,6 +18,7 @@ import {
 } from './physicalPorts';
 import { MM_TO_M } from '@/features/rack/rackMath';
 import { EtherlightingLayer } from './etherlighting/EtherlightingLayer';
+import { styleFor } from '../parametric/stylePresets';
 import type { DeviceDefinition } from '../deviceSchema';
 
 /**
@@ -87,24 +88,44 @@ const BEZEL_COLORS: Partial<Record<PhysicalConnectorType, string>> = {
 };
 const INSET_COLOR = '#0b0d10';
 
-/**
- * Pass-through body of a keystone jack, mm from the panel face. It
- * protrudes behind the plate and its back face lands on the rear RJ45
- * opening, so the rear jack clearly stands proud of the panel and is
- * easy to see and click. Kept in sync with the rear port z on the
- * gen-patch-* panels: rearOpeningZ = frontZ − (1 + depthMm) = 20 − 33 = −13.
- */
-const KEYSTONE_BODY = { widthMm: 15.5, heightMm: 18.5, depthMm: 32 };
-const KEYSTONE_BODY_COLOR = '#1d2126';
+/** Shadowed interior of an empty keystone opening (a hole, not a jack). */
+const KEYSTONE_HOLE_COLOR = '#1c2025';
 
-/** Bezel + inset boxes for one connector, in device-local mm. */
-function connectorParts(port: PhysicalPort): Part[] {
+/**
+ * Bezel + inset boxes for one connector, in device-local mm. `frameColor`
+ * is the host panel's own faceplate colour, used so keystone openings
+ * read as punched holes in the plate rather than black jack heads.
+ */
+function connectorParts(port: PhysicalPort, frameColor: string): Part[] {
   const { widthMm: w, heightMm: h } = CONNECTOR_SIZES[port.type];
   const out = port.location === 'front' ? 1 : -1;
   const rotationY = port.location === 'front' ? 0 : Math.PI;
   const [x, y, z] = port.positionMm;
+
+  // An empty keystone panel is a flat metal plate with rectangular
+  // punch-outs — no protruding bezel, no inserted jack. Render the
+  // opening as a shallow silver frame flush with the plate (matched to
+  // the faceplate colour so it blends) around a dark recessed hole. The
+  // same treatment on the rear face keeps it a clean feed-through panel.
+  if (port.type === 'keystone') {
+    return [
+      {
+        positionMm: [x, y, z + out * 0.25],
+        sizeMm: [w, h, 1.3],
+        rotationY,
+        color: frameColor,
+      },
+      {
+        positionMm: [x, y, z + out * 0.55],
+        sizeMm: [w * 0.66, h * 0.82, 1.1],
+        rotationY,
+        color: KEYSTONE_HOLE_COLOR,
+      },
+    ];
+  }
+
   const color = BEZEL_COLORS[port.type] ?? '#3b4148';
-  const parts: Part[] = [
+  return [
     {
       positionMm: [x, y, z + out * 0.6],
       sizeMm: [w, h, 2.6],
@@ -118,21 +139,6 @@ function connectorParts(port: PhysicalPort): Part[] {
       color: INSET_COLOR,
     },
   ];
-  // A keystone jack is a pass-through module: its snap-in body protrudes
-  // behind the plate and terminates in a second RJ45 opening at the rear.
-  // The body is drawn once, from the front opening; the rear opening is
-  // its own port (front bezel + inset above), so both faces are real,
-  // connectable connectors — a feed-through panel.
-  if (port.type === 'keystone' && port.location === 'front') {
-    const body = KEYSTONE_BODY;
-    parts.push({
-      positionMm: [x, y, z - out * (1 + body.depthMm / 2)],
-      sizeMm: [body.widthMm, body.heightMm, body.depthMm],
-      rotationY,
-      color: KEYSTONE_BODY_COLOR,
-    });
-  }
-  return parts;
 }
 
 const mm = (v: [number, number, number]): [number, number, number] => [
@@ -146,11 +152,16 @@ const mm = (v: [number, number, number]): [number, number, number] => [
 /** All connector bodies (ports + power inlets) as one instanced pair. */
 function ConnectorsRenderer({ definition }: { definition: DeviceDefinition }) {
   const parts = useMemo(() => {
+    // Keystone openings blend into the host plate: use its faceplate colour.
+    const frameColor = styleFor(
+      definition.presentation.styleKey ?? definition.manufacturerName,
+      definition.presentation.tone,
+    ).face;
     const all = [
       ...resolvePhysicalPorts(definition),
       ...resolvePowerConnectors(definition),
     ];
-    return all.filter((p) => p.visible).flatMap(connectorParts);
+    return all.filter((p) => p.visible).flatMap((p) => connectorParts(p, frameColor));
   }, [definition]);
 
   if (parts.length === 0) return null;

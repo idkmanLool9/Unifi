@@ -184,12 +184,14 @@ describe('chassis spec builder', () => {
     expect(spec.driveBays).toHaveLength(0);
   });
 
-  it('patch panels grow one recessed band per keystone row', () => {
+  it('patch panels are a flat plate with no dark recessed band', () => {
+    // A real keystone panel is clean silver; the openings punch straight
+    // through it, so there is no dark row behind them.
     const p24 = buildChassisSpec(generic('gen-patch-24'));
     expect(p24.bodyStyle).toBe('panel');
-    expect(p24.patchRows.length).toBeGreaterThanOrEqual(1);
+    expect(p24.patchRows).toHaveLength(0);
     const p48 = buildChassisSpec(generic('gen-patch-48'));
-    expect(p48.patchRows.length).toBeGreaterThan(p24.patchRows.length - 1);
+    expect(p48.patchRows).toHaveLength(0);
   });
 
   it('loaded patch panels carry a rear cable-support bar; blanks do not', () => {

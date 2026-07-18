@@ -21,7 +21,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '1U feed-through keystone panel — 24 pass-through jacks with an RJ45 opening on both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
+      '1U feed-through keystone panel — a flat silver plate with 24 empty keystone openings punched through both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -33,17 +33,17 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         positionMm: [-205.8, 0, 20],
         pitchMm: 17.9,
       },
-      // Rear of the same pass-through jacks: an RJ45 opening at the back
-      // of each keystone body, so permanent/building cabling terminates
-      // here exactly as on a real feed-through panel. Aligned to the
-      // front openings; cables exit straight out the back.
+      // The same openings punched through the rear face of the plate, so
+      // permanent/building cabling terminates here exactly as on a real
+      // feed-through panel. Aligned to the front openings; cables exit
+      // straight out the back.
       {
         id: 'keystone-rear',
         type: 'keystone',
         count: 24,
         label: 'Rear 1–24',
         location: 'rear',
-        positionMm: [-205.8, 0, -13],
+        positionMm: [-205.8, 0, -6],
         pitchMm: 17.9,
       },
     ],
@@ -70,7 +70,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '2U feed-through keystone panel — 48 pass-through jacks in two rows, each with an RJ45 opening on both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
+      '2U feed-through keystone panel — a flat plate with 48 empty keystone openings in two rows, punched through both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -99,7 +99,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         count: 24,
         label: 'Rear 1–24',
         location: 'rear',
-        positionMm: [-205.8, 21, -13],
+        positionMm: [-205.8, 21, -6],
         pitchMm: 17.9,
         row: 0,
       },
@@ -109,7 +109,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         count: 24,
         label: 'Rear 25–48',
         location: 'rear',
-        positionMm: [-205.8, -21, -13],
+        positionMm: [-205.8, -21, -6],
         pitchMm: 17.9,
         row: 1,
       },
