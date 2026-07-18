@@ -676,14 +676,17 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
           </>
         );
       }
-      // Cantilever shelf: perforated top deck, corner cable slots,
-      // front apron between the ears, tapered side skirts.
+      // Cantilever shelf: perforated deck at the BOTTOM of the unit
+      // (devices sit on it), a full-height front face between the
+      // ears, and tapered side gussets standing on the deck — tall at
+      // the front, sloping to a thin rear tail.
       const deckT = 0.0022;
-      const deckTop = (spec.heightMm / 2 - 4) * MM;
+      const deckBase = (-spec.heightMm / 2 + 4) * MM;
       const deckY = deckT / 2;
       const earW = (spec.ears?.widthMm ?? 0) * MM;
+      const apronH = spec.heightMm * MM - 0.005;
       return (
-        <group position={[0, deckTop - deckT, 0]}>
+        <group position={[0, deckBase, 0]}>
           <mesh position={[0, deckY, -d * 0.02]} material={face} castShadow receiveShadow>
             <boxGeometry args={[w * 0.985, deckT, d * 0.94]} />
           </mesh>
@@ -691,21 +694,21 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
           {spec.deck!.slotsMm.map((slot, i) => (
             <DeckSlot key={i} slot={slot} yM={deckY + deckT / 2 + 0.0004} />
           ))}
-          {/* Front apron folding down between the mounting ears */}
+          {/* Front face rising from the deck between the mounting ears */}
           <mesh
-            position={[0, -(deckTop + h / 2) / 2 + deckY, d / 2 - 0.0015]}
+            position={[0, apronH / 2, d / 2 - 0.0015]}
             material={face}
             castShadow
           >
-            <boxGeometry args={[w - 2 * earW - 0.002, deckTop + h / 2, 0.003]} />
+            <boxGeometry args={[w - 2 * earW - 0.002, apronH, 0.003]} />
           </mesh>
-          {/* Tapered side skirts (full height at the front, thin rear) */}
+          {/* Tapered side gussets (full height front, thin rear tail) */}
           {[-1, 1].map((s) => (
             <mesh
               key={s}
               geometry={skirtGeometry(spec.heightMm, spec.depthMm)}
               material={body}
-              position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckTop + deckY, d * 0.47]}
+              position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckBase, d * 0.47]}
               rotation={[0, Math.PI / 2, 0]}
               castShadow
             />

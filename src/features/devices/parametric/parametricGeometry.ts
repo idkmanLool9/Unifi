@@ -109,10 +109,11 @@ const earCache = new Map<string, ExtrudeGeometry>();
 const skirtCache = new Map<string, ExtrudeGeometry>();
 
 /**
- * Cantilever-shelf side skirt: a vertical plate that is the full unit
- * height at the front (where the bending moment lives) and tapers to a
- * thin edge at the rear. Built in shape space with x = distance behind
- * the front edge and y = height; extruded 2.2 mm along z (the plate
+ * Cantilever-shelf side skirt: a vertical gusset standing ON the deck —
+ * full unit height at the front (where the bending moment lives),
+ * sloping down to a thin tail at the rear, its bottom edge running
+ * along the deck. Built in shape space with x = distance behind the
+ * front edge and y = height; extruded 2.2 mm along z (the plate
  * thickness — world X after the renderer's 90° yaw).
  */
 export function skirtGeometry(
@@ -124,16 +125,16 @@ export function skirtGeometry(
   if (cached) return cached;
 
   const MM = 0.001;
-  const top = (heightMm / 2 - 4) * MM;
-  const bottom = (-heightMm / 2) * MM;
+  const top = (heightMm / 2 - 1) * MM;
+  const bottom = (-heightMm / 2 + 4) * MM;
   const run = depthMm * 0.92 * MM;
   const tail = 8 * MM;
   const shape = new Shape();
-  shape.moveTo(0, top);
-  shape.lineTo(0, bottom);
-  shape.lineTo(24 * MM, bottom);
-  shape.lineTo(run, top - tail);
-  shape.lineTo(run, top);
+  shape.moveTo(0, bottom);
+  shape.lineTo(0, top);
+  shape.lineTo(24 * MM, top);
+  shape.lineTo(run, bottom + tail);
+  shape.lineTo(run, bottom);
   shape.closePath();
 
   const geometry = new ExtrudeGeometry(shape, {
