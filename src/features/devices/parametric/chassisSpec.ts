@@ -81,8 +81,21 @@ export interface ChassisSpec {
   /** D-ring loops (x offsets on the faceplate). */
   rings: Array<{ xMm: number; wMm: number; hMm: number }>;
   brush: RectMm | null;
-  /** Cantilever shelf / drawer: horizontal deck with side walls. */
-  deck: { lipMm: number; drawer: boolean } | null;
+  /**
+   * Cantilever shelf / drawer deck. Shelves carry a perforated top
+   * plate with corner cable slots, a front apron and tapered side
+   * skirts (the classic toolless rack shelf); drawers keep a closed
+   * front face instead.
+   */
+  deck: {
+    lipMm: number;
+    drawer: boolean;
+    /** Dense round-hole field across the deck. */
+    perforated: boolean;
+    /** Oblong cable pass-throughs in the deck plane (x across the
+     *  width, y along the depth from the deck center). */
+    slotsMm: RectMm[];
+  } | null;
   /** Base shape for open (non-box, non-panel) accessories. */
   openBody: 'deck' | 'tray' | 'raceway' | 'bar' | 'frame' | null;
 }
@@ -440,10 +453,30 @@ export function buildChassisSpec(definition: DeviceDefinition): ChassisSpec {
   }
 
   /* Shelves and drawers: a deck with a front lip. */
-  const deck =
-    kind === 'shelf' || kind === 'drawer'
-      ? { lipMm: Math.min(h, 12), drawer: kind === 'drawer' }
-      : null;
+  let deck: ChassisSpec['deck'] = null;
+  if (kind === 'shelf' || kind === 'drawer') {
+    const drawer = kind === 'drawer';
+    const slotsMm: RectMm[] = [];
+    if (!drawer && d >= 160 && w >= 300) {
+      // Four oblong cable slots near the deck corners.
+      const slotX = w / 2 - 92;
+      const slotY = d / 2 - 52;
+      for (const [sx, sy] of [
+        [-1, 1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+      ] as const) {
+        slotsMm.push({ xMm: sx * slotX, yMm: sy * slotY, wMm: 64, hMm: 20 });
+      }
+    }
+    deck = {
+      lipMm: Math.min(h, 12),
+      drawer,
+      perforated: !drawer && d >= 120,
+      slotsMm,
+    };
+  }
 
   const openBody: ChassisSpec['openBody'] =
     bodyStyle !== 'open'

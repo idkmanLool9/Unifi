@@ -1,7 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { BoxGeometry, CylinderGeometry, TorusGeometry } from 'three';
 import { Detailed, Instance, Instances, RoundedBox } from '@react-three/drei';
-import { buildChassisSpec, type ChassisSpec, type VentRegion } from './chassisSpec';
+import {
+  buildChassisSpec,
+  type ChassisSpec,
+  type RectMm,
+  type VentRegion,
+} from './chassisSpec';
 import {
   BRUSH_MATERIAL,
   GLASS_MATERIAL,
@@ -11,7 +16,7 @@ import {
   chassisMaterial,
   tintedMaterial,
 } from './materials';
-import { earGeometry, ventLayout } from './parametricGeometry';
+import { earGeometry, skirtGeometry, ventLayout } from './parametricGeometry';
 import { createTextTexture } from '@/features/rack/rackTextures';
 import { MM_TO_M } from '@/features/rack/rackMath';
 import type { DeviceDefinition } from '../deviceSchema';
@@ -519,6 +524,59 @@ function Rings({ spec }: { spec: ChassisSpec }) {
   );
 }
 
+/** Dense round-hole field across a shelf deck, facing up. */
+function DeckPerforation({ spec, yM }: { spec: ChassisSpec; yM: number }) {
+  const layout = useMemo(
+    () =>
+      ventLayout(
+        { xMm: 0, yMm: 0, wMm: spec.widthMm - 180, hMm: spec.depthMm * 0.58 },
+        'holes',
+      ),
+    [spec.widthMm, spec.depthMm],
+  );
+  return (
+    <Instances
+      geometry={UNIT_DISC}
+      material={VENT_CAVITY_MATERIAL}
+      limit={layout.offsets.length}
+      frustumCulled={false}
+    >
+      {layout.offsets.map(([x, z], i) => (
+        <Instance
+          key={i}
+          position={[x * MM, yM, z * MM]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[layout.slotWMm * MM, layout.slotHMm * MM, 0.0008]}
+        />
+      ))}
+    </Instances>
+  );
+}
+
+/** One oblong (stadium) cable slot lying flat in the deck. */
+function DeckSlot({ slot, yM }: { slot: RectMm; yM: number }) {
+  const bodyW = Math.max(slot.wMm - slot.hMm, 1);
+  return (
+    <group position={[slot.xMm * MM, yM, slot.yMm * MM]}>
+      <mesh
+        geometry={UNIT_BOX}
+        material={VENT_CAVITY_MATERIAL}
+        scale={[bodyW * MM, 0.0008, slot.hMm * MM]}
+      />
+      {[-1, 1].map((s) => (
+        <mesh
+          key={s}
+          geometry={UNIT_DISC}
+          material={VENT_CAVITY_MATERIAL}
+          position={[((s * bodyW) / 2) * MM, 0, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          scale={[slot.hMm * MM, slot.hMm * MM, 0.0008]}
+        />
+      ))}
+    </group>
+  );
+}
+
 /* ---- body shapes ------------------------------------------------------- */
 
 /** Enclosed box: inset body + styled faceplate. */
@@ -592,38 +650,67 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
 
   switch (spec.openBody) {
     case 'deck': {
-      const lip = spec.deck!.lipMm * MM;
-      return (
-        <>
-          {/* Deck plate at the bottom of the unit */}
-          <mesh position={[0, -h / 2 + 0.0015, 0]} material={body} castShadow receiveShadow>
-            <boxGeometry args={[w * 0.98, 0.003, d * 0.96]} />
-          </mesh>
-          {/* Front lip / drawer face */}
-          <mesh
-            position={[0, -h / 2 + (spec.deck!.drawer ? h / 2 : lip / 2), d / 2 - 0.0015]}
-            material={face}
-            castShadow
-          >
-            <boxGeometry args={[w, spec.deck!.drawer ? h : lip, 0.003]} />
-          </mesh>
-          {spec.deck!.drawer && (
+      if (spec.deck!.drawer) {
+        return (
+          <>
+            <mesh position={[0, -h / 2 + 0.0015, 0]} material={body} castShadow receiveShadow>
+              <boxGeometry args={[w * 0.98, 0.003, d * 0.96]} />
+            </mesh>
+            {/* Closed drawer face + pull */}
+            <mesh position={[0, 0, d / 2 - 0.0015]} material={face} castShadow>
+              <boxGeometry args={[w, h, 0.003]} />
+            </mesh>
             <mesh position={[0, 0, d / 2 + 0.004]} material={tintedMaterial(spec.style.detail)} castShadow>
               <boxGeometry args={[w * 0.3, 0.006, 0.005]} />
             </mesh>
-          )}
-          {/* Side rails */}
+            {[-1, 1].map((s) => (
+              <mesh
+                key={s}
+                position={[(s * (w * 0.98)) / 2, -h / 2 + (h * 0.4) / 2, 0]}
+                material={body}
+                castShadow
+              >
+                <boxGeometry args={[0.003, h * 0.4, d * 0.96]} />
+              </mesh>
+            ))}
+          </>
+        );
+      }
+      // Cantilever shelf: perforated top deck, corner cable slots,
+      // front apron between the ears, tapered side skirts.
+      const deckT = 0.0022;
+      const deckTop = (spec.heightMm / 2 - 4) * MM;
+      const deckY = deckT / 2;
+      const earW = (spec.ears?.widthMm ?? 0) * MM;
+      return (
+        <group position={[0, deckTop - deckT, 0]}>
+          <mesh position={[0, deckY, -d * 0.02]} material={face} castShadow receiveShadow>
+            <boxGeometry args={[w * 0.985, deckT, d * 0.94]} />
+          </mesh>
+          {spec.deck!.perforated && <DeckPerforation spec={spec} yM={deckY + deckT / 2 + 0.0003} />}
+          {spec.deck!.slotsMm.map((slot, i) => (
+            <DeckSlot key={i} slot={slot} yM={deckY + deckT / 2 + 0.0004} />
+          ))}
+          {/* Front apron folding down between the mounting ears */}
+          <mesh
+            position={[0, -(deckTop + h / 2) / 2 + deckY, d / 2 - 0.0015]}
+            material={face}
+            castShadow
+          >
+            <boxGeometry args={[w - 2 * earW - 0.002, deckTop + h / 2, 0.003]} />
+          </mesh>
+          {/* Tapered side skirts (full height at the front, thin rear) */}
           {[-1, 1].map((s) => (
             <mesh
               key={s}
-              position={[(s * (w * 0.98)) / 2, -h / 2 + (h * 0.4) / 2, 0]}
+              geometry={skirtGeometry(spec.heightMm, spec.depthMm)}
               material={body}
+              position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckTop + deckY, d * 0.47]}
+              rotation={[0, Math.PI / 2, 0]}
               castShadow
-            >
-              <boxGeometry args={[0.003, h * 0.4, d * 0.96]} />
-            </mesh>
+            />
           ))}
-        </>
+        </group>
       );
     }
     case 'tray':

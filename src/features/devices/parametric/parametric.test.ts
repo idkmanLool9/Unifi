@@ -220,7 +220,7 @@ describe('chassis spec builder', () => {
     const shelf = buildChassisSpec(
       seed({ id: 't-shelf2', accessoryKind: 'cantilever-shelf', powerConsumptionWatts: 0, maximumPowerWatts: 0 }),
     );
-    expect(shelf.deck).toEqual({ lipMm: 12, drawer: false });
+    expect(shelf.deck?.drawer).toBe(false);
     expect(shelf.openBody).toBe('deck');
 
     const drawer = buildChassisSpec(
@@ -233,6 +233,29 @@ describe('chassis spec builder', () => {
       }),
     );
     expect(drawer.deck?.drawer).toBe(true);
+    // Drawers keep a closed face: no perforation, no cable slots.
+    expect(drawer.deck?.perforated).toBe(false);
+    expect(drawer.deck?.slotsMm).toHaveLength(0);
+  });
+
+  it('the Ubiquiti toolless shelf gets the full cantilever treatment', () => {
+    const shelf = UBIQUITI_DEVICES.find((d) => d.id === 'ubnt-rack-shelf-1u')!;
+    expect(inferDeviceKind(shelf)).toBe('shelf');
+    const spec = buildChassisSpec(shelf);
+    // Brushed-silver brand preset, EIA ears, perforated deck.
+    expect(spec.style.id).toBe('ubiquiti');
+    expect(spec.ears).toEqual({ widthMm: 16, holeCount: 3 });
+    expect(spec.deck?.perforated).toBe(true);
+    // Four oblong cable slots, one per corner, inside the deck bounds.
+    expect(spec.deck?.slotsMm).toHaveLength(4);
+    for (const slot of spec.deck!.slotsMm) {
+      expect(Math.abs(slot.xMm) + slot.wMm / 2).toBeLessThan(shelf.widthMm / 2);
+      expect(Math.abs(slot.yMm) + slot.hMm / 2).toBeLessThan(shelf.depthMm / 2);
+    }
+    // Passive steel: no vents, no buttons, no PSU frames.
+    expect(spec.vents).toHaveLength(0);
+    expect(spec.buttons).toHaveLength(0);
+    expect(spec.psuFramesMm).toHaveLength(0);
   });
 
   it('PDUs without authored outlets get a visual outlet strip', () => {
