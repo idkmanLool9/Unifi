@@ -3,7 +3,11 @@ import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useUIStore } from '@/stores/uiStore';
-import { allDevices, getDevice } from '@/features/devices/deviceRegistry';
+import {
+  allDevices,
+  getDevice,
+  registerDevice,
+} from '@/features/devices/deviceRegistry';
 import { allPhysicalPorts } from '@/features/cables/anchors';
 import { focusCable, focusPort } from '@/features/viewport/focusActions';
 import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
@@ -30,6 +34,7 @@ export function installDebugHooks(): void {
     selectionStore: useSelectionStore,
     uiStore: useUIStore,
     getDevice,
+    registerDevice,
     allDevices,
     allPhysicalPorts,
     focusCable,

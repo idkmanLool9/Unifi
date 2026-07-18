@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildChassisSpec, freeIntervals, occupiedFrontRects, type RectMm } from './chassisSpec';
 import { inferDeviceKind } from './deviceKind';
-import { ventLayout } from './parametricGeometry';
+import { skirtGeometry, ventLayout } from './parametricGeometry';
 import { styleFor } from './stylePresets';
 import { defineDevice, type DeviceSeed } from '../definitions/defineDevice';
 import { GENERIC_DEVICES } from '../definitions/generic';
@@ -287,6 +287,46 @@ describe('chassis spec builder', () => {
     const b = buildChassisSpec(grown);
     expect(b.driveBays.length).toBeGreaterThan(a.driveBays.length);
     expect(b.ears!.holeCount).toBe(12);
+  });
+});
+
+describe('cantilever skirt geometry orientation', () => {
+  it('is full height at the front (z = 0) and a thin tail at the rear', () => {
+    const geometry = skirtGeometry(43.7, 260);
+    const position = geometry.getAttribute('position');
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (let i = 0; i < position.count; i++) minZ = Math.min(minZ, position.getZ(i));
+    for (let i = 0; i < position.count; i++) maxZ = Math.max(maxZ, position.getZ(i));
+    // Front edge at z = 0, running rearward (negative z).
+    expect(maxZ).toBeCloseTo(0, 5);
+    expect(minZ).toBeLessThan(-0.2);
+
+    const heightSpan = (zLo: number, zHi: number) => {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = 0; i < position.count; i++) {
+        const z = position.getZ(i);
+        if (z < zLo || z > zHi) continue;
+        lo = Math.min(lo, position.getY(i));
+        hi = Math.max(hi, position.getY(i));
+      }
+      return hi - lo;
+    };
+    const frontSpan = heightSpan(-0.02, 0);
+    const rearSpan = heightSpan(minZ, minZ + 0.02);
+    // Tall at the front, thin tail at the rear — never the reverse.
+    expect(frontSpan).toBeGreaterThan(0.03);
+    expect(rearSpan).toBeLessThan(0.015);
+    // Thickness extrudes along +X only.
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < position.count; i++) {
+      minX = Math.min(minX, position.getX(i));
+      maxX = Math.max(maxX, position.getX(i));
+    }
+    expect(minX).toBeCloseTo(0, 5);
+    expect(maxX).toBeCloseTo(0.0022, 5);
   });
 });
 

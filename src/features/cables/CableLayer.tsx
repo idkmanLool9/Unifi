@@ -8,7 +8,7 @@ import {
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { resolveEndpoint, type Vec3 } from './anchors';
-import { plugQuaternion } from './Rj45Plug';
+import { plugQuaternion, plugQuaternionOriented } from './Rj45Plug';
 import {
   connectorCableOffsetMm,
   connectorInsertionMm,
@@ -32,7 +32,7 @@ import {
   recommendLengthMm,
 } from './routing';
 import { useRoutingRulesStore } from '@/stores/routingRulesStore';
-import { getDevice } from '@/features/devices/deviceRegistry';
+import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
 import { poseForEndpoint } from '@/features/devices/instancePose';
 import { focusCable } from '@/features/viewport/focusActions';
 import { railHeight, U_METERS } from '@/features/rack/rackConstants';
@@ -143,6 +143,9 @@ function CableMesh({
   const allCables = useCableStore((s) => s.cables);
 
   const rules = useRoutingRulesStore((s) => s.rules);
+  // Authoring saves re-register definitions in place: recompute the
+  // route the moment a definition changes (port moved, rotated, …).
+  const registryVersion = useRegistryStore((s) => s.version);
   const spec = CABLE_CATALOG[cable.type];
   const bundle = cable.bundleId
     ? bundles.find((b) => b.id === cable.bundleId)
@@ -367,7 +370,7 @@ function CableMesh({
       routedNodeKeys: useManaged ? plan.nodeKeys : [],
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeKey, instances, spec, geometry]);
+  }, [routeKey, instances, spec, geometry, registryVersion]);
 
   // Sync derived facts (route length, status) back to the serializable
   // instance — only when they actually changed, never per frame. A
@@ -571,6 +574,7 @@ function CableMesh({
             born={born}
             position={position}
             exitDir={end.exitDir}
+            exitUp={end.exitUp}
           >
             <Component color={cable.color} cableRadiusM={cableRadiusM} />
           </PlugAt>
@@ -724,12 +728,15 @@ function PlugAt({
   born,
   position,
   exitDir,
+  exitUp,
   children,
 }: {
   role: 'source' | 'destination';
   born: boolean;
   position: Vec3;
   exitDir: Vec3;
+  /** Port up vector — rolls the plug with the port's rotation. */
+  exitUp?: Vec3;
   children: ReactNode;
 }) {
   const ref = useRef<Group>(null);
@@ -763,7 +770,9 @@ function PlugAt({
     <group
       ref={ref}
       position={position}
-      quaternion={plugQuaternion(exitDir)}
+      quaternion={
+        exitUp ? plugQuaternionOriented(exitDir, exitUp) : plugQuaternion(exitDir)
+      }
       visible={!born}
     >
       {children}

@@ -24,7 +24,7 @@ import {
   resolveEndpoint,
   type Vec3,
 } from './anchors';
-import { plugQuaternion } from './Rj45Plug';
+import { plugQuaternion, plugQuaternionOriented } from './Rj45Plug';
 import { poseForEndpoint } from '@/features/devices/instancePose';
 import {
   calibratedPort,
@@ -43,7 +43,11 @@ import { portGlowColor } from '@/features/devices/hardware/etherlighting/resolve
 import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
 import { focusPort } from '@/features/viewport/focusActions';
 import { checkPair, useCableToolStore } from '@/stores/cableToolStore';
-import { deviceModelUrl, getDevice } from '@/features/devices/deviceRegistry';
+import {
+  deviceModelUrl,
+  getDevice,
+  useRegistryStore,
+} from '@/features/devices/deviceRegistry';
 import { useAssetStore } from '@/stores/assetStore';
 import { useCableStore, type CableEnd } from '@/stores/cableStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
@@ -147,6 +151,7 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
   const instances = useDeviceInstancesStore((s) => s.instances);
   const cables = useCableStore((s) => s.cables);
   const calibrationVersion = useCalibrationStore((s) => s.version);
+  const registryVersion = useRegistryStore((s) => s.version);
   const assetAvailability = useAssetStore((s) => s.availability);
   const sourceEnd = useCableToolStore((s) => s.sourceEnd);
   const setSource = useCableToolStore((s) => s.setSource);
@@ -202,7 +207,7 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
             resolved.surface[1] + exitDir[1] * faceLift,
             resolved.surface[2] + exitDir[2] * faceLift,
           ],
-          quaternion: plugQuaternion(exitDir),
+          quaternion: plugQuaternionOriented(exitDir, resolved.exitUp),
           color:
             portGlowColor(
               useEtherlightingStore.getState().settings,
@@ -214,7 +219,7 @@ function PortTargets({ geometry }: { geometry: RackGeometry }) {
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instances, geometry, calibrationVersion, assetAvailability]);
+  }, [instances, geometry, calibrationVersion, assetAvailability, registryVersion]);
 
   // Compatibility of every port against the pending source (memoized —
   // recomputed only when the source or the cable set changes).

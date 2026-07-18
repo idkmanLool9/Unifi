@@ -702,14 +702,15 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
           >
             <boxGeometry args={[w - 2 * earW - 0.002, apronH, 0.003]} />
           </mesh>
-          {/* Tapered side gussets (full height front, thin rear tail) */}
+          {/* Tapered side gussets (full height front, thin rear tail).
+              Orientation is baked into the geometry: tall edge at its
+              z = 0, which we place on the shelf's front edge. */}
           {[-1, 1].map((s) => (
             <mesh
               key={s}
               geometry={skirtGeometry(spec.heightMm, spec.depthMm)}
               material={body}
               position={[s < 0 ? -w / 2 : w / 2 - 0.0022, -deckBase, d * 0.47]}
-              rotation={[0, Math.PI / 2, 0]}
               castShadow
             />
           ))}

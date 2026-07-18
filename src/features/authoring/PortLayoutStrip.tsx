@@ -261,13 +261,34 @@ function ArrayPanel() {
 
 function PortsContext({ power }: { power: boolean }) {
   const ports = useAuthoringStore((s) => s.ports);
+  const deviceId = useAuthoringStore((s) => s.deviceId);
   const selectMany = useAuthoringStore((s) => s.selectMany);
   const dispatchCamera = useAuthoringStore((s) => s.dispatchCamera);
-  const [face, setFace] = useState<'front' | 'rear'>(power ? 'rear' : 'front');
   const [query, setQuery] = useState('');
 
   const facePorts = (f: 'front' | 'rear') =>
     ports.filter((p) => p.location === f && isPowerType(p.type) === power);
+
+  // Open on the face that actually has ports (rear-ported devices like
+  // desktop gateways otherwise greet the author with an empty front).
+  const populated: 'front' | 'rear' =
+    facePorts('front').length === 0 && facePorts('rear').length > 0
+      ? 'rear'
+      : power
+        ? 'rear'
+        : 'front';
+  const [face, setFaceState] = useState<'front' | 'rear'>(populated);
+  const [faceDevice, setFaceDevice] = useState(deviceId);
+  if (faceDevice !== deviceId) {
+    // New device opened: re-derive the default face.
+    setFaceDevice(deviceId);
+    setFaceState(populated);
+  }
+  const setFace = (f: 'front' | 'rear') => {
+    setFaceState(f);
+    // Switching face swings the camera to that panel.
+    dispatchCamera({ type: 'frame-ports', face: f });
+  };
 
   const q = query.trim().toLowerCase();
   const matched = facePorts(face).filter(

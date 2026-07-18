@@ -92,7 +92,12 @@ export const rackHeightFor = (
 
 export type RailMode = 'auto' | 'manual';
 
-/** Deepest mounted device in millimeters, or null for an empty rack. */
+/** Working room behind a mounted shelf (cables of shelf devices), mm. */
+export const SHELF_REAR_CLEARANCE_MM = 140;
+
+/** Deepest mounted device in millimeters, or null for an empty rack.
+ *  Shelves demand extra rear clearance so the auto-sized rack never
+ *  hugs the shelf edge — the gear standing on it needs cable room. */
 export function deepestDeviceDepthMm(
   instances: readonly PlacedDevice[],
   getDefinition: (id: string) => DeviceDefinition | undefined,
@@ -100,7 +105,13 @@ export function deepestDeviceDepthMm(
   let deepest = 0;
   for (const instance of instances) {
     const definition = getDefinition(instance.definitionId);
-    if (definition) deepest = Math.max(deepest, definition.depthMm);
+    if (!definition) continue;
+    const effective =
+      definition.accessoryKind === 'cantilever-shelf' ||
+      definition.accessoryKind === 'fixed-shelf'
+        ? definition.depthMm + SHELF_REAR_CLEARANCE_MM
+        : definition.depthMm;
+    deepest = Math.max(deepest, effective);
   }
   return deepest > 0 ? deepest : null;
 }

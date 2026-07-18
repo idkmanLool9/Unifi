@@ -153,6 +153,9 @@ export interface ResolvedEndpoint {
   anchor: Vec3;
   /** Unit exit direction in rack-local space (rotation-aware). */
   exitDir: Vec3;
+  /** The port's up vector in rack-local space — carries the port's
+   *  roll so plugs and cavity glows rotate with the port. */
+  exitUp: Vec3;
 }
 
 /** Resolves a port ref on a placed device to world-attachable points.
@@ -211,6 +214,7 @@ export function resolveEndpoint(
     if (length > 1e-6) localExit = [ex / length, ey / length, ez / length];
   }
   const rotated = rotatePortVector(localExit, port.rotationDeg);
+  const rotatedUp = rotatePortVector([0, 1, 0], port.rotationDeg);
   const { cos, sin } = exactTrig(resolvedPose.rotationY);
   // `+ 0` keeps rotated zero components from becoming -0.
   const exitDir: Vec3 = [
@@ -218,10 +222,16 @@ export function resolveEndpoint(
     rotated[1] + 0,
     -sin * rotated[0] + cos * rotated[2] + 0,
   ];
+  const exitUp: Vec3 = [
+    cos * rotatedUp[0] + sin * rotatedUp[2] + 0,
+    rotatedUp[1] + 0,
+    -sin * rotatedUp[0] + cos * rotatedUp[2] + 0,
+  ];
   return {
     port,
     surface,
     anchor,
     exitDir,
+    exitUp,
   };
 }

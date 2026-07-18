@@ -110,11 +110,15 @@ const skirtCache = new Map<string, ExtrudeGeometry>();
 
 /**
  * Cantilever-shelf side skirt: a vertical gusset standing ON the deck —
- * full unit height at the front (where the bending moment lives),
+ * full unit height at the FRONT (where the bending moment lives),
  * sloping down to a thin tail at the rear, its bottom edge running
- * along the deck. Built in shape space with x = distance behind the
- * front edge and y = height; extruded 2.2 mm along z (the plate
- * thickness — world X after the renderer's 90° yaw).
+ * along the deck.
+ *
+ * The device-local orientation (+Z = front) is baked into the geometry
+ * itself, so the renderer positions it without any rotation: vertices
+ * span z ∈ [-run, 0] with the tall edge at z = 0 (the mesh is placed
+ * with its z-origin on the shelf's front edge) and the plate thickness
+ * extrudes along +X. Unit-tested against the real vertex data.
  */
 export function skirtGeometry(
   heightMm: number,
@@ -129,6 +133,7 @@ export function skirtGeometry(
   const bottom = (-heightMm / 2 + 4) * MM;
   const run = depthMm * 0.92 * MM;
   const tail = 8 * MM;
+  // Shape x = distance behind the front edge; y = height.
   const shape = new Shape();
   shape.moveTo(0, bottom);
   shape.lineTo(0, top);
@@ -141,6 +146,10 @@ export function skirtGeometry(
     depth: 2.2 * MM,
     bevelEnabled: false,
   });
+  // Bake shape-x onto -Z (rearward) and the extrusion onto +X, so the
+  // tall edge lands exactly on z = 0 (device front) with no per-mesh
+  // rotation left to get wrong.
+  geometry.rotateY(Math.PI / 2);
   skirtCache.set(key, geometry);
   return geometry;
 }

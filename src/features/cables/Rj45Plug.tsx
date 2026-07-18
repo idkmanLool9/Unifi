@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   BoxGeometry,
   CylinderGeometry,
+  Matrix4,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Quaternion,
@@ -102,6 +103,24 @@ export function plugQuaternion(exitDir: Vec3): Quaternion {
   return new Quaternion().setFromUnitVectors(
     Z_AXIS,
     new Vector3(...exitDir).normalize(),
+  );
+}
+
+/**
+ * Like plugQuaternion, but with plug-local +Y following the port's own
+ * (rotated) up vector — rolling a port in Device Authoring rolls the
+ * seated plug and connector with it.
+ */
+export function plugQuaternionOriented(exitDir: Vec3, upHint: Vec3): Quaternion {
+  const z = new Vector3(...exitDir).normalize();
+  const y = new Vector3(...upHint);
+  // Orthonormalize the hint against the exit axis.
+  y.addScaledVector(z, -y.dot(z));
+  if (y.lengthSq() < 1e-10) y.set(0, 1, 0).addScaledVector(z, -z.y);
+  y.normalize();
+  const x = new Vector3().crossVectors(y, z);
+  return new Quaternion().setFromRotationMatrix(
+    new Matrix4().makeBasis(x, y, z),
   );
 }
 

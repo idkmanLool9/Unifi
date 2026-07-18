@@ -274,6 +274,10 @@ function PortSections() {
                     port.anchorMm[1],
                     -port.anchorMm[2],
                   ],
+                  // The authored exit mirrors onto the new face too.
+                  exitDirMm: port.exitDirMm
+                    ? [port.exitDirMm[0], port.exitDirMm[1], -port.exitDirMm[2]]
+                    : undefined,
                 });
               }}
               className={inputClass}

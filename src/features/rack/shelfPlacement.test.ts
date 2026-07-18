@@ -190,8 +190,8 @@ describe('occupancy and cables with shelf children', () => {
       pose,
     )!;
     expect(endpoint).not.toBeNull();
-    // The rear-panel WAN port of a device yawed +90° exits along -X.
-    expect(endpoint.exitDir[0]).toBeCloseTo(-1, 5);
+    // The front-panel WAN port of a device yawed +90° exits along +X.
+    expect(endpoint.exitDir[0]).toBeCloseTo(1, 5);
     expect(Math.abs(endpoint.exitDir[2])).toBeLessThan(1e-5);
     // And the port's world position rotates with the chassis: the WAN
     // port (device-local x = -40) lands offset along +Z from center.
