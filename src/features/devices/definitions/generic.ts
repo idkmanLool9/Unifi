@@ -125,7 +125,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     modelNumber: 'UACC-Rack-Panel-Blank-1U',
     category: 'accessories',
     rackUnits: 1,
-    depthMm: 20,
+    depthMm: 14,
     weightKg: 0.25,
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
