@@ -696,13 +696,15 @@ function OpenBody({ spec }: { spec: ChassisSpec }) {
           {spec.deck!.slotsMm.map((slot, i) => (
             <DeckSlot key={i} slot={slot} yM={deckY + deckT / 2 + 0.0004} />
           ))}
-          {/* Shallow lip folding down from the deck's leading edge */}
+          {/* Shallow lip folding down from the deck's leading edge to
+              the chassis bottom (4 mm below the deck) — never past the
+              shelf's own rack unit. */}
           <mesh
-            position={[0, deckY - 0.0075, d / 2 - 0.0015]}
+            position={[0, (deckT - 0.004) / 2, d / 2 - 0.0015]}
             material={face}
             castShadow
           >
-            <boxGeometry args={[w - 2 * earW - 0.002, 0.015, 0.003]} />
+            <boxGeometry args={[w - 2 * earW - 0.002, 0.004 + deckT, 0.003]} />
           </mesh>
           {/* Tapered side gussets (full height front, thin rear tail).
               Orientation is baked into the geometry: tall edge at its
