@@ -42,12 +42,16 @@ export function createRackMaterials(finish: RackFinish): RackMaterialSet {
         envMapIntensity: 1.15,
       }
     : {
-        metalness: 0.92,
-        roughness: 0.34,
+        // Anodised/brushed aluminium: kept only mildly metallic so the
+        // light base colour always shows. At high metalness a thin
+        // side-facing rail reflects the dark surroundings and reads
+        // black; a lower value lets the silver read from any angle.
+        metalness: 0.45,
+        roughness: 0.46,
         roughnessMap: map,
         bumpMap: map,
         bumpScale: 0.0006,
-        envMapIntensity: 1.05,
+        envMapIntensity: 1.25,
       };
 
   const frame = new MeshPhysicalMaterial({ color: finish.frame, ...common });
