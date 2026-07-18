@@ -111,15 +111,19 @@ export function MountingHardware({ definition, geometry }: MountingHardwareProps
 
   const materials = useMemo(
     () => ({
+      // Mounting ears/flanges/bolts that hold the device to the rails.
+      // Brushed silver matched to the rack frame, kept only mildly
+      // metallic so the light colour shows from any angle instead of
+      // reflecting the dark surroundings and reading black.
       steel: new MeshStandardMaterial({
-        color: '#23272d',
-        metalness: 0.75,
-        roughness: 0.42,
+        color: '#c6cbd1',
+        metalness: 0.45,
+        roughness: 0.48,
       }),
       zinc: new MeshStandardMaterial({
-        color: '#6f767e',
-        metalness: 0.85,
-        roughness: 0.35,
+        color: '#b3b9c0',
+        metalness: 0.5,
+        roughness: 0.4,
       }),
     }),
     [],
