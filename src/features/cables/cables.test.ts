@@ -78,6 +78,21 @@ describe('anchor resolution', () => {
     expect(resolved.port.type).toBe('keystone');
     expect(Math.abs(resolved.anchor[0])).toBeLessThan(panel.widthMm / 2000);
   });
+
+  it('exposes the rear of each pass-through keystone as a connectable endpoint', () => {
+    const rearPort = findPhysicalPort(panel, 'keystone-rear[12]');
+    expect(rearPort).toBeDefined();
+    expect(rearPort!.location).toBe('rear');
+    const rear = resolveEndpoint(panel, instance, GEO, 'keystone-rear[12]')!;
+    const front = resolveEndpoint(panel, instance, GEO, 'keystone[12]')!;
+    // Front-facing panel: the rear opening faces the back of the rack and
+    // its plug pulls away from the front, so cables leave out the back.
+    expect(rear.exitDir[2]).toBeLessThan(0);
+    expect(front.exitDir[2]).toBeGreaterThan(0);
+    expect(rear.anchor[2]).toBeLessThan(rear.surface[2]);
+    // The two openings of one jack line up horizontally.
+    expect(rear.surface[0]).toBeCloseTo(front.surface[0], 4);
+  });
 });
 
 /* ---- compatibility --------------------------------------------------- */

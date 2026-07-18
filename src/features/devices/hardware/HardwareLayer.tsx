@@ -87,12 +87,10 @@ const BEZEL_COLORS: Partial<Record<PhysicalConnectorType, string>> = {
 };
 const INSET_COLOR = '#0b0d10';
 
-/** Rear pass-through body of a keystone jack, mm from the panel face. */
+/** Pass-through body of a keystone jack, mm from the panel face. Reaches
+ *  back to where the rear RJ45 opening sits (see gen-patch-* rear ports). */
 const KEYSTONE_BODY = { widthMm: 15.5, heightMm: 18.5, depthMm: 26 };
-/** Termination cap (punch-down cover) on the back of a keystone body. */
-const KEYSTONE_CAP = { widthMm: 17.5, heightMm: 20, depthMm: 5 };
 const KEYSTONE_BODY_COLOR = '#1d2126';
-const KEYSTONE_CAP_COLOR = '#33547a';
 
 /** Bezel + inset boxes for one connector, in device-local mm. */
 function connectorParts(port: PhysicalPort): Part[] {
@@ -115,25 +113,19 @@ function connectorParts(port: PhysicalPort): Part[] {
       color: INSET_COLOR,
     },
   ];
-  // A keystone jack is a pass-through module: its snap-in body and
-  // termination cap protrude from the back of the plate it clicks into.
-  if (port.type === 'keystone') {
+  // A keystone jack is a pass-through module: its snap-in body protrudes
+  // behind the plate and terminates in a second RJ45 opening at the rear.
+  // The body is drawn once, from the front opening; the rear opening is
+  // its own port (front bezel + inset above), so both faces are real,
+  // connectable connectors — a feed-through panel.
+  if (port.type === 'keystone' && port.location === 'front') {
     const body = KEYSTONE_BODY;
-    const cap = KEYSTONE_CAP;
-    parts.push(
-      {
-        positionMm: [x, y, z - out * (1 + body.depthMm / 2)],
-        sizeMm: [body.widthMm, body.heightMm, body.depthMm],
-        rotationY,
-        color: KEYSTONE_BODY_COLOR,
-      },
-      {
-        positionMm: [x, y, z - out * (1 + body.depthMm + cap.depthMm / 2)],
-        sizeMm: [cap.widthMm, cap.heightMm, cap.depthMm],
-        rotationY,
-        color: KEYSTONE_CAP_COLOR,
-      },
-    );
+    parts.push({
+      positionMm: [x, y, z - out * (1 + body.depthMm / 2)],
+      sizeMm: [body.widthMm, body.heightMm, body.depthMm],
+      rotationY,
+      color: KEYSTONE_BODY_COLOR,
+    });
   }
   return parts;
 }

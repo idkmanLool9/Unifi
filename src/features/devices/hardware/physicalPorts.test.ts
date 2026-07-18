@@ -191,24 +191,38 @@ describe('LED resolution', () => {
 });
 
 describe('patch panel generation', () => {
-  it('exposes every keystone opening as an addressable connector', () => {
+  it('exposes every keystone opening on both faces as an addressable connector', () => {
     const panel24 = GENERIC_DEVICES.find((d) => d.id === 'gen-patch-24')!;
     const ports = resolvePhysicalPorts(panel24);
-    expect(ports).toHaveLength(24);
+    // Feed-through panel: 24 front openings + 24 rear openings.
+    expect(ports).toHaveLength(48);
     expect(ports[0].ref).toBe('keystone[1]');
     expect(ports[23].ref).toBe('keystone[24]');
+    const front = ports.filter((p) => p.location === 'front');
+    const rear = ports.filter((p) => p.location === 'rear');
+    expect(front).toHaveLength(24);
+    expect(rear).toHaveLength(24);
+    // Rear openings face the back and line up with the front ones in x.
+    expect(rear[0].ref).toBe('keystone-rear[1]');
+    for (const p of rear) expect(p.positionMm[2]).toBeLessThan(0);
+    for (let i = 0; i < 24; i++) {
+      expect(rear[i].positionMm[0]).toBeCloseTo(front[i].positionMm[0], 5);
+    }
     // Openings stay inside the faceplate.
     for (const p of ports) {
       expect(Math.abs(p.positionMm[0])).toBeLessThan(panel24.widthMm / 2);
     }
   });
 
-  it('generates both rows of the 48-port panel', () => {
+  it('generates both rows of the 48-port panel on both faces', () => {
     const panel48 = GENERIC_DEVICES.find((d) => d.id === 'gen-patch-48')!;
     const ports = resolvePhysicalPorts(panel48);
-    expect(ports).toHaveLength(48);
-    expect(ports.filter((p) => p.positionMm[1] > 0)).toHaveLength(24);
-    expect(ports.filter((p) => p.positionMm[1] < 0)).toHaveLength(24);
+    // Two rows × (24 front + 24 rear).
+    expect(ports).toHaveLength(96);
+    expect(ports.filter((p) => p.positionMm[1] > 0)).toHaveLength(48);
+    expect(ports.filter((p) => p.positionMm[1] < 0)).toHaveLength(48);
+    expect(ports.filter((p) => p.location === 'front')).toHaveLength(48);
+    expect(ports.filter((p) => p.location === 'rear')).toHaveLength(48);
   });
 
   it('blank and brush panels expose no connectors', () => {

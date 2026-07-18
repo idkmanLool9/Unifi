@@ -21,7 +21,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '1U keystone patch panel — 24 snap-in jacks with pass-through bodies terminated at the rear, plus a rear cable-support bar.',
+      '1U feed-through keystone panel — 24 pass-through jacks with an RJ45 opening on both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -29,8 +29,21 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         id: 'keystone',
         type: 'keystone',
         count: 24,
-        label: 'Keystone 1–24',
+        label: 'Front 1–24',
         positionMm: [-205.8, 0, 20],
+        pitchMm: 17.9,
+      },
+      // Rear of the same pass-through jacks: an RJ45 opening at the back
+      // of each keystone body, so permanent/building cabling terminates
+      // here exactly as on a real feed-through panel. Aligned to the
+      // front openings; cables exit straight out the back.
+      {
+        id: 'keystone-rear',
+        type: 'keystone',
+        count: 24,
+        label: 'Rear 1–24',
+        location: 'rear',
+        positionMm: [-205.8, 0, -7],
         pitchMm: 17.9,
       },
     ],
@@ -57,7 +70,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
     powerConsumptionWatts: 0,
     maximumPowerWatts: 0,
     description:
-      '2U keystone patch panel — 48 snap-in jacks in two rows, pass-through bodies terminated at the rear, plus a rear cable-support bar.',
+      '2U feed-through keystone panel — 48 pass-through jacks in two rows, each with an RJ45 opening on both faces (patch at the front, permanent cabling at the rear), plus a rear cable-support bar.',
     tags: ['patch-panel', 'keystone', 'passive'],
     accessoryKind: 'patch-panel',
     ports: [
@@ -65,7 +78,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         id: 'keystone-a',
         type: 'keystone',
         count: 24,
-        label: 'Keystone 1–24',
+        label: 'Front 1–24',
         positionMm: [-205.8, 21, 20],
         pitchMm: 17.9,
         row: 0,
@@ -74,8 +87,29 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
         id: 'keystone-b',
         type: 'keystone',
         count: 24,
-        label: 'Keystone 25–48',
+        label: 'Front 25–48',
         positionMm: [-205.8, -21, 20],
+        pitchMm: 17.9,
+        row: 1,
+      },
+      // Rear RJ45 openings on the back of the same pass-through jacks.
+      {
+        id: 'keystone-a-rear',
+        type: 'keystone',
+        count: 24,
+        label: 'Rear 1–24',
+        location: 'rear',
+        positionMm: [-205.8, 21, -7],
+        pitchMm: 17.9,
+        row: 0,
+      },
+      {
+        id: 'keystone-b-rear',
+        type: 'keystone',
+        count: 24,
+        label: 'Rear 25–48',
+        location: 'rear',
+        positionMm: [-205.8, -21, -7],
         pitchMm: 17.9,
         row: 1,
       },
