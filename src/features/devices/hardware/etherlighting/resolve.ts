@@ -245,8 +245,8 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
         : speedColor;
       break;
     case 'activity':
-      // Base "up" color; the live-state block below refines it.
       color = speedColor;
+      color2 = settings.activityColor;
       break;
     case 'link':
       color = linked ? speedColor : '#6a7078';
@@ -277,6 +277,9 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
   const activitySemantics =
     colorMode === 'activity' || mode === 'activity' || mode === 'traffic';
   if (activitySemantics) {
+    // Only connectivity/fault handling here — a live ("up") port keeps the
+    // exact color and animation the color mode already gave it, so the lit
+    // look is unchanged from before this behavior existed.
     const state = portActivityState(runtime);
     if (state === 'none' || state === 'disabled') return off;
     if (state === 'down') {
@@ -289,9 +292,6 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
       color2 = settings.warningColor;
       overrideMode = 'breathing';
       overrideActivity = 0;
-    } else {
-      // Live port: flash between its color and the activity accent.
-      color2 = settings.activityColor;
     }
   }
 

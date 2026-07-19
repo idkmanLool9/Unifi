@@ -213,8 +213,8 @@ describe('activity mode reflects live link state', () => {
       runtime: { link: true },
     });
     expect(up.enabled).toBe(true);
+    // A live port keeps its color mode's look unchanged (speed color here).
     expect(up.color).toBe(DEFAULT_ETHERLIGHTING.speedPalette['2.5g']);
-    expect(up.color2).toBe(DEFAULT_ETHERLIGHTING.activityColor);
     // Down still flags red even when Activity is only the animation mode.
     const down = resolve({
       settings: { colorMode: 'speed', animationMode: 'activity' },

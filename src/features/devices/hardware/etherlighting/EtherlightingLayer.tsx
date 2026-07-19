@@ -164,14 +164,10 @@ void main() {
     color = hsv2rgb(vec3(fract(t * 0.12 + phase * 0.05 + u * 0.35), 0.85, 1.0));
   }
   else if (mode < 8.5) {
-    // Activity: a smooth per-port shimmer. Each port pulses on its own
-    // phase and rate (a stable per-port seed) so it reads as independent
-    // traffic — not a hard strobe and not a wave sweeping the row.
-    float seed = fract(sin(phase * 91.7) * 43758.5453);
-    float rate = 1.5 + 2.5 * activity;
-    float pulse = 0.5 + 0.5 * sin(t * rate * (0.7 + 0.6 * seed) + seed * 6.2831);
-    anim = mix(0.5, 1.0, pulse * activity + (1.0 - activity) * 0.25);
-    color = mix(vColor, vColor2, pulse * activity * 0.45);
+    float rate = 2.0 + 7.0 * activity;
+    float blink = step(0.45, fract(t * rate * 0.4 + phase));
+    anim = mix(0.3, 1.0, blink * activity + (1.0 - activity) * 0.4);
+    color = mix(vColor, vColor2, blink * activity);
   }
   else {
     float sweep = fract(t * (0.4 + activity * 1.2) + phase * 0.1);
