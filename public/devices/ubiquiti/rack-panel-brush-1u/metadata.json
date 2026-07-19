@@ -1,0 +1,44 @@
+{
+  "id": "ubnt-uacc-rack-panel-brush-1u",
+  "slug": "rack-panel-brush-1u",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "Rack Panel Brush 1U",
+  "modelNumber": "UACC-RACK-PANEL-BRUSH-1U",
+  "category": "accessories",
+  "accessoryKind": "brush-panel",
+  "rackUnits": 1,
+  "widthMm": 442.4,
+  "heightMm": 43.7,
+  "depthMm": 63.5,
+  "weightKg": 0.42,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 0,
+  "maximumPowerWatts": 0,
+  "portsAuthored": true,
+  "ports": [],
+  "leds": [],
+  "tags": ["cable-management", "brush", "passive", "1u", "unifi"],
+  "description": "1U brush cable-management panel. Two dense polypropylene brush strips close the aperture while allowing cables to pass through, keeping the rack front tidy and limiting air bypass.",
+  "modelTransform": { "scale": 1, "rotationDeg": [0, 0, 0], "offsetMm": [0, 0, 30.5] },
+  "mountingOffsetMm": 0,
+  "cableManagement": {
+    "kind": "brush-panel",
+    "capacity": 48,
+    "costFactor": 0.8,
+    "nodes": [
+      { "id": "brush-l", "positionMm": [-160, 0, 0], "axisMm": [0, 0, 1] },
+      { "id": "brush-cl", "positionMm": [-80, 0, 0], "axisMm": [0, 0, 1] },
+      { "id": "brush-c", "positionMm": [0, 0, 0], "axisMm": [0, 0, 1] },
+      { "id": "brush-cr", "positionMm": [80, 0, 0], "axisMm": [0, 0, 1] },
+      { "id": "brush-r", "positionMm": [160, 0, 0], "axisMm": [0, 0, 1] }
+    ]
+  },
+  "presentation": {
+    "faceplate": "server",
+    "tone": "metal",
+    "portsLabel": "Cable pass-through",
+    "speedLabel": "Passive"
+  }
+}

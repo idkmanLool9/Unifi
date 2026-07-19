@@ -2,6 +2,7 @@
   "devices": [
     "generic/ups-2u",
     "ubiquiti/dream-machine-pro",
-    "ubiquiti/pro-max-24-poe"
+    "ubiquiti/pro-max-24-poe",
+    "ubiquiti/rack-panel-brush-1u"
   ]
 }
