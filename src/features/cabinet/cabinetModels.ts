@@ -10,8 +10,9 @@ import type { RackProfileId } from '@/features/rack/rackProfiles';
  * Ubiquiti UACC 12U 600mm wall-mount cabinet. Model measured at
  * 600×644×610 mm, centred at the origin, Y up, glass door toward +Z.
  * Right-hinged front door (pivot on the +X front edge), two removable
- * side panels, lift-off top / bottom covers, a wall-side back, four
- * interior mounting rails and two roof fans.
+ * side panels, lift-off top / bottom covers, a wall-side back with a
+ * removable cable-entry (gland) plate, four interior mounting rails and
+ * two roof fans.
  */
 const UACC_WALL_12U: CabinetModelDef = {
   id: 'uacc-wall-12u-600',
@@ -78,13 +79,30 @@ const UACC_WALL_12U: CabinetModelDef = {
       kind: 'top-cover',
       interaction: 'lift',
       group: 'top',
-      nodes: ['Cab-Top', 'Cab-Top-CableLip', 'Cab-GlandPlate', 'Cab-Gland-Scr-*'],
+      nodes: ['Cab-Top', 'Cab-Top-CableLip'],
       move: { dirMm: [0, 1, 0], distanceMm: 130 },
       explode: { dirMm: [0, 1, 0], distanceMm: 200 },
       defaultState: 'installed',
       states: ['installed', 'hidden', 'removed'],
       supportsTransparency: true,
       obstructsInterior: false,
+    },
+    {
+      id: 'cable-entry',
+      name: 'Cable Entry Plate',
+      kind: 'rear-cover',
+      interaction: 'remove',
+      group: 'rear',
+      // The removable cable-gland square on the rear face (plate + its four
+      // screws). Pops out toward the back so cables can be routed through,
+      // independently of the full back panel. Listed before `back-panel` and
+      // the `frame` catch-all so it claims these nodes first.
+      nodes: ['Cab-GlandPlate', 'Cab-Gland-Scr-*'],
+      move: { dirMm: [0, 0, -1], distanceMm: 120 },
+      explode: { dirMm: [0, 0, -1], distanceMm: 200 },
+      defaultState: 'installed',
+      states: ['installed', 'hidden', 'removed'],
+      supportsTransparency: true,
     },
     {
       id: 'bottom-cover',

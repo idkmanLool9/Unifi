@@ -42,6 +42,20 @@ describe('node pattern matching', () => {
     expect(partForNode(MODEL, 'nonexistent-node')).toBeUndefined();
   });
 
+  it('the rear cable-entry plate is its own removable part, not the top/back', () => {
+    // The gland plate + its screws belong to the dedicated cable-entry part
+    // so it can be removed independently to route cables through the rear.
+    expect(partForNode(MODEL, 'Cab-GlandPlate')?.id).toBe('cable-entry');
+    expect(partForNode(MODEL, 'Cab-Gland-Scr-175-50')?.id).toBe('cable-entry');
+    const entry = MODEL.parts.find((p) => p.id === 'cable-entry')!;
+    expect(entry.interaction).toBe('remove');
+    expect(entry.states).toContain('removed');
+    // It travels toward the rear (−Z) when removed.
+    expect(entry.move!.dirMm[2]).toBeLessThan(0);
+    // The top cover no longer owns the gland nodes.
+    expect(partForNode(MODEL, 'Cab-Top')?.id).toBe('top-cover');
+  });
+
   it('every part claims at least one authored node pattern', () => {
     for (const part of MODEL.parts) {
       expect(part.nodes.length).toBeGreaterThan(0);
