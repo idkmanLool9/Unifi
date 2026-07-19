@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Grid } from '@react-three/drei';
 import { Bloom, EffectComposer, N8AO } from '@react-three/postprocessing';
 import { useEtherlightingStore } from '@/features/devices/hardware/etherlighting/etherlightingStore';
@@ -6,9 +8,47 @@ import { CameraRig } from './CameraRig';
 import { StatsProbe } from './StatsProbe';
 import { VIEWPORT_THEME } from './viewportTheme';
 import { RackModel } from '@/features/rack/RackModel';
+import { useCabinetStore } from '@/stores/cabinetStore';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
 import { useViewSettingsStore } from '@/stores/viewSettingsStore';
 import type { ResolvedTheme } from '@/types';
+
+/**
+ * On-demand shadow maps. Shadows are expensive (a full extra scene pass
+ * from the light's view every frame) yet only change when geometry moves.
+ * We switch off per-frame auto-update and re-render the shadow map only for
+ * a short window after anything that actually moves the scene — device
+ * placement/drag, cabinet doors, rack orientation, shadow toggle. Camera
+ * orbit and the port-glow animation (which don't move casters) then cost no
+ * shadow work at all. Purely a performance change: the shadows look identical.
+ */
+function ShadowSync() {
+  const gl = useThree((s) => s.gl);
+  const dirtyUntil = useRef(0);
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
+    dirtyUntil.current = performance.now() + 800;
+    const bump = () => {
+      dirtyUntil.current = performance.now() + 700;
+    };
+    const unsub = [
+      useRackStore.subscribe(bump),
+      useDeviceInstancesStore.subscribe(bump),
+      useCabinetStore.subscribe(bump),
+      useViewSettingsStore.subscribe(bump),
+    ];
+    return () => {
+      unsub.forEach((u) => u());
+      gl.shadowMap.autoUpdate = true;
+    };
+  }, [gl]);
+  useFrame(() => {
+    if (performance.now() < dirtyUntil.current) gl.shadowMap.needsUpdate = true;
+  });
+  return null;
+}
 
 interface SceneProps {
   theme: ResolvedTheme;
@@ -24,6 +64,7 @@ export function Scene({ theme }: SceneProps) {
   return (
     <>
       <SceneLighting />
+      <ShadowSync />
 
       {gridVisible && (
         <Grid
@@ -72,7 +113,7 @@ function ScenePostprocessing({ aoEnabled }: { aoEnabled: boolean }) {
   const bloomActive = ether.enabled && ether.enableBloom;
   if (!aoEnabled && !bloomActive) return null;
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={2}>
       {aoEnabled ? (
         <N8AO
           halfRes

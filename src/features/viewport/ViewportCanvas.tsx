@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { PerformanceMonitor } from '@react-three/drei';
 import {
   Box,
   Eye,
@@ -41,6 +42,10 @@ export function ViewportCanvas() {
   const hasRack = useRackStore((s) => s.rack !== null);
   const cableTool = useUIStore((s) => s.activeTool === 'cable');
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
+  // Adaptive resolution: full crispness when the GPU keeps up, drop pixels
+  // under sustained load, snap back when it recovers. Only softens briefly
+  // during heavy moments instead of tanking the frame rate.
+  const [dpr, setDpr] = useState(1.5);
 
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -139,7 +144,7 @@ export function ViewportCanvas() {
     >
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={dpr}
         gl={{
           antialias: true,
           alpha: true,
@@ -170,6 +175,12 @@ export function ViewportCanvas() {
           useSelectionStore.getState().clear();
         }}
       >
+        <PerformanceMonitor
+          flipflops={3}
+          onIncline={() => setDpr(2)}
+          onDecline={() => setDpr(1)}
+          onFallback={() => setDpr(1)}
+        />
         <Scene theme={theme} />
       </Canvas>
 
