@@ -15,17 +15,213 @@
   "defaultFacing": "front",
   "powerConsumptionWatts": 25,
   "maximumPowerWatts": 1500,
-  "tags": ["ups", "battery", "backup", "power"],
+  "tags": [
+    "ups",
+    "battery",
+    "backup",
+    "power"
+  ],
   "description": "2U rackmount UPS with a front status display and power button, rear AC input and a network management port.",
   "mountingOffsetMm": 0,
+  "portsAuthored": true,
   "ports": [
     {
-      "id": "mgmt",
+      "id": "rj45 - 2",
       "type": "rj45",
       "count": 1,
-      "label": "Network management",
+      "label": "surge-network-out",
       "location": "rear",
+      "positionMm": [
+        -175.52,
+        -0.66,
+        -145.01
+      ],
       "speedGbps": 1
+    },
+    {
+      "id": "rj45-1",
+      "type": "rj45",
+      "count": 1,
+      "label": "surge-network-In",
+      "location": "rear",
+      "positionMm": [
+        -150.95,
+        -0.66,
+        -145.01
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "rj45-2",
+      "type": "rj45",
+      "count": 1,
+      "location": "rear",
+      "positionMm": [
+        -175.13,
+        -24.9,
+        -145.01
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "c13-4",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        56.37,
+        20,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-2",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        103.93,
+        20,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-3",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        80.13,
+        20,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-1",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        127.71,
+        20,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-5",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        127.7,
+        -20.25,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-6",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        103.82,
+        -20.25,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-7",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        80.07,
+        -20.25,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
+    },
+    {
+      "id": "c13-8",
+      "type": "c13",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        56.13,
+        -20.25,
+        -134.5
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        90
+      ],
+      "sizeMm": [
+        32.4,
+        22
+      ]
     }
   ],
   "leds": [
@@ -34,7 +230,14 @@
       "label": "Online status",
       "kind": "power",
       "color": "#3fb970",
-      "positionMm": [0, 25, 150]
+      "positionMm": [
+        0,
+        25,
+        150
+      ],
+      "diameterMm": 2,
+      "intensity": 1,
+      "state": "on"
     }
   ],
   "power": {
@@ -47,7 +250,10 @@
         "label": "AC input"
       }
     ],
-    "sources": ["ac", "battery"]
+    "sources": [
+      "ac",
+      "battery"
+    ]
   },
   "presentation": {
     "faceplate": "ups",

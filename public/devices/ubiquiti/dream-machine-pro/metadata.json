@@ -47,7 +47,12 @@
       "positionMm": [
         142.28,
         -7,
-        143
+        141.79
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        -180
       ],
       "speedGbps": 1,
       "sizeMm": [
@@ -63,8 +68,8 @@
       "location": "front",
       "positionMm": [
         173.62,
-        -6.06,
-        143
+        -5.91,
+        141.91
       ],
       "speedGbps": 1,
       "sizeMm": [
@@ -73,23 +78,10 @@
       ]
     },
     {
-      "id": "sfp-lan-1-1",
-      "type": "sfp+",
-      "count": 1,
-      "label": "SFP+ LAN",
-      "location": "front",
-      "positionMm": [
-        192.01,
-        7.72,
-        143
-      ],
-      "speedGbps": 10
-    },
-    {
       "id": "sfp-wan-1-1",
       "type": "sfp+",
       "count": 1,
-      "label": "SFP+ WAN",
+      "label": "LAN",
       "location": "front",
       "positionMm": [
         191.98,
@@ -98,19 +90,116 @@
       ],
       "speedGbps": 10,
       "sizeMm": [
-        14.5,
-        11.63
+        14.58,
+        10.31
       ]
     },
     {
-      "id": "rj45-1-1",
+      "id": "c13-1",
+      "type": "c13",
+      "count": 1,
+      "location": "rear",
+      "positionMm": [
+        -172.97,
+        -3.61,
+        -144.25
+      ]
+    },
+    {
+      "id": "sfp-1",
+      "type": "sfp+",
+      "count": 1,
+      "label": "WAN",
+      "location": "front",
+      "positionMm": [
+        192.06,
+        7.88,
+        143
+      ],
+      "speedGbps": 10,
+      "sizeMm": [
+        14.58,
+        10.31
+      ]
+    },
+    {
+      "id": "rj45-1",
       "type": "rj45",
       "count": 1,
       "location": "front",
       "positionMm": [
-        126.26,
+        142.73,
+        6.99,
+        141.79
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-2",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        126.71,
+        6.99,
+        141.75
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-3",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        110.91,
+        6.99,
+        141.81
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-4",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        94.88,
+        6.99,
+        141.75
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        14.09,
+        11.08
+      ]
+    },
+    {
+      "id": "rj45-5",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        126.66,
         -7,
-        143
+        141.79
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        -180
       ],
       "speedGbps": 1,
       "sizeMm": [
@@ -119,14 +208,19 @@
       ]
     },
     {
-      "id": "rj45-2-1",
+      "id": "rj45-6",
       "type": "rj45",
       "count": 1,
       "location": "front",
       "positionMm": [
-        110.63,
+        110.16,
         -7,
-        143
+        141.79
+      ],
+      "rotationDeg": [
+        0,
+        0,
+        -180
       ],
       "speedGbps": 1,
       "sizeMm": [
@@ -135,78 +229,19 @@
       ]
     },
     {
-      "id": "rj45-3-1",
+      "id": "rj45-7",
       "type": "rj45",
       "count": 1,
       "location": "front",
       "positionMm": [
-        95.07,
+        95.52,
         -7,
-        143
+        141.79
       ],
-      "speedGbps": 1,
-      "sizeMm": [
-        14.09,
-        11.08
-      ]
-    },
-    {
-      "id": "rj45-4-1",
-      "type": "rj45",
-      "count": 1,
-      "location": "front",
-      "positionMm": [
-        110.48,
-        6.86,
-        143
-      ],
-      "speedGbps": 1,
-      "sizeMm": [
-        14.09,
-        11.08
-      ]
-    },
-    {
-      "id": "rj45-5-1",
-      "type": "rj45",
-      "count": 1,
-      "location": "front",
-      "positionMm": [
-        126.27,
-        6.86,
-        143
-      ],
-      "speedGbps": 1,
-      "sizeMm": [
-        14.09,
-        11.08
-      ]
-    },
-    {
-      "id": "rj45-6-1",
-      "type": "rj45",
-      "count": 1,
-      "location": "front",
-      "positionMm": [
-        142.32,
-        6.86,
-        143
-      ],
-      "speedGbps": 1,
-      "sizeMm": [
-        14.09,
-        11.08
-      ]
-    },
-    {
-      "id": "rj45-7-1",
-      "type": "rj45",
-      "count": 1,
-      "location": "front",
-      "positionMm": [
-        94.9,
-        6.86,
-        143
+      "rotationDeg": [
+        0,
+        0,
+        -180
       ],
       "speedGbps": 1,
       "sizeMm": [
@@ -219,7 +254,16 @@
     {
       "id": "status",
       "label": "Status ring",
-      "color": "#4c82f7"
+      "kind": "status",
+      "color": "#4c82f7",
+      "positionMm": [
+        -209.2,
+        10.925,
+        142.8
+      ],
+      "diameterMm": 2,
+      "intensity": 1,
+      "state": "on"
     }
   ],
   "power": {

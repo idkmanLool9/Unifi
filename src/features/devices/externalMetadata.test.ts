@@ -40,13 +40,16 @@ describe('shipped external device metadata', () => {
     // Authored metadata is ground truth: calibration must stay off.
     expect(result.value.portsAuthored).toBe(true);
     const ports = resolvePhysicalPorts(result.value);
-    expect(ports.length).toBe(26);
+    // 24 RJ45 + 2 SFP+ on the front, plus the rear C13 power inlet.
+    expect(ports.length).toBe(27);
     expect(ports.filter((p) => p.type === 'rj45').length).toBe(24);
     expect(ports.filter((p) => p.type === 'sfp+').length).toBe(2);
-    // Single row: every copper port shares the authored y and face z.
+    expect(ports.filter((p) => p.type === 'c13').length).toBe(1);
+    // Single row: every copper port shares the authored y and sits on the
+    // front face (~163.5, within hand-authoring tolerance).
     for (const port of ports.filter((p) => p.type === 'rj45')) {
       expect(port.positionMm[1]).toBe(-6);
-      expect(port.positionMm[2]).toBe(163.5);
+      expect(Math.abs(port.positionMm[2] - 163.5)).toBeLessThanOrEqual(0.5);
       expect(port.sizeMm).toEqual([14.46, 12.75]);
     }
   });
