@@ -82,8 +82,12 @@ export interface EtherlightingSettings {
   customColor: string;
   /** PoE indication color. */
   poeColor: string;
-  /** Activity flash color. */
+  /** Activity flash color (traffic accent for a live/up port). */
   activityColor: string;
+  /** Color for a connected port with no link (activity mode). */
+  linkDownColor: string;
+  /** Color for a connected port in a degraded/warning state. */
+  warningColor: string;
   /** Editable speed palette. */
   speedPalette: Record<string, string>;
 }
@@ -110,6 +114,8 @@ export const DEFAULT_ETHERLIGHTING: EtherlightingSettings = {
   customColor: '#4c82f7',
   poeColor: '#3fb970',
   activityColor: '#e8d44d',
+  linkDownColor: '#e5544b',
+  warningColor: '#e8973f',
   speedPalette: DEFAULT_SPEED_PALETTE,
 };
 
@@ -135,6 +141,18 @@ export const useEtherlightingStore = create<EtherlightingState>()(
         })),
       reset: () => set({ settings: DEFAULT_ETHERLIGHTING }),
     }),
-    { name: 'rackforge-etherlighting' },
+    {
+      name: 'rackforge-etherlighting',
+      // Backfill any settings added since a user's state was persisted, so
+      // new keys (e.g. link-down / warning colors) always have a default
+      // instead of resolving to undefined.
+      merge: (persisted, current) => {
+        const p = persisted as { settings?: Partial<EtherlightingSettings> };
+        return {
+          ...current,
+          settings: { ...DEFAULT_ETHERLIGHTING, ...(p?.settings ?? {}) },
+        };
+      },
+    },
   ),
 );

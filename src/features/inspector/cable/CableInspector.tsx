@@ -26,6 +26,7 @@ import {
   type SlackMode,
 } from '@/features/cables/routing';
 import { getDevice } from '@/features/devices/deviceRegistry';
+import { usePortRuntimeStore } from '@/features/devices/hardware/etherlighting/portRuntimeStore';
 import { resolveEndPort } from '@/stores/cableToolStore';
 import { useCablePresetsStore } from '@/stores/cablePresetsStore';
 import {
@@ -107,6 +108,25 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
     toast({ variant: 'success', title: 'Cable removed' });
   };
 
+  // Live link state for Etherlighting's Activity mode: the operational
+  // state of the two ports this cable connects. 'up' clears the override
+  // (a connected port is up by default); 'down'/'warning' flag a fault so
+  // the port frames turn red/amber instead of the normal traffic color.
+  const runtimeStates = usePortRuntimeStore((s) => s.states);
+  const setPortState = usePortRuntimeStore((s) => s.setPortState);
+  const srcStatus =
+    runtimeStates[`${cable.source.deviceInstanceId}:${cable.source.portRef}`]
+      ?.status ?? 'up';
+  const setLinkState = (state: 'up' | 'warning' | 'down') => {
+    for (const end of [cable.source, cable.destination]) {
+      setPortState(
+        end.deviceInstanceId,
+        end.portRef,
+        state === 'up' ? { link: true } : { link: true, status: state },
+      );
+    }
+  };
+
   return (
     <>
       <CollapsibleSection title="Connection">
@@ -136,6 +156,23 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
             {cable.statusMessage}
           </p>
         )}
+        <div className="space-y-1 pt-2">
+          <span className="block text-xs text-secondary">Link state</span>
+          <SegmentedControl
+            label="Link state"
+            value={srcStatus === 'disabled' ? 'up' : srcStatus}
+            onChange={setLinkState}
+            options={[
+              { value: 'up', label: 'Up' },
+              { value: 'warning', label: 'Warning' },
+              { value: 'down', label: 'Down' },
+            ]}
+          />
+          <p className="text-[10px] leading-snug text-muted">
+            Drives Etherlighting Activity mode — a down link glows red, a
+            warning amber.
+          </p>
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Cable">

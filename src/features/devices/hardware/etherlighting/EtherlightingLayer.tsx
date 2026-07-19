@@ -287,6 +287,9 @@ export function EtherlightingLayer({
   const targets = useRef<Float32Array>(new Float32Array(0));
   const eased = useRef<Float32Array>(new Float32Array(0));
   const baseBrightness = useRef<Float32Array>(new Float32Array(0));
+  // True when at least one frame is lit — a fully dark device layer (e.g.
+  // an unconnected device in Activity mode) skips all per-frame work.
+  const anyLit = useRef(true);
 
   // Static + resolved per-instance data. Runs when settings, cables,
   // runtime states or the frame set change — never per frame.
@@ -373,6 +376,7 @@ export function EtherlightingLayer({
     iParams.needsUpdate = true;
     iExtra.needsUpdate = true;
     iAspect.needsUpdate = true;
+    anyLit.current = baseBrightness.current.some((b) => b > 0.001);
   }, [frames, geometry, count, settings, definition, instanceId, runtimeStates, cables]);
 
   // Per-frame: time uniform, eased color transitions, cable-tool boost,
@@ -387,9 +391,12 @@ export function EtherlightingLayer({
     MATERIAL.uniforms.uIntensity.value = settings.intensity;
     MATERIAL.uniforms.uHdr.value = settings.enableHdr ? settings.hdrStrength : 1;
 
-    // Render-distance culling per device layer.
+    // Render-distance culling per device layer, and a fast skip for a
+    // fully dark layer (no lit ports — e.g. unconnected in Activity mode).
     mesh.getWorldPosition(WORLD_POS);
-    const visible = WORLD_POS.distanceTo(camera.position) < settings.renderDistanceM;
+    const visible =
+      anyLit.current &&
+      WORLD_POS.distanceTo(camera.position) < settings.renderDistanceM;
     if (mesh.visible !== visible) mesh.visible = visible;
     if (!visible) return;
 

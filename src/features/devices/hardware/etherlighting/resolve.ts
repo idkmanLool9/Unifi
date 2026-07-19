@@ -5,7 +5,7 @@ import {
   type EtherZone,
   type EtherlightingSettings,
 } from './etherlightingStore';
-import type { PortRuntime } from './portRuntimeStore';
+import type { PortLinkStatus, PortRuntime } from './portRuntimeStore';
 import type {
   DeviceDefinition,
   PortEtherLighting,
@@ -71,6 +71,20 @@ const POWER_TYPES = new Set([
 /** A port is Etherlighting-eligible purely from its metadata. */
 export function isEligiblePort(port: PhysicalPort): boolean {
   return port.visible && !POWER_TYPES.has(port.type);
+}
+
+/** Effective port state, plus 'none' when nothing is connected. */
+export type PortActivityState = PortLinkStatus | 'none';
+
+/**
+ * The operational state Activity mode visualises: an explicit runtime
+ * status wins, otherwise a port with a link is 'up' and everything else
+ * is 'none' (nothing plugged in). This is what turns unconnected ports
+ * dark in Activity mode instead of leaving them glowing.
+ */
+export function portActivityState(runtime: PortRuntime): PortActivityState {
+  if (runtime.status) return runtime.status;
+  return runtime.link ? 'up' : 'none';
 }
 
 export function zonesToMask(zones: readonly EtherZone[]): {
@@ -217,6 +231,10 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
   let color = speedColor;
   let color2 = speedColor;
   let linkDim = 1;
+  // Activity mode overrides the animation/traffic level for fault states
+  // (a down port shouldn't flash like a busy one).
+  let overrideMode: EtherAnimationMode | null = null;
+  let overrideActivity: number | null = null;
   switch (colorMode) {
     case 'speed':
       color = speedColor;
@@ -226,10 +244,29 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
         ? (portOverride?.poeColor ?? settings.poeColor)
         : speedColor;
       break;
-    case 'activity':
-      color = speedColor;
-      color2 = settings.activityColor;
+    case 'activity': {
+      // Live link-state view: only connected ports light. An unconnected
+      // (or admin-disabled) port is dark, a healthy port keeps its speed
+      // hue and traffic flash, a connected-but-down port is solid red,
+      // and a degraded port pulses amber.
+      const state = portActivityState(runtime);
+      if (state === 'none' || state === 'disabled') return off;
+      if (state === 'down') {
+        color = settings.linkDownColor;
+        color2 = settings.linkDownColor;
+        overrideMode = 'static';
+        overrideActivity = 0;
+      } else if (state === 'warning') {
+        color = settings.warningColor;
+        color2 = settings.warningColor;
+        overrideMode = 'breathing';
+        overrideActivity = 0;
+      } else {
+        color = speedColor;
+        color2 = settings.activityColor;
+      }
       break;
+    }
     case 'link':
       color = linked ? speedColor : '#6a7078';
       linkDim = linked ? 1 : 0.25;
@@ -268,9 +305,9 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
     zoneMask: mask,
     corners,
     frameOffset,
-    mode: settings.enableAnimations ? mode : 'static',
+    mode: settings.enableAnimations ? (overrideMode ?? mode) : 'static',
     glowRadius: portOverride?.glowRadius ?? settings.glowRadius,
     transitionSpeed: portOverride?.transitionSpeed ?? settings.transitionSpeed,
-    activity: runtime.activity ?? (linked ? 0.5 : 0),
+    activity: overrideActivity ?? runtime.activity ?? (linked ? 0.5 : 0),
   };
 }

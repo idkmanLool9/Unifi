@@ -11,9 +11,19 @@ import type { CableInstance } from '@/stores/cableStore';
  * the rack without any renderer changes.
  */
 
+/**
+ * Operational state of a connected port, for the activity color mode.
+ * `up` is a healthy link; `down` is connected-but-no-link (shown red);
+ * `warning` is a degraded/faulted link (amber); `disabled` is admin-down
+ * (unlit). Absent means "derive from the cable plan" (connected → up).
+ */
+export type PortLinkStatus = 'up' | 'down' | 'warning' | 'disabled';
+
 export interface PortRuntime {
   /** Link up/down. */
   link?: boolean;
+  /** Explicit operational state (overrides the cable-derived link). */
+  status?: PortLinkStatus;
   /** Negotiated speed, Gbps (overrides the authored port speed). */
   speedGbps?: number;
   /** Traffic activity 0–1 (drives activity/traffic animations). */

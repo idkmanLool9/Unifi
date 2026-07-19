@@ -6,6 +6,7 @@ import {
 } from './etherlightingStore';
 import {
   isEligiblePort,
+  portActivityState,
   portGlowColor,
   resolvePortLight,
   zonesToMask,
@@ -46,7 +47,12 @@ const resolve = (
   over: {
     settings?: Partial<EtherlightingSettings>;
     port?: Partial<PhysicalPort>;
-    runtime?: { link?: boolean; activity?: number; speedGbps?: number };
+    runtime?: {
+      link?: boolean;
+      activity?: number;
+      speedGbps?: number;
+      status?: 'up' | 'down' | 'warning' | 'disabled';
+    };
     definition?: typeof proMax;
     xNorm?: number;
   } = {},
@@ -181,6 +187,58 @@ describe('color modes', () => {
       runtime: { speedGbps: 10 },
     });
     expect(negotiated.color).toBe(DEFAULT_ETHERLIGHTING.speedPalette['10g']);
+  });
+});
+
+describe('activity mode reflects live link state', () => {
+  it('an unconnected port stays dark in activity mode', () => {
+    const off = resolve({ settings: { colorMode: 'activity' }, runtime: {} });
+    expect(off.enabled).toBe(false);
+    // ...but still lights in speed mode (capability view).
+    const lit = resolve({ settings: { colorMode: 'speed' }, runtime: {} });
+    expect(lit.enabled).toBe(true);
+  });
+
+  it('a connected (link) port lights with the traffic flash color', () => {
+    const up = resolve({
+      settings: { colorMode: 'activity' },
+      runtime: { link: true },
+    });
+    expect(up.enabled).toBe(true);
+    expect(up.color).toBe(DEFAULT_ETHERLIGHTING.speedPalette['2.5g']);
+    expect(up.color2).toBe(DEFAULT_ETHERLIGHTING.activityColor);
+  });
+
+  it('a down-but-connected port glows solid red', () => {
+    const down = resolve({
+      settings: { colorMode: 'activity' },
+      runtime: { link: true, status: 'down' },
+    });
+    expect(down.enabled).toBe(true);
+    expect(down.color).toBe(DEFAULT_ETHERLIGHTING.linkDownColor);
+    expect(down.mode).toBe('static');
+    expect(down.activity).toBe(0);
+  });
+
+  it('a warning port pulses amber, a disabled port is dark', () => {
+    const warn = resolve({
+      settings: { colorMode: 'activity' },
+      runtime: { link: true, status: 'warning' },
+    });
+    expect(warn.color).toBe(DEFAULT_ETHERLIGHTING.warningColor);
+    expect(warn.mode).toBe('breathing');
+    const disabled = resolve({
+      settings: { colorMode: 'activity' },
+      runtime: { link: true, status: 'disabled' },
+    });
+    expect(disabled.enabled).toBe(false);
+  });
+
+  it('portActivityState derives up from a link and none otherwise', () => {
+    expect(portActivityState({})).toBe('none');
+    expect(portActivityState({ link: true })).toBe('up');
+    expect(portActivityState({ link: true, status: 'down' })).toBe('down');
+    expect(portActivityState({ status: 'warning' })).toBe('warning');
   });
 });
 

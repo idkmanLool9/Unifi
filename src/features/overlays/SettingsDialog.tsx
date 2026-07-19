@@ -300,6 +300,40 @@ function EtherlightingSettings() {
       </Row>
 
       <div className="py-2.5">
+        <p className="text-xs font-medium text-primary">Activity states</p>
+        <p className="mt-0.5 text-[11px] leading-snug text-secondary">
+          In Activity color mode only connected ports light: healthy links
+          keep their speed color with a traffic flash, while these colors
+          flag problem ports. Unconnected ports stay dark.
+        </p>
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          {(
+            [
+              ['Traffic', 'activityColor'],
+              ['Link down', 'linkDownColor'],
+              ['Warning', 'warningColor'],
+            ] as const
+          ).map(([label, key]) => (
+            <label
+              key={key}
+              className="flex items-center justify-between gap-1.5 rounded-lg border border-edge px-2 py-1"
+            >
+              <span className="text-[10.5px] font-medium text-secondary">
+                {label}
+              </span>
+              <input
+                type="color"
+                aria-label={`${label} color`}
+                value={settings[key]}
+                onChange={(e) => patch({ [key]: e.target.value })}
+                className="h-5 w-8 cursor-pointer rounded border-0 bg-transparent"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="py-2.5">
         <p className="text-xs font-medium text-primary">Speed colors</p>
         <p className="mt-0.5 text-[11px] leading-snug text-secondary">
           Global link-speed palette used by the speed color mode.
