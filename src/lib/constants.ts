@@ -42,3 +42,6 @@ export const VIEW_POSES: Record<
   left: { position: [-13, 2, 0], target: [0, 1.5, 0] },
   right: { position: [13, 2, 0], target: [0, 1.5, 0] },
 };
+
+/** Interactive cabinet part-state store. */
+export const CABINET_STORE_KEY = 'rackforge-cabinet';

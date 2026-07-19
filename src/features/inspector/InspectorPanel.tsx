@@ -18,6 +18,8 @@ import { LightingSection } from './sections/LightingSection';
 import { QuickActionsSection } from './sections/QuickActionsSection';
 import { ActivitySection } from './sections/ActivitySection';
 import { RackSection } from './rack/RackSection';
+import { CabinetSection } from './rack/CabinetSection';
+import { cabinetModelForProfile } from '@/features/cabinet/cabinetModels';
 import { DimensionsSection } from './rack/DimensionsSection';
 import { RailsSection } from './rack/RailsSection';
 import { RackUnitsSection } from './rack/RackUnitsSection';
@@ -133,6 +135,12 @@ export function InspectorPanel() {
                 ) : showRack ? (
                   <>
                     <RackSection rack={rack} />
+                    {(() => {
+                      const cabinet = cabinetModelForProfile(rack.profileId);
+                      return cabinet ? (
+                        <CabinetSection rack={rack} model={cabinet} />
+                      ) : null;
+                    })()}
                     <DimensionsSection rack={rack} />
                     <RailsSection rack={rack} />
                     <RackUnitsSection rack={rack} />

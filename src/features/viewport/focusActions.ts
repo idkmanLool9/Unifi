@@ -1,4 +1,6 @@
 import {
+  cabinetInteriorPose,
+  cabinetSidePose,
   cableApproachPose,
   cableFocusPose,
   deviceFocusPose,
@@ -189,6 +191,42 @@ export function faceDetail(face: 'front' | 'rear'): void {
       ctx.geometry,
       ctx.geometry.railBaseYM + railHeight(ctx.rack.units),
       face,
+      ctx.rack.orientation,
+      ctx.fov,
+    ),
+  );
+}
+
+/**
+ * Focus one face of an interactive cabinet. Front/rear reuse the rail-face
+ * detail pose; left/right frame the enclosure side head-on so a removed
+ * side panel reveals the interior.
+ */
+export function focusCabinetFace(
+  face: 'front' | 'rear' | 'left' | 'right',
+): void {
+  if (face === 'front' || face === 'rear') return faceDetail(face);
+  const ctx = currentContext();
+  if (!ctx) return;
+  dispatch(
+    cabinetSidePose(
+      ctx.geometry,
+      ctx.geometry.railBaseYM + railHeight(ctx.rack.units),
+      face,
+      ctx.rack.orientation,
+      ctx.fov,
+    ),
+  );
+}
+
+/** Move the camera to look into the cabinet interior, framed on the rails. */
+export function focusCabinetInterior(): void {
+  const ctx = currentContext();
+  if (!ctx) return;
+  dispatch(
+    cabinetInteriorPose(
+      ctx.geometry,
+      ctx.geometry.railBaseYM + railHeight(ctx.rack.units),
       ctx.rack.orientation,
       ctx.fov,
     ),

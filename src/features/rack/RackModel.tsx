@@ -10,6 +10,8 @@ import { useRackGeometry } from './useRackGeometry';
 import { DEBUG_DIMS_ENABLED, DebugDimensions } from './DebugDimensions';
 import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
+import { CabinetModel } from '@/features/cabinet/CabinetModel';
+import { cabinetModelForProfile } from '@/features/cabinet/cabinetModels';
 import { MountedDevices } from '@/features/devices/MountedDevices';
 import { CableEditLayer } from '@/features/cables/CableEditLayer';
 import { CableLayer } from '@/features/cables/CableLayer';
@@ -51,6 +53,10 @@ export function RackModel({ rack, theme }: RackModelProps) {
   const accent = VIEWPORT_THEME[theme].accent;
 
   const geometry = useRackGeometry(rack);
+
+  // Interactive GLB cabinet for cabinet profiles; open frames render the
+  // parametric structure. Purely metadata-driven — no per-model code here.
+  const cabinet = cabinetModelForProfile(rack.profileId);
 
   const W = geometry.externalWidthM;
   const D = geometry.externalDepthM;
@@ -177,6 +183,16 @@ export function RackModel({ rack, theme }: RackModelProps) {
       }}
       onPointerOut={() => setHovered(false)}
     >
+      {/* Interactive GLB cabinet enclosure (metadata-driven) — replaces the
+          parametric frame for cabinet profiles. Devices still mount via the
+          shared rack geometry, so they sit inside the shell. */}
+      {cabinet && (
+        <CabinetModel model={cabinet} geometry={geometry} rackId={rack.id} />
+      )}
+
+      {/* Parametric open-frame structure (open racks + non-cabinet enclosures) */}
+      {!cabinet && (
+        <>
       {/* Upright L-profiles: mounting flange + rearward web on the outer edge */}
       {corners.map(({ sx, sz }) => (
         <group key={`upright-${sx}-${sz}`}>
@@ -364,6 +380,8 @@ export function RackModel({ rack, theme }: RackModelProps) {
             />
           </mesh>
         )),
+      )}
+        </>
       )}
 
       {/* FRONT floor marker */}

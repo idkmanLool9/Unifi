@@ -217,6 +217,54 @@ export function cableFocusPose(
   };
 }
 
+/**
+ * Straight-on pose for a cabinet's left or right side, framing the full
+ * enclosure width (side panel + interior). Used by the Cabinet menu's
+ * "Focus Left/Right" so a removed panel reveals the interior head-on.
+ */
+export function cabinetSidePose(
+  geometry: RackGeometry,
+  railTopYM: number,
+  side: 'left' | 'right',
+  orientation: RackOrientation,
+  fovDeg: number,
+): CameraPose {
+  const out = side === 'left' ? -1 : 1;
+  const midY = (geometry.railBaseYM + railTopYM) / 2;
+  const midZ = (geometry.frontRailZ + geometry.rearRailZ) / 2;
+  const depthSpan = Math.abs(geometry.frontRailZ - geometry.rearRailZ);
+  const span = Math.max(depthSpan, railTopYM - geometry.railBaseYM) * 1.15;
+  const standoff = standoffForSpan(span, fovDeg, 1.25);
+  const x = (out * geometry.externalWidthM) / 2;
+  return {
+    position: rackLocalToWorld([x + out * standoff, midY, midZ], orientation),
+    target: rackLocalToWorld([0, midY, midZ], orientation),
+  };
+}
+
+/**
+ * Interior view pose: the camera sits just outside the front rail plane
+ * on the door side, looking back into the rack toward the rear, framed
+ * on the mounting region. Reads as "inside the open cabinet".
+ */
+export function cabinetInteriorPose(
+  geometry: RackGeometry,
+  railTopYM: number,
+  orientation: RackOrientation,
+  fovDeg: number,
+): CameraPose {
+  const midY = (geometry.railBaseYM + railTopYM) / 2;
+  const span = Math.max(geometry.externalWidthM, railTopYM - geometry.railBaseYM) * 1.05;
+  const standoff = standoffForSpan(span, fovDeg, 1.02);
+  return {
+    position: rackLocalToWorld(
+      [0, midY, geometry.frontRailZ + standoff],
+      orientation,
+    ),
+    target: rackLocalToWorld([0, midY, geometry.rearRailZ], orientation),
+  };
+}
+
 /** Straight-on detail pose for a whole rack face. */
 export function faceDetailPose(
   geometry: RackGeometry,
