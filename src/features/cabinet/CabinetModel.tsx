@@ -1,5 +1,12 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react';
-import { Group, Material, Mesh, Object3D } from 'three';
+import {
+  Group,
+  Material,
+  Mesh,
+  MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import {
@@ -17,6 +24,43 @@ import { U_METERS } from '@/features/rack/rackConstants';
 
 const DRACO_DECODER_PATH = assetUrl('draco/');
 const MM = 0.001;
+
+/**
+ * Grade a cloned cabinet material toward a realistic light-grey enclosure
+ * instead of the blown-out near-white the raw asset reads as under the
+ * studio rig. The steel is pulled to a light grey with calmer reflections;
+ * the glass door gets a subtle smoky tint so — closed, as it usually is —
+ * you see the gear through it slightly dimmed, like the real product.
+ */
+function gradeCabinetMaterial(m: Material): void {
+  const std = m as MeshStandardMaterial;
+  const name = m.name.toLowerCase();
+  const isGlass = name.includes('glass') || m.transparent;
+
+  if (isGlass) {
+    std.color?.set('#525a63'); // cool smoky grey tint
+    std.opacity = 0.5;
+    std.transparent = true;
+    std.metalness = 0;
+    std.roughness = 0.06;
+    std.envMapIntensity = 0.9;
+    const phys = m as MeshPhysicalMaterial;
+    if (typeof phys.transmission === 'number' && phys.transmission > 0) {
+      phys.transmission = 0.55; // tinted, not perfectly clear
+      phys.ior = 1.5;
+    }
+    return;
+  }
+
+  // Painted steel / aluminium: tame environment reflections and pull the
+  // near-white down to a light grey (RAL 7035-ish) so it stops glowing.
+  std.envMapIntensity = 0.55;
+  if (std.color) {
+    const hsl = { h: 0, s: 0, l: 0 };
+    std.color.getHSL(hsl);
+    if (hsl.l > 0.72) std.color.setHSL(hsl.h, hsl.s, hsl.l * 0.8);
+  }
+}
 
 /** A part's actuation group: its pivot/anchor + the nodes attached under it. */
 interface PartGroup {
@@ -71,7 +115,10 @@ function buildPartGroups(root: Object3D, model: CabinetModelDef): PartGroup[] {
         let c = map.get(m);
         if (!c) {
           c = m.clone();
-          c.userData.baseOpacity = m.opacity;
+          gradeCabinetMaterial(c);
+          // Capture opacity AFTER grading so the transparency system eases
+          // toward the graded (tinted) value, not the raw asset opacity.
+          c.userData.baseOpacity = c.opacity;
           map.set(m, c);
         }
         return c;
