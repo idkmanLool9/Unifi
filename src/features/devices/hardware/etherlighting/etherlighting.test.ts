@@ -199,6 +199,30 @@ describe('activity mode reflects live link state', () => {
     expect(lit.enabled).toBe(true);
   });
 
+  it('activity as the ANIMATION mode also darkens unconnected ports', () => {
+    // Color mode Speed + Animation mode Activity: the common setup. An
+    // unconnected port must still go dark, a connected one keeps its speed
+    // color and flashes.
+    const off = resolve({
+      settings: { colorMode: 'speed', animationMode: 'activity' },
+      runtime: {},
+    });
+    expect(off.enabled).toBe(false);
+    const up = resolve({
+      settings: { colorMode: 'speed', animationMode: 'activity' },
+      runtime: { link: true },
+    });
+    expect(up.enabled).toBe(true);
+    expect(up.color).toBe(DEFAULT_ETHERLIGHTING.speedPalette['2.5g']);
+    expect(up.color2).toBe(DEFAULT_ETHERLIGHTING.activityColor);
+    // Down still flags red even when Activity is only the animation mode.
+    const down = resolve({
+      settings: { colorMode: 'speed', animationMode: 'activity' },
+      runtime: { link: true, status: 'down' },
+    });
+    expect(down.color).toBe(DEFAULT_ETHERLIGHTING.linkDownColor);
+  });
+
   it('a connected (link) port lights with the traffic flash color', () => {
     const up = resolve({
       settings: { colorMode: 'activity' },

@@ -244,29 +244,10 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
         ? (portOverride?.poeColor ?? settings.poeColor)
         : speedColor;
       break;
-    case 'activity': {
-      // Live link-state view: only connected ports light. An unconnected
-      // (or admin-disabled) port is dark, a healthy port keeps its speed
-      // hue and traffic flash, a connected-but-down port is solid red,
-      // and a degraded port pulses amber.
-      const state = portActivityState(runtime);
-      if (state === 'none' || state === 'disabled') return off;
-      if (state === 'down') {
-        color = settings.linkDownColor;
-        color2 = settings.linkDownColor;
-        overrideMode = 'static';
-        overrideActivity = 0;
-      } else if (state === 'warning') {
-        color = settings.warningColor;
-        color2 = settings.warningColor;
-        overrideMode = 'breathing';
-        overrideActivity = 0;
-      } else {
-        color = speedColor;
-        color2 = settings.activityColor;
-      }
+    case 'activity':
+      // Base "up" color; the live-state block below refines it.
+      color = speedColor;
       break;
-    }
     case 'link':
       color = linked ? speedColor : '#6a7078';
       linkDim = linked ? 1 : 0.25;
@@ -287,6 +268,32 @@ export function resolvePortLight(context: ResolveContext): ResolvedPortLight {
       break;
   }
   if (colorMode !== 'activity') color2 = color2 === color ? color : color2;
+
+  // Live link-state treatment. Activity applies through EITHER the color
+  // mode or the animation mode, so "Animation: Activity" alone still darks
+  // out unconnected ports. Only connected ports light: a down port is solid
+  // red, a degraded one pulses amber, a live port keeps its color and
+  // flashes with traffic.
+  const activitySemantics =
+    colorMode === 'activity' || mode === 'activity' || mode === 'traffic';
+  if (activitySemantics) {
+    const state = portActivityState(runtime);
+    if (state === 'none' || state === 'disabled') return off;
+    if (state === 'down') {
+      color = settings.linkDownColor;
+      color2 = settings.linkDownColor;
+      overrideMode = 'static';
+      overrideActivity = 0;
+    } else if (state === 'warning') {
+      color = settings.warningColor;
+      color2 = settings.warningColor;
+      overrideMode = 'breathing';
+      overrideActivity = 0;
+    } else {
+      // Live port: flash between its color and the activity accent.
+      color2 = settings.activityColor;
+    }
+  }
 
   const base =
     portOverride?.brightness ??
