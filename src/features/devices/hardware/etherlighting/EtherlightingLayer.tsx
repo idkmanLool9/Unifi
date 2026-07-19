@@ -164,14 +164,14 @@ void main() {
     color = hsv2rgb(vec3(fract(t * 0.12 + phase * 0.05 + u * 0.35), 0.85, 1.0));
   }
   else if (mode < 8.5) {
-    // Activity: each port blinks on its own pseudo-random schedule (a
-    // per-port seed varies both phase and rate) so it reads as independent
-    // traffic flicker, not a wave sweeping across the row.
+    // Activity: a smooth per-port shimmer. Each port pulses on its own
+    // phase and rate (a stable per-port seed) so it reads as independent
+    // traffic — not a hard strobe and not a wave sweeping the row.
     float seed = fract(sin(phase * 91.7) * 43758.5453);
-    float rate = 3.0 + 6.0 * activity;
-    float blink = step(0.5, fract(t * rate * (0.55 + 0.9 * seed) + seed));
-    anim = mix(0.22, 1.0, blink * activity + (1.0 - activity) * 0.35);
-    color = mix(vColor, vColor2, blink * activity);
+    float rate = 1.5 + 2.5 * activity;
+    float pulse = 0.5 + 0.5 * sin(t * rate * (0.7 + 0.6 * seed) + seed * 6.2831);
+    anim = mix(0.5, 1.0, pulse * activity + (1.0 - activity) * 0.25);
+    color = mix(vColor, vColor2, pulse * activity * 0.45);
   }
   else {
     float sweep = fract(t * (0.4 + activity * 1.2) + phase * 0.1);
