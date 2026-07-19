@@ -239,7 +239,12 @@ function CabinetInteriorLights({
   const halfH = (model.rackUnits * U_METERS) / 2;
   const xWall = (model.sizeMm[0] * MM) / 2 - 0.04; // just inside the side panels
   const z = 0.22; // interior, toward the front of the bay
-  const emissive = lights.brightness * 3;
+  const emissive = lights.brightness * 2.6;
+
+  // Three softer fill lights per side, pushed against the side wall and
+  // spread over the height, so the wash is even and no single unit catches
+  // a bright specular hotspot (which bloom would turn into glare).
+  const fillYs = [halfH * 0.7, 0, -halfH * 0.7];
 
   return (
     <>
@@ -256,12 +261,12 @@ function CabinetInteriorLights({
             />
           </mesh>
           {/* Fill lights along the strip */}
-          {[halfH * 0.55, -halfH * 0.55].map((y, i) => (
+          {fillYs.map((y, i) => (
             <pointLight
               key={i}
-              position={[s * (xWall - 0.02), y, z]}
-              intensity={lights.brightness * 2}
-              distance={1.3}
+              position={[s * (xWall + 0.005), y, z]}
+              intensity={lights.brightness * 0.9}
+              distance={1.1}
               decay={2}
               color={lights.color}
             />
