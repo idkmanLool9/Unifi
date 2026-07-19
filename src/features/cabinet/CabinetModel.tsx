@@ -11,6 +11,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import {
   computePartTarget,
+  DEFAULT_CABINET_LIGHTS,
   defaultInstance,
   type CabinetInstance,
 } from './cabinetRuntime';
@@ -211,10 +212,63 @@ function LoadedCabinet({
     [model, geometry],
   );
 
+  const lights = instance.lights ?? DEFAULT_CABINET_LIGHTS;
+
   return (
     <group position={placement}>
       <primitive object={cloned} />
+      {lights.on && lights.brightness > 0.001 && (
+        <CabinetInteriorLights model={model} lights={lights} />
+      )}
     </group>
+  );
+}
+
+/**
+ * Interior LED strips on both sides of the bay: a visible emissive bar plus
+ * fill lights so mounted gear is actually lit. Position/height scale with
+ * the enclosure; brightness and color come from the per-cabinet state.
+ */
+function CabinetInteriorLights({
+  model,
+  lights,
+}: {
+  model: CabinetModelDef;
+  lights: { brightness: number; color: string };
+}) {
+  const halfH = (model.rackUnits * U_METERS) / 2;
+  const xWall = (model.sizeMm[0] * MM) / 2 - 0.04; // just inside the side panels
+  const z = 0.22; // interior, toward the front of the bay
+  const emissive = lights.brightness * 3;
+
+  return (
+    <>
+      {[-1, 1].map((s) => (
+        <group key={s}>
+          {/* Visible LED strip */}
+          <mesh position={[s * xWall, 0, z]}>
+            <boxGeometry args={[0.01, 2 * halfH, 0.02]} />
+            <meshStandardMaterial
+              color="#0a0a0a"
+              emissive={lights.color}
+              emissiveIntensity={emissive}
+              toneMapped={false}
+            />
+          </mesh>
+          {/* Fill lights along the strip */}
+          {[halfH * 0.55, -halfH * 0.55].map((y, i) => (
+            <pointLight
+              key={i}
+              position={[s * (xWall - 0.02), y, z]}
+              intensity={lights.brightness * 2}
+              distance={1.3}
+              decay={2}
+              color={lights.color}
+            />
+          ))}
+        </group>
+      ))}
+    </>
   );
 }
 

@@ -32,11 +32,28 @@ export interface PartRuntime {
   opacityPct?: number;
 }
 
+/** Interior LED strip lighting (both sides), user-configurable. */
+export interface CabinetLights {
+  on: boolean;
+  /** Brightness 0–1. */
+  brightness: number;
+  /** LED color, hex. */
+  color: string;
+}
+
+export const DEFAULT_CABINET_LIGHTS: CabinetLights = {
+  on: true,
+  brightness: 0.55,
+  color: '#dCEBFF',
+};
+
 export interface CabinetInstance {
   mode: CabinetMode;
   /** Animation speed multiplier (1 = default, 2 = twice as fast). */
   animationSpeed: number;
   transparency: TransparencyMode;
+  /** Interior LED strips. */
+  lights: CabinetLights;
   parts: Record<string, PartRuntime>;
 }
 
@@ -47,7 +64,13 @@ const DEG = Math.PI / 180;
 export function defaultInstance(model: CabinetModelDef): CabinetInstance {
   const parts: Record<string, PartRuntime> = {};
   for (const p of model.parts) parts[p.id] = { state: p.defaultState };
-  return { mode: 'normal', animationSpeed: 1, transparency: 'off', parts };
+  return {
+    mode: 'normal',
+    animationSpeed: 1,
+    transparency: 'off',
+    lights: { ...DEFAULT_CABINET_LIGHTS },
+    parts,
+  };
 }
 
 function normalize([x, y, z]: Vec3): Vec3 {

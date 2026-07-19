@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { CABINET_STORE_KEY } from '@/lib/constants';
 import {
   closeAllDoors as closeAllDoorsFn,
+  DEFAULT_CABINET_LIGHTS,
   defaultInstance,
   hideAllPanels as hideAllPanelsFn,
   interiorParts,
@@ -10,6 +11,7 @@ import {
   openAllDoors as openAllDoorsFn,
   restoreParts,
   type CabinetInstance,
+  type CabinetLights,
   type CabinetMode,
   type PartRuntime,
   type TransparencyMode,
@@ -63,6 +65,12 @@ interface CabinetStoreState {
     rackId: string,
     model: CabinetModelDef,
     speed: number,
+  ) => void;
+
+  setLights: (
+    rackId: string,
+    model: CabinetModelDef,
+    patch: Partial<CabinetLights>,
   ) => void;
 }
 
@@ -158,6 +166,13 @@ export const useCabinetStore = create<CabinetStoreState>()(
             ...read(rackId, model),
             animationSpeed: Math.min(3, Math.max(0.25, speed)),
           }),
+
+        setLights: (rackId, model, patch) => {
+          const inst = read(rackId, model);
+          const lights = { ...DEFAULT_CABINET_LIGHTS, ...inst.lights, ...patch };
+          lights.brightness = Math.min(1, Math.max(0, lights.brightness));
+          write(rackId, { ...inst, lights });
+        },
       };
     },
     { name: CABINET_STORE_KEY, version: 1 },

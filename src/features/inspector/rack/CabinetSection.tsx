@@ -16,6 +16,7 @@ import { Slider } from '@/components/ui/Slider';
 import { Switch } from '@/components/ui/Switch';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import {
+  DEFAULT_CABINET_LIGHTS,
   defaultInstance,
   type CabinetMode,
   type TransparencyMode,
@@ -106,6 +107,8 @@ export function CabinetSection({
   const setMode = useCabinetStore((s) => s.setMode);
   const setTransparency = useCabinetStore((s) => s.setTransparency);
   const setAnimationSpeed = useCabinetStore((s) => s.setAnimationSpeed);
+  const setLights = useCabinetStore((s) => s.setLights);
+  const lights = instance.lights ?? DEFAULT_CABINET_LIGHTS;
 
   const stateOf = (part: CabinetPartDef): CabinetPartState =>
     instance.parts[part.id]?.state ?? part.defaultState;
@@ -273,6 +276,61 @@ export function CabinetSection({
           </div>
         </CollapsibleSection>
       )}
+
+      <CollapsibleSection title="Interior Lighting">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-secondary">LED strips (both sides)</span>
+            <Switch
+              label="Interior LED strips"
+              checked={lights.on}
+              onChange={(on) => setLights(rackId, model, { on })}
+            />
+          </div>
+          <Slider
+            label="Brightness"
+            value={Math.round(lights.brightness * 100)}
+            min={0}
+            max={100}
+            step={5}
+            onChange={(v) => setLights(rackId, model, { brightness: v / 100 })}
+            format={(v) => `${v}%`}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-secondary">Color</span>
+            <input
+              type="color"
+              aria-label="Interior LED color"
+              value={lights.color}
+              onChange={(e) => setLights(rackId, model, { color: e.target.value })}
+              className="h-6 w-9 cursor-pointer rounded border-0 bg-transparent"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ['Cool', '#dcebff'],
+                ['Warm', '#ffd9a8'],
+                ['White', '#ffffff'],
+                ['UniFi', '#4c82f7'],
+              ] as const
+            ).map(([label, hex]) => (
+              <button
+                key={hex}
+                type="button"
+                onClick={() => setLights(rackId, model, { color: hex })}
+                className="flex items-center gap-1.5 rounded-md border border-edge px-2 py-1 text-[10px] font-medium text-secondary transition-colors hover:bg-surface-hover"
+              >
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: hex }}
+                />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CollapsibleSection>
 
       <CollapsibleSection title="Transparency & Motion">
         <div className="space-y-2.5">
