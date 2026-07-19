@@ -12,6 +12,8 @@ import { createRackMaterials } from './rackMaterials';
 import { createRailTexture, createTextTexture } from './rackTextures';
 import { CabinetModel } from '@/features/cabinet/CabinetModel';
 import { cabinetModelForProfile } from '@/features/cabinet/cabinetModels';
+import { useAssetAvailability } from '@/stores/assetStore';
+import { assetUrl } from '@/lib/assetUrl';
 import { MountedDevices } from '@/features/devices/MountedDevices';
 import { CableEditLayer } from '@/features/cables/CableEditLayer';
 import { CableLayer } from '@/features/cables/CableLayer';
@@ -56,7 +58,14 @@ export function RackModel({ rack, theme }: RackModelProps) {
 
   // Interactive GLB cabinet for cabinet profiles; open frames render the
   // parametric structure. Purely metadata-driven — no per-model code here.
+  // The parametric frame stays as the fallback until the cabinet GLB is
+  // confirmed available, so the rack is never invisible while the asset
+  // probes (or if it is missing on a given deployment).
   const cabinet = cabinetModelForProfile(rack.profileId);
+  const cabinetAvailability = useAssetAvailability(
+    cabinet ? assetUrl(cabinet.modelPath) : '',
+  );
+  const cabinetReady = cabinet != null && cabinetAvailability === 'available';
 
   const W = geometry.externalWidthM;
   const D = geometry.externalDepthM;
@@ -190,8 +199,10 @@ export function RackModel({ rack, theme }: RackModelProps) {
         <CabinetModel model={cabinet} geometry={geometry} rackId={rack.id} />
       )}
 
-      {/* Parametric open-frame structure (open racks + non-cabinet enclosures) */}
-      {!cabinet && (
+      {/* Parametric open-frame structure. Rendered for open racks and, for
+          cabinet profiles, as the fallback until the GLB shell is ready — so
+          the rack always has a visible body. */}
+      {!cabinetReady && (
         <>
       {/* Upright L-profiles: mounting flange + rearward web on the outer edge */}
       {corners.map(({ sx, sz }) => (

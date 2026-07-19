@@ -17,7 +17,7 @@ export const useAssetStore = create<AssetState>()((set, get) => ({
   availability: {},
 
   probe: (url) => {
-    if (get().availability[url] !== undefined) return;
+    if (!url || get().availability[url] !== undefined) return;
     // Object/data URLs exist by construction — and blob: rejects HEAD.
     if (url.startsWith('blob:') || url.startsWith('data:')) {
       set((s) => ({ availability: { ...s.availability, [url]: 'available' } }));
@@ -47,6 +47,7 @@ export const useAssetStore = create<AssetState>()((set, get) => ({
 /** React hook: current availability of a URL, probing on first use. */
 export function useAssetAvailability(url: string): AssetAvailability {
   const status = useAssetStore((s) => s.availability[url]);
+  if (!url) return 'missing';
   if (status === undefined) {
     useAssetStore.getState().probe(url);
     return 'checking';

@@ -188,6 +188,11 @@ export function CabinetModel({
 }) {
   const url = assetUrl(model.modelPath);
   const availability = useAssetAvailability(url);
+  // Start decoding the GLB in parallel with the availability probe, so the
+  // handoff from the parametric fallback frame to the shell has no blank gap.
+  useEffect(() => {
+    useGLTF.preload(url, DRACO_DECODER_PATH);
+  }, [url]);
   if (availability !== 'available') return null;
 
   return (
