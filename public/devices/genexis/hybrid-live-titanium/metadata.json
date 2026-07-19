@@ -1,0 +1,336 @@
+{
+  "id": "genexis-hybrid-live-titanium",
+  "slug": "hybrid-live-titanium",
+  "manufacturer": "genexis",
+  "manufacturerName": "Genexis",
+  "productName": "Hybrid Live! Titanium",
+  "modelNumber": "Hybrid Live! Titanium",
+  "category": "routing",
+  "rackUnits": 1,
+  "widthMm": 104,
+  "heightMm": 241,
+  "depthMm": 56,
+  "weightKg": 0.25,
+  "mountingStandard": "none",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 12,
+  "maximumPowerWatts": 20,
+  "description": "Genexis Hybrid Live! Titanium wall-mounted residential gateway. Two-part titanium-white housing with a swept upper facet, seven status LEDs and a bottom I/O bay carrying four RJ45 LAN jacks and two RJ11 telephony jacks. Sits on a rack shelf.",
+  "tags": [
+    "gateway",
+    "modem",
+    "router",
+    "wall-mount",
+    "genexis",
+    "cpe",
+    "voip",
+    "desktop"
+  ],
+  "portsAuthored": true,
+  "modelTransform": {
+    "scale": 1,
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "offsetMm": [
+      0,
+      0,
+      0
+    ]
+  },
+  "mountingOffsetMm": 0,
+  "mechanical": {
+    "mountStyle": "desktop"
+  },
+  "lighting": {
+    "etherlighting": false,
+    "perPortLink": false,
+    "poeIndicator": false,
+    "speedColors": {},
+    "effects": []
+  },
+  "ports": [
+    {
+      "id": "lan-01",
+      "type": "rj45",
+      "count": 1,
+      "label": "LAN 1",
+      "location": "front",
+      "positionMm": [
+        -34.7,
+        -107.6,
+        -26.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        11.68,
+        11.9
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "lan-02",
+      "type": "rj45",
+      "count": 1,
+      "label": "LAN 2",
+      "location": "front",
+      "positionMm": [
+        -20.55,
+        -107.6,
+        -26.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        11.68,
+        11.9
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "lan-03",
+      "type": "rj45",
+      "count": 1,
+      "label": "LAN 3",
+      "location": "front",
+      "positionMm": [
+        -6.4,
+        -107.6,
+        -26.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        11.68,
+        11.9
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "lan-04",
+      "type": "rj45",
+      "count": 1,
+      "label": "LAN 4",
+      "location": "front",
+      "positionMm": [
+        7.75,
+        -107.6,
+        -26.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        11.68,
+        11.9
+      ],
+      "speedGbps": 1
+    },
+    {
+      "id": "phone-01",
+      "type": "other",
+      "count": 1,
+      "label": "PHONE 1",
+      "location": "front",
+      "positionMm": [
+        22.85,
+        -107.6,
+        -25.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        9.5,
+        9.9
+      ]
+    },
+    {
+      "id": "phone-02",
+      "type": "other",
+      "count": 1,
+      "label": "PHONE 2",
+      "location": "front",
+      "positionMm": [
+        34.8,
+        -107.6,
+        -25.45
+      ],
+      "rotationDeg": [
+        90,
+        0,
+        0
+      ],
+      "exitDirMm": [
+        0,
+        -1,
+        0
+      ],
+      "sizeMm": [
+        9.5,
+        9.9
+      ]
+    }
+  ],
+  "leds": [
+    {
+      "id": "top-power",
+      "label": "Power",
+      "kind": "power",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        29.0,
+        103.89,
+        -16.97
+      ],
+      "diameterMm": 4.1,
+      "intensity": 1
+    },
+    {
+      "id": "top-link",
+      "label": "Uplink",
+      "kind": "link",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        29.0,
+        97.22,
+        -13.54
+      ],
+      "diameterMm": 4.1,
+      "intensity": 1
+    },
+    {
+      "id": "top-net",
+      "label": "Network",
+      "kind": "status",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        29.0,
+        90.55,
+        -10.12
+      ],
+      "diameterMm": 4.1,
+      "intensity": 1
+    },
+    {
+      "id": "front-01",
+      "label": "Status",
+      "kind": "status",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        22.0,
+        34.5,
+        -1.22
+      ],
+      "diameterMm": 4.5,
+      "intensity": 1
+    },
+    {
+      "id": "front-phone",
+      "label": "Phone",
+      "kind": "other",
+      "color": "#3fb970",
+      "state": "off",
+      "positionMm": [
+        22.0,
+        15.5,
+        -1.22
+      ],
+      "diameterMm": 4.5,
+      "intensity": 1
+    },
+    {
+      "id": "front-internet",
+      "label": "Internet",
+      "kind": "cloud",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        22.0,
+        -3.5,
+        -1.22
+      ],
+      "diameterMm": 4.5,
+      "intensity": 1
+    },
+    {
+      "id": "front-wifi",
+      "label": "Wi-Fi",
+      "kind": "status",
+      "color": "#3fb970",
+      "state": "on",
+      "positionMm": [
+        22.0,
+        -22.5,
+        -1.22
+      ],
+      "diameterMm": 4.5,
+      "intensity": 1
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "dc",
+        "type": "dc",
+        "count": 1,
+        "location": "rear",
+        "label": "DC input"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "presentation": {
+    "faceplate": "network",
+    "tone": "metal",
+    "portsLabel": "4\u00d7 LAN \u00b7 2\u00d7 Phone",
+    "speedLabel": "Gateway"
+  }
+}
