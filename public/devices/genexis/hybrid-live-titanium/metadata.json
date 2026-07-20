@@ -8,14 +8,14 @@
   "category": "routing",
   "rackUnits": 1,
   "widthMm": 104,
-  "heightMm": 241,
-  "depthMm": 56,
+  "heightMm": 75,
+  "depthMm": 241,
   "weightKg": 0.25,
   "mountingStandard": "none",
   "defaultFacing": "front",
   "powerConsumptionWatts": 12,
   "maximumPowerWatts": 20,
-  "description": "Genexis Hybrid Live! Titanium wall-mounted residential gateway. Two-part titanium-white housing with a swept upper facet, seven status LEDs and a bottom I/O bay carrying four RJ45 LAN jacks and two RJ11 telephony jacks. Sits on a rack shelf.",
+  "description": "Genexis Hybrid Live! Titanium wall-mounted residential gateway. Two-part titanium-white housing with a swept upper facet, seven status LEDs and a bottom I/O bay carrying four RJ45 LAN jacks and two RJ11 telephony jacks. Lies flat on its back on a rack shelf, status LEDs facing up.",
   "tags": [
     "gateway",
     "modem",
@@ -30,13 +30,13 @@
   "modelTransform": {
     "scale": 1,
     "rotationDeg": [
-      0,
+      -90,
       0,
       0
     ],
     "offsetMm": [
       0,
-      0,
+      37.5,
       0
     ]
   },
@@ -60,18 +60,18 @@
       "location": "front",
       "positionMm": [
         -34.7,
-        -107.6,
-        -26.45
+        11.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         11.68,
@@ -87,18 +87,18 @@
       "location": "front",
       "positionMm": [
         -20.55,
-        -107.6,
-        -26.45
+        11.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         11.68,
@@ -114,18 +114,18 @@
       "location": "front",
       "positionMm": [
         -6.4,
-        -107.6,
-        -26.45
+        11.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         11.68,
@@ -141,18 +141,18 @@
       "location": "front",
       "positionMm": [
         7.75,
-        -107.6,
-        -26.45
+        11.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         11.68,
@@ -168,18 +168,18 @@
       "location": "front",
       "positionMm": [
         22.85,
-        -107.6,
-        -25.45
+        12.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         9.5,
@@ -194,18 +194,18 @@
       "location": "front",
       "positionMm": [
         34.8,
-        -107.6,
-        -25.45
+        12.05,
+        107.6
       ],
       "rotationDeg": [
-        90,
+        0,
         0,
         0
       ],
       "exitDirMm": [
         0,
-        -1,
-        0
+        0,
+        1
       ],
       "sizeMm": [
         9.5,
@@ -222,8 +222,8 @@
       "state": "on",
       "positionMm": [
         29.0,
-        103.89,
-        -16.97
+        20.53,
+        -103.89
       ],
       "diameterMm": 4.1,
       "intensity": 1
@@ -236,8 +236,8 @@
       "state": "on",
       "positionMm": [
         29.0,
-        97.22,
-        -13.54
+        23.96,
+        -97.22
       ],
       "diameterMm": 4.1,
       "intensity": 1
@@ -250,8 +250,8 @@
       "state": "on",
       "positionMm": [
         29.0,
-        90.55,
-        -10.12
+        27.38,
+        -90.55
       ],
       "diameterMm": 4.1,
       "intensity": 1
@@ -264,8 +264,8 @@
       "state": "on",
       "positionMm": [
         22.0,
-        34.5,
-        -1.22
+        36.28,
+        -34.5
       ],
       "diameterMm": 4.5,
       "intensity": 1
@@ -278,8 +278,8 @@
       "state": "off",
       "positionMm": [
         22.0,
-        15.5,
-        -1.22
+        36.28,
+        -15.5
       ],
       "diameterMm": 4.5,
       "intensity": 1
@@ -292,8 +292,8 @@
       "state": "on",
       "positionMm": [
         22.0,
-        -3.5,
-        -1.22
+        36.28,
+        3.5
       ],
       "diameterMm": 4.5,
       "intensity": 1
@@ -306,8 +306,8 @@
       "state": "on",
       "positionMm": [
         22.0,
-        -22.5,
-        -1.22
+        36.28,
+        22.5
       ],
       "diameterMm": 4.5,
       "intensity": 1
