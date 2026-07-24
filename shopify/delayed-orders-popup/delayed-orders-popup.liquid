@@ -1,30 +1,35 @@
 {%- comment -%}
   ────────────────────────────────────────────────────────────────
-  Bestelmelding-popup MET AFTELLER — "levertijd telt elke dag 1 omlaag"
+  Bestelmelding-popup — logo + afteller + 3s-leesvergrendeling + NL/DE/EN
   ────────────────────────────────────────────────────────────────
-  Bezoekers kunnen gewoon bestellen; de pop-up toont hoeveel dagen de
-  bestelling nog nodig heeft. Dat aantal telt elke dag automatisch 1 omlaag,
-  gerekend vanaf 'start_date'. Bij 0 verdwijnt de pop-up vanzelf.
+  • Toont je logo, en meldt dat bestellen kan maar dat de bestelling nog een
+    aantal dagen levertijd heeft. Dat aantal telt elke dag automatisch 1 omlaag
+    vanaf 'start_date'. Bij 0 verdwijnt de pop-up vanzelf.
+  • De pop-up is de eerste 'lock_seconds' seconden NIET weg te klikken, zodat de
+    klant even kan lezen. De knop telt af; het kruisje verschijnt daarna.
+  • De taal wordt automatisch gekozen (Nederlands / Duits / Engels) op basis van
+    de browsertaal van de klant, met de winkeltaal als terugval.
 
-  ► STARTDATUM ZETTEN:  pas 'start_date' aan (formaat JJJJ-MM-DD).
-  ► AANTAL DAGEN:       pas 'total_days' aan (standaard 7).
-  ► TEKST AANPASSEN:    zie 'popup_title' / 'popup_message_*' / 'popup_button'.
-  ► UITZETTEN:          zet 'show_popup' op false.
-  ► OPNIEUW TONEN:      verhoog 'popup_version' met 1.
-
-  De aftelling wordt server-side (winkel-tijdzone) berekend, dus hij klopt
-  altijd bij het laden van de pagina — er hoeft niets te blijven draaien.
+  ► LOGO:            pas 'logo_url' aan (of laat staan).
+  ► STARTDATUM:      pas 'start_date' aan (formaat JJJJ-MM-DD).
+  ► AANTAL DAGEN:    pas 'total_days' aan (standaard 7).
+  ► LEESVERGRENDELING: pas 'lock_seconds' aan (standaard 3).
+  ► UITZETTEN:       zet 'show_popup' op false.
+  ► OPNIEUW TONEN:   verhoog 'popup_version' met 1.
+  Teksten staan in het JS-blok onderaan (I18N: nl / de / en).
 {%- endcomment -%}
 
 {%- liquid
   assign show_popup = true
-  assign popup_version = 2
+  assign popup_version = 3
 
   # ── Instellingen ─────────────────────────────────────────────
+  assign logo_url = 'https://cdn.shopify.com/s/files/1/0929/6668/3005/files/IMG_1979.jpg?v=1784920028'
   assign start_date = '2026-07-24'
   assign total_days = 7
+  assign lock_seconds = 3
 
-  # ── Aftelling berekenen (elke dag 1 omlaag) ──────────────────
+  # ── Aftelling (elke dag 1 omlaag) ────────────────────────────
   assign start_ts = start_date | date: '%s' | plus: 0
   assign today_str = 'now' | date: '%Y-%m-%d'
   assign today_ts = today_str | date: '%s' | plus: 0
@@ -40,67 +45,62 @@
     assign remaining = total_days
   endif
 
+  assign shop_locale = request.locale.iso_code | default: 'nl' | downcase
   assign day_word = 'dagen'
   if remaining == 1
     assign day_word = 'dag'
   endif
-
-  # ── Teksten ──────────────────────────────────────────────────
-  assign popup_title = 'Bestellen kan gewoon 🎉'
-  assign popup_message_pre = 'Je kunt nu bestellen! Je bestelling wordt over'
-  assign popup_message_post = 'verwerkt en verzonden. Bedankt voor je geduld 🙏'
-  assign popup_button = 'Begrepen'
 -%}
 
 {%- if show_popup and remaining > 0 -%}
-<div id="mor7d-overlay" class="mor7d-overlay" data-version="{{ popup_version }}" data-day="{{ today_str }}" hidden>
-  <div class="mor7d-modal" role="dialog" aria-modal="true" aria-labelledby="mor7d-title" aria-describedby="mor7d-text">
-    <button type="button" class="mor7d-close" aria-label="Sluiten" data-mor7d-close>&times;</button>
+<div id="mor7d-overlay" class="mor7d-overlay"
+     data-version="{{ popup_version }}" data-day="{{ today_str }}"
+     data-remaining="{{ remaining }}" data-total="{{ total_days }}"
+     data-lock="{{ lock_seconds }}" data-locale="{{ shop_locale }}" hidden>
+  <div class="mor7d-modal" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="mor7d-title" aria-describedby="mor7d-text">
+    <button type="button" class="mor7d-close" aria-label="Sluiten" data-mor7d-close hidden>&times;</button>
 
-    <div class="mor7d-badge" aria-hidden="true">
-      <span class="mor7d-badge-n">{{ remaining }}</span>
-      <span class="mor7d-badge-u">{{ day_word }}</span>
-    </div>
+    <img class="mor7d-logo" src="{{ logo_url }}" alt="{{ shop.name | escape }}" loading="eager">
 
-    <h2 id="mor7d-title" class="mor7d-title">{{ popup_title }}</h2>
-    <p id="mor7d-text" class="mor7d-text">{{ popup_message_pre }} <b>{{ remaining }} {{ day_word }}</b> {{ popup_message_post }}</p>
+    <h2 id="mor7d-title" class="mor7d-title" data-i18n="title">Bestellen kan gewoon 🎉</h2>
+    <p id="mor7d-text" class="mor7d-text" data-i18n="msg">Je kunt nu bestellen! Je bestelling wordt over <b>{{ remaining }} {{ day_word }}</b> verwerkt en verzonden. Bedankt voor je geduld 🙏</p>
 
     <div class="mor7d-seg" aria-hidden="true">
       {%- for i in (1..total_days) -%}
         <span class="{% if forloop.index <= remaining %}is-on{% endif %}"></span>
       {%- endfor -%}
     </div>
-    <p class="mor7d-seg-label">nog {{ remaining }} van {{ total_days }} {{ day_word }} levertijd</p>
+    <p class="mor7d-seg-label" data-i18n="seg">nog {{ remaining }} van {{ total_days }} {{ day_word }} levertijd</p>
 
-    <button type="button" class="mor7d-btn" data-mor7d-close>{{ popup_button }}</button>
+    <button type="button" class="mor7d-btn" data-mor7d-close data-i18n="btn" disabled>Begrepen</button>
   </div>
 </div>
 
 <style>
   .mor7d-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(17,17,26,.6);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;transition:opacity .28s ease}
   .mor7d-overlay.mor7d-open{opacity:1}
-  .mor7d-modal{position:relative;box-sizing:border-box;width:100%;max-width:430px;background:#fff;color:#15151f;border-radius:22px;padding:40px 30px 30px;box-shadow:0 24px 70px rgba(24,16,54,.35);text-align:center;font-family:inherit;overflow:hidden;opacity:0;transform:translateY(16px) scale(.96);transition:transform .34s cubic-bezier(.2,.9,.3,1.3),opacity .28s ease}
+  .mor7d-modal{position:relative;box-sizing:border-box;width:100%;max-width:430px;background:#fff;color:#15151f;border-radius:22px;padding:36px 30px 30px;box-shadow:0 24px 70px rgba(24,16,54,.35);text-align:center;font-family:inherit;overflow:hidden;opacity:0;transform:translateY(16px) scale(.96);transition:transform .34s cubic-bezier(.2,.9,.3,1.3),opacity .28s ease}
   .mor7d-overlay.mor7d-open .mor7d-modal{opacity:1;transform:none}
-  .mor7d-modal::before{content:"";position:absolute;top:-130px;left:50%;width:300px;height:300px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(139,92,246,.30),rgba(236,72,153,0));pointer-events:none}
-  .mor7d-badge{position:relative;width:112px;height:112px;margin:0 auto 20px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#6366f1,#a855f7 55%,#ec4899);box-shadow:0 14px 32px rgba(139,92,246,.45)}
-  .mor7d-badge::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(139,92,246,.4);animation:mor7d-pulse 2.4s ease-out infinite}
-  .mor7d-badge-n{font-size:2.7rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-  .mor7d-badge-u{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.92;margin-top:2px}
+  .mor7d-modal:focus{outline:none}
+  .mor7d-modal::before{content:"";position:absolute;top:-130px;left:50%;width:300px;height:300px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(139,92,246,.28),rgba(236,72,153,0));pointer-events:none}
+  .mor7d-logo{position:relative;display:block;margin:2px auto 20px;max-width:220px;max-height:110px;width:auto;height:auto;border-radius:16px;box-shadow:0 8px 20px rgba(24,16,54,.15)}
   .mor7d-title{margin:0 0 10px;font-size:1.5rem;line-height:1.2;font-weight:800;letter-spacing:-.01em}
-  .mor7d-text{margin:0 auto 20px;max-width:34ch;font-size:1rem;line-height:1.55;color:#4a4a58}
+  .mor7d-text{margin:0 auto 20px;max-width:36ch;font-size:1rem;line-height:1.55;color:#4a4a58}
   .mor7d-text b{color:#15151f;white-space:nowrap}
   .mor7d-seg{display:flex;gap:6px;justify-content:center;margin:0 0 9px;flex-wrap:wrap}
   .mor7d-seg span{width:26px;height:8px;border-radius:99px;background:#ececf3}
   .mor7d-seg span.is-on{background:linear-gradient(135deg,#6366f1,#a855f7 55%,#ec4899)}
-  .mor7d-seg-label{font-size:.82rem;color:#8a8a99;margin:0 0 24px;font-weight:600}
-  .mor7d-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;color:#fff;font-size:1.02rem;font-weight:700;padding:14px 28px;border-radius:13px;width:100%;background:linear-gradient(135deg,#6366f1,#a855f7 55%,#ec4899);box-shadow:0 10px 24px rgba(139,92,246,.4);transition:transform .12s ease,box-shadow .12s ease}
+  .mor7d-seg-label{font-size:.82rem;color:#8a8a99;margin:0 0 22px;font-weight:600}
+  .mor7d-btn{position:relative;appearance:none;-webkit-appearance:none;border:0;cursor:pointer;color:#fff;font-size:1.02rem;font-weight:700;padding:14px 28px;border-radius:13px;width:100%;overflow:hidden;background:linear-gradient(135deg,#6366f1,#a855f7 55%,#ec4899);box-shadow:0 10px 24px rgba(139,92,246,.4);transition:transform .12s ease,box-shadow .12s ease,background .2s ease,color .2s ease}
   .mor7d-btn:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(139,92,246,.5)}
   .mor7d-btn:active{transform:translateY(0)}
+  .mor7d-btn:disabled{cursor:default;color:#9a9aa8;background:#ececf3;box-shadow:none;transform:none}
+  .mor7d-btn.is-filling::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,#6366f1,#ec4899);animation:mor7d-fill var(--mor7d-lock,3s) linear forwards}
   .mor7d-close{position:absolute;top:14px;right:16px;display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:rgba(0,0,0,.04);border:0;color:#8a8a99;font-size:1.4rem;line-height:1;cursor:pointer;border-radius:50%;transition:background .15s,color .15s}
   .mor7d-close:hover{background:rgba(0,0,0,.08);color:#15151f}
   .mor7d-btn:focus-visible,.mor7d-close:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
-  @keyframes mor7d-pulse{0%{transform:scale(1);opacity:.7}70%{transform:scale(1.28);opacity:0}100%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.mor7d-overlay,.mor7d-modal,.mor7d-btn{transition:opacity .2s ease}.mor7d-modal{transform:none}.mor7d-badge::after{animation:none}}
+  @keyframes mor7d-fill{to{width:100%}}
+  @media (prefers-reduced-motion:reduce){.mor7d-overlay,.mor7d-modal,.mor7d-btn{transition:opacity .2s ease}.mor7d-modal{transform:none}.mor7d-btn.is-filling::after{animation:none;width:100%}}
 </style>
 
 <script>
@@ -110,12 +110,73 @@
 
     var version = overlay.getAttribute('data-version') || '1';
     var day = overlay.getAttribute('data-day') || '';
+    var remaining = parseInt(overlay.getAttribute('data-remaining') || '0', 10);
+    var total = parseInt(overlay.getAttribute('data-total') || '7', 10);
+    var lockSec = parseInt(overlay.getAttribute('data-lock') || '3', 10);
+    var shopLocale = (overlay.getAttribute('data-locale') || '').toLowerCase();
+
     // Eén keer per dag per bezoeker (nieuwe dag => nieuw sleuteltje => opnieuw tonen).
     var storageKey = 'mor7d_seen_' + day + '_v' + version;
-
     try { if (sessionStorage.getItem(storageKey)) return; } catch (e) {}
 
+    // ── Vertalingen ─────────────────────────────────────────────
+    var I18N = {
+      nl: {
+        title: 'Bestellen kan gewoon 🎉',
+        msg: function (n, w) { return 'Je kunt nu bestellen! Je bestelling wordt over <b>' + n + ' ' + w + '</b> verwerkt en verzonden. Bedankt voor je geduld 🙏'; },
+        unit: function (n) { return n === 1 ? 'dag' : 'dagen'; },
+        seg: function (n, t) { return 'nog ' + n + ' van ' + t + ' dagen levertijd'; },
+        btn: 'Begrepen',
+        lock: function (s) { return 'Nog even lezen… ' + s; }
+      },
+      de: {
+        title: 'Bestellen ganz normal möglich 🎉',
+        msg: function (n, w) { return 'Du kannst jetzt bestellen! Deine Bestellung wird in <b>' + n + ' ' + w + '</b> bearbeitet und verschickt. Danke für deine Geduld 🙏'; },
+        unit: function (n) { return n === 1 ? 'Tag' : 'Tagen'; },
+        seg: function (n, t) { return 'noch ' + n + ' von ' + t + ' Tagen Lieferzeit'; },
+        btn: 'Verstanden',
+        lock: function (s) { return 'Kurz lesen… ' + s; }
+      },
+      en: {
+        title: 'You can still order 🎉',
+        msg: function (n, w) { return 'You can order now! Your order will be processed and shipped in <b>' + n + ' ' + w + '</b>. Thanks for your patience 🙏'; },
+        unit: function (n) { return n === 1 ? 'day' : 'days'; },
+        seg: function (n, t) { return n + ' of ' + t + ' days left'; },
+        btn: 'Got it',
+        lock: function (s) { return 'Please read… ' + s; }
+      }
+    };
+
+    function pickLang() {
+      var cands = [];
+      if (navigator.languages && navigator.languages.length) cands = cands.concat(navigator.languages);
+      if (navigator.language) cands.push(navigator.language);
+      cands.push(shopLocale);
+      for (var i = 0; i < cands.length; i++) {
+        var l = (cands[i] || '').toLowerCase();
+        if (l.indexOf('nl') === 0) return 'nl';
+        if (l.indexOf('de') === 0) return 'de';
+        if (l.indexOf('en') === 0) return 'en';
+      }
+      return 'en';
+    }
+
+    var t = I18N[pickLang()];
+    var word = t.unit(remaining);
+
+    var elTitle = overlay.querySelector('[data-i18n="title"]');
+    var elMsg = overlay.querySelector('[data-i18n="msg"]');
+    var elSeg = overlay.querySelector('[data-i18n="seg"]');
+    var elBtn = overlay.querySelector('[data-i18n="btn"]');
+    var modal = overlay.querySelector('.mor7d-modal');
+    var closeBtn = overlay.querySelector('.mor7d-close');
+
+    if (elTitle) elTitle.textContent = t.title;
+    if (elMsg) elMsg.innerHTML = t.msg(remaining, word);
+    if (elSeg) elSeg.textContent = t.seg(remaining, total);
+
     var lastFocus = null;
+    var locked = true;
 
     function open() {
       lastFocus = document.activeElement;
@@ -123,11 +184,35 @@
       overlay.offsetHeight; // forceer reflow zodat de transitie afspeelt
       overlay.classList.add('mor7d-open');
       document.addEventListener('keydown', onKey);
-      var btn = overlay.querySelector('.mor7d-btn');
-      if (btn) btn.focus();
+      if (modal) modal.focus();
+
+      // 3-seconden leesvergrendeling
+      var left = lockSec;
+      if (elBtn) {
+        elBtn.textContent = t.lock(left);
+        elBtn.style.setProperty('--mor7d-lock', lockSec + 's');
+        elBtn.classList.add('is-filling');
+      }
+      if (lockSec <= 0) { unlock(); return; }
+      var timer = window.setInterval(function () {
+        left -= 1;
+        if (left > 0) {
+          if (elBtn) elBtn.textContent = t.lock(left);
+        } else {
+          window.clearInterval(timer);
+          unlock();
+        }
+      }, 1000);
+    }
+
+    function unlock() {
+      locked = false;
+      if (elBtn) { elBtn.disabled = false; elBtn.classList.remove('is-filling'); elBtn.textContent = t.btn; }
+      if (closeBtn) closeBtn.hidden = false;
     }
 
     function close() {
+      if (locked) return;
       overlay.classList.remove('mor7d-open');
       document.removeEventListener('keydown', onKey);
       try { sessionStorage.setItem(storageKey, '1'); } catch (e) {}

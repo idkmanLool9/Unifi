@@ -1,38 +1,49 @@
-# Bestelmelding-popup met afteller — Shopify
+# Bestelmelding-popup — Shopify (logo · afteller · 3s-lock · NL/DE/EN)
 
 Een levendige, zelfstandige pop-up voor de Shopify-winkel **morephrem.shop** die
 bezoekers laat weten dat ze gewoon kunnen bestellen, maar dat hun bestelling nog
-een aantal dagen levertijd heeft. **Dat aantal telt elke dag automatisch 1 omlaag**
-vanaf een instelbare startdatum. Bij 0 verdwijnt de melding vanzelf.
+een aantal dagen levertijd heeft.
 
 ![Voorbeeld](./preview-desktop.png)
 
 ## Wat het doet
 
-- Toont een grote **afteller-badge** (bijv. `7 DAGEN`) plus een voortgangsbalk van
-  gekleurde balkjes die elke dag korter wordt.
-- De teller wordt **server-side in Liquid** berekend op basis van de winkeldatum
-  (tijdzone van de winkel), dus hij klopt bij elke paginalading — er hoeft niets te
-  blijven draaien en er is geen app voor nodig.
-- Verschijnt **één keer per dag per bezoeker** (via `sessionStorage`, sleutel bevat
-  de datum), zodat een terugkerende klant de nieuwe stand ziet.
-- Sluitbaar via het kruisje, de knop **Begrepen**, een klik ernaast of Esc.
-  Toegankelijk (`role="dialog"`, `aria-modal`, focus, Esc) en respecteert
-  `prefers-reduced-motion`. Unieke CSS-prefix `mor7d-`, dus geen thema-conflicten.
+- **Logo bovenaan** (jouw Shopify-bestand) in plaats van een gekleurde bol.
+- **Afteller**: het aantal dagen telt **elke dag automatisch 1 omlaag** vanaf een
+  instelbare startdatum, met een voortgangsbalk van gekleurde balkjes. Bij 0
+  verdwijnt de pop-up vanzelf. Berekend **server-side in Liquid** (winkel-tijdzone),
+  dus altijd correct zonder dat er iets hoeft te draaien.
+- **3 seconden leesvergrendeling**: de pop-up is de eerste paar seconden niet weg te
+  klikken (knop telt af met een voortgangslijntje, kruisje verschijnt daarna), zodat
+  klanten niet per ongeluk wegklikken vóór ze het gelezen hebben.
+- **Automatische taal — Nederlands / Duits / Engels** op basis van de browsertaal van
+  de klant, met de winkeltaal (`request.locale`) als terugval. Onbekende talen → Engels.
+- Verschijnt **één keer per dag per bezoeker**. Toegankelijk (`role="dialog"`,
+  `aria-modal`, focus, Esc ná de lock) en respecteert `prefers-reduced-motion`.
+  Unieke CSS-prefix `mor7d-`, dus geen thema-conflicten.
 
-## Hoe de afteller rekent
+## Instellen / aanpassen
 
+Bovenin `delayed-orders-popup.liquid` staat het instelblok:
+
+```liquid
+assign show_popup    = true
+assign popup_version = 3             # +1 => iedereen ziet 'm vandaag opnieuw
+assign logo_url      = 'https://cdn.shopify.com/s/files/1/0929/6668/3005/files/IMG_1979.jpg?v=1784920028'
+assign start_date    = '2026-07-24'  # dag waarop de afteller op total_days staat
+assign total_days    = 7             # levertijd in dagen op de startdatum
+assign lock_seconds  = 3             # seconden dat de pop-up niet weg te klikken is
 ```
-resterend = total_days − (vandaag − start_date, in hele dagen)
-```
 
-Voorbeeld met `start_date = 2026-07-24` en `total_days = 7`:
+De teksten per taal staan in het `I18N`-blok onderin de snippet (`nl` / `de` / `en`):
+titel, bericht (met het dynamische dagenaantal), knop, en de "even lezen"-tekst.
+
+### Afteller-voorbeeld (start 2026-07-24, 7 dagen)
 
 | Datum | Toont |
 |---|---|
 | 24-07-2026 | 7 dagen |
-| 25-07-2026 | 6 dagen |
-| … | … |
+| 27-07-2026 | 4 dagen |
 | 30-07-2026 | 1 dag |
 | 31-07-2026 | pop-up verdwijnt (0) |
 
@@ -56,23 +67,6 @@ De kopie staat klaar maar is nog **niet live**:
 1. **Preview:** `https://morephrem.shop/?preview_theme_id=187632484733`
 2. Shopify Admin → **Online Store → Themes**.
 3. Zoek **"Webshop — bestelmelding (7 dagen levertijd)"** → **Actions → Publish**.
-
-## Instellen / aanpassen
-
-Bovenin `delayed-orders-popup.liquid` staat het instelblok:
-
-```liquid
-assign show_popup    = true          # false = pop-up uit
-assign popup_version = 2             # +1 => iedereen ziet 'm vandaag opnieuw
-assign start_date    = '2026-07-24'  # dag waarop de afteller op total_days staat
-assign total_days    = 7             # levertijd in dagen op de startdatum
-assign popup_title   = 'Bestellen kan gewoon 🎉'
-assign popup_message_pre  = 'Je kunt nu bestellen! Je bestelling wordt over'
-assign popup_message_post = 'verwerkt en verzonden. Bedankt voor je geduld 🙏'
-assign popup_button  = 'Begrepen'
-```
-
-> Het getal in de tekst en de badge komt uit `remaining` en telt automatisch mee.
 
 ## Verwijderen / terugdraaien
 
