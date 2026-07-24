@@ -1,0 +1,87 @@
+{%- comment -%}
+  ────────────────────────────────────────────────────────────────
+  Bestelmelding-popup — "Bestellen kan, levertijd 7 dagen"
+  ────────────────────────────────────────────────────────────────
+  Deze pop-up verschijnt één keer per bezoek (per browsersessie) en laat
+  bezoekers weten dat bestellingen pas na 7 dagen worden verwerkt/verzonden.
+
+  ► TEKST AANPASSEN?  Verander hieronder de waarden bij 'assign'.
+  ► POP-UP UITZETTEN? Zet 'show_popup' op false.
+  ► OPNIEUW TONEN aan iedereen (ook wie 'm al weg klikte)?
+     Verhoog 'popup_version' met 1.
+{%- endcomment -%}
+
+{%- liquid
+  assign show_popup = true
+  assign popup_version = 1
+  assign popup_title = 'Bestellen kan gewoon 📦'
+  assign popup_message = 'Je kunt je bestelling zoals altijd plaatsen. Let op: bestellingen worden pas ná 7 dagen verwerkt en verzonden. Bedankt voor je geduld!'
+  assign popup_button = 'Begrepen'
+-%}
+
+{%- if show_popup -%}
+<div id="mor7d-overlay" class="mor7d-overlay" data-version="{{ popup_version }}" hidden>
+  <div class="mor7d-modal" role="dialog" aria-modal="true" aria-labelledby="mor7d-title" aria-describedby="mor7d-text">
+    <button type="button" class="mor7d-close" aria-label="Sluiten" data-mor7d-close>&times;</button>
+    <h2 id="mor7d-title" class="mor7d-title">{{ popup_title }}</h2>
+    <p id="mor7d-text" class="mor7d-text">{{ popup_message }}</p>
+    <button type="button" class="mor7d-btn" data-mor7d-close>{{ popup_button }}</button>
+  </div>
+</div>
+
+<style>
+  .mor7d-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,18,25,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:opacity .25s ease}
+  .mor7d-overlay.mor7d-open{opacity:1}
+  .mor7d-modal{position:relative;box-sizing:border-box;width:100%;max-width:420px;background:#fff;color:#1a1a1a;border-radius:16px;padding:34px 28px 28px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;transform:translateY(12px) scale(.98);transition:transform .25s ease;font-family:inherit}
+  .mor7d-overlay.mor7d-open .mor7d-modal{transform:none}
+  .mor7d-title{margin:0 0 12px;font-size:1.4rem;line-height:1.25;font-weight:700}
+  .mor7d-text{margin:0 0 24px;font-size:1rem;line-height:1.55;color:#444}
+  .mor7d-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;background:#1a1a1a;color:#fff;font-size:1rem;font-weight:600;padding:13px 28px;border-radius:10px;width:100%;transition:opacity .15s ease}
+  .mor7d-btn:hover{opacity:.85}
+  .mor7d-close{position:absolute;top:10px;right:14px;background:transparent;border:0;color:#8a8a8a;font-size:1.9rem;line-height:1;cursor:pointer;padding:2px 8px;border-radius:8px}
+  .mor7d-close:hover{color:#1a1a1a}
+  .mor7d-btn:focus-visible,.mor7d-close:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){.mor7d-overlay,.mor7d-modal{transition:none}}
+</style>
+
+<script>
+  (function () {
+    var overlay = document.getElementById('mor7d-overlay');
+    if (!overlay) return;
+
+    var version = overlay.getAttribute('data-version') || '1';
+    var storageKey = 'mor7d_seen_v' + version;
+
+    // Al weg geklikt in deze sessie? Dan niet opnieuw tonen.
+    try { if (sessionStorage.getItem(storageKey)) return; } catch (e) {}
+
+    var lastFocus = null;
+
+    function open() {
+      lastFocus = document.activeElement;
+      overlay.hidden = false;
+      overlay.offsetHeight; // forceer reflow zodat de transitie afspeelt
+      overlay.classList.add('mor7d-open');
+      document.addEventListener('keydown', onKey);
+      var btn = overlay.querySelector('.mor7d-btn');
+      if (btn) btn.focus();
+    }
+
+    function close() {
+      overlay.classList.remove('mor7d-open');
+      document.removeEventListener('keydown', onKey);
+      try { sessionStorage.setItem(storageKey, '1'); } catch (e) {}
+      window.setTimeout(function () { overlay.hidden = true; }, 260);
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function onKey(e) { if (e.key === 'Escape') close(); }
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.hasAttribute('data-mor7d-close')) close();
+    });
+
+    window.setTimeout(open, 700); // korte vertraging zodat de pagina eerst laadt
+  })();
+</script>
+{%- endif -%}
