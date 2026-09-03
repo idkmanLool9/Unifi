@@ -95,6 +95,23 @@ export interface CabinetPartDef {
   animationMs?: number;
 }
 
+/**
+ * Optional rigid transform baked onto the GLB before placement, so a model
+ * authored in a different frame (scale, up-axis, origin) is normalised to
+ * the shared convention: centred on X/Z, rail band at local y=0, front rail
+ * plane at local z≈0.267 m. Applied only to the visual mesh — parts, hinges
+ * and interior lights still work in the normalised frame. Omit for models
+ * already authored to convention (the default).
+ */
+export interface CabinetModelTransform {
+  /** Uniform scale applied to the GLB. */
+  scale: number;
+  /** Euler rotation (degrees, XYZ order) applied to the GLB. */
+  rotationDeg: Vec3;
+  /** Translation applied after scale+rotation, model-local millimetres. */
+  offsetMm: Vec3;
+}
+
 export interface CabinetModelDef {
   id: string;
   name: string;
@@ -105,6 +122,8 @@ export interface CabinetModelDef {
   sizeMm: Vec3;
   /** Default animation duration for parts without an override, ms. */
   animationMs: number;
+  /** Normalising transform for off-convention GLBs (see type doc). */
+  modelTransform?: CabinetModelTransform;
   parts: CabinetPartDef[];
 }
 

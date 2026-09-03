@@ -21,6 +21,7 @@ export type RackProfileId =
   | 'wall-rack-9u'
   | 'unifi-minirack'
   | 'uacc-wall-12u'
+  | 'uacc-wall-12u-solid'
   | 'custom';
 
 export type EnclosureType =
@@ -212,6 +213,30 @@ export const RACK_PROFILES: Record<RackProfileId, RackProfile> = {
     baseType: 'compact-feet',
     description:
       'Interactive 12U 600mm wall-mount cabinet: hinged glass door, removable side panels and covers.',
+  },
+  'uacc-wall-12u-solid': {
+    id: 'uacc-wall-12u-solid',
+    name: 'UACC 12U Wall Cabinet (Realistic)',
+    enclosure: 'wall-mount',
+    allowedUnits: [12],
+    externalWidthMm: 600,
+    externalDepthMm: 610,
+    // Same mounting geometry as the interactive profile so devices seat
+    // identically inside the shell; this variant swaps the 123-part model
+    // for the accurate one-piece manufacturer mesh (no moving parts).
+    frontRailInsetMm: 38,
+    railSpacingRange: { minMm: 250, maxMm: 500, defaultMm: 450 },
+    fixedRailSpacingMm: 450,
+    nominalUsableDepthMm: 450,
+    maxDeviceDepthMm: 500,
+    rearClearanceMm: 50,
+    cableClearanceMm: 60,
+    supportRails: true,
+    shelfCompatible: true,
+    loadRatingKg: 45,
+    baseType: 'compact-feet',
+    description:
+      'Photoreal 12U 600mm wall cabinet — the accurate one-piece model. Fixed glass door (no open/remove interactions).',
   },
   custom: {
     id: 'custom',

@@ -174,13 +174,50 @@ const UACC_WALL_12U: CabinetModelDef = {
   ],
 };
 
+/**
+ * Photoreal one-piece variant of the same cabinet. This GLB is the accurate
+ * manufacturer mesh — a solid shell with just body, glass door and an
+ * interior fill, so it has no separable parts. A single catch-all `frame`
+ * part carries the whole model through the shared renderer (material
+ * grading, interior lights, fallback gating) with a show/hide toggle as its
+ * only interaction. Authored bottom-origin, so a −320 mm Y offset re-centres
+ * it onto the shared convention (rail band at local y=0); it is already in
+ * metres, Y-up and centred on X/Z, so scale is 1 and no rotation is needed.
+ */
+const UACC_WALL_12U_SOLID: CabinetModelDef = {
+  id: 'uacc-wall-12u-600-solid',
+  name: 'UACC 12U 600mm Wall Cabinet (Realistic)',
+  modelPath: 'cabinets/uacc-wall-12u-600-solid/model.glb',
+  rackUnits: 12,
+  sizeMm: [600, 644, 610],
+  animationMs: 400,
+  modelTransform: { scale: 1, rotationDeg: [0, 0, 0], offsetMm: [0, -320, 0] },
+  parts: [
+    {
+      id: 'shell',
+      name: 'Cabinet Shell',
+      kind: 'frame',
+      interaction: 'visibility',
+      group: 'front',
+      // One catch-all: the solid model exposes no separable nodes.
+      nodes: ['*'],
+      defaultState: 'installed',
+      states: ['installed', 'hidden'],
+      supportsTransparency: true,
+      obstructsInterior: true,
+    },
+  ],
+};
+
 const CABINET_MODELS: Record<string, CabinetModelDef> = {
   [UACC_WALL_12U.id]: UACC_WALL_12U,
+  [UACC_WALL_12U_SOLID.id]: UACC_WALL_12U_SOLID,
 };
 
 /** Maps a rack profile to its interactive cabinet model, when it has one. */
 const CABINET_FOR_PROFILE: Partial<Record<RackProfileId, string>> = {
   'uacc-wall-12u': UACC_WALL_12U.id,
+  'uacc-wall-12u-solid': UACC_WALL_12U_SOLID.id,
 };
 
 export const getCabinetModel = (id: string): CabinetModelDef | undefined =>

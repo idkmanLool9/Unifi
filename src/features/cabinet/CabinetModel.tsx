@@ -36,7 +36,9 @@ const MM = 0.001;
 function gradeCabinetMaterial(m: Material): void {
   const std = m as MeshStandardMaterial;
   const name = m.name.toLowerCase();
-  const isGlass = name.includes('glass') || m.transparent;
+  // Detect glass by name only: a transparent-but-not-glass material (e.g. a
+  // model's interior "fill") must not be tinted like a door pane.
+  const isGlass = name.includes('glass');
 
   if (isGlass) {
     std.color?.set('#525a63'); // cool smoky grey tint
@@ -55,8 +57,11 @@ function gradeCabinetMaterial(m: Material): void {
 
   // Painted steel / aluminium: tame environment reflections and pull the
   // near-white down to a light grey (RAL 7035-ish) so it stops glowing.
+  // Skip the colour pull on textured shells — there the base colour is a
+  // white multiplier over a photoreal texture, so darkening it muddies the
+  // map rather than the paint.
   std.envMapIntensity = 0.55;
-  if (std.color) {
+  if (std.color && !std.map) {
     const hsl = { h: 0, s: 0, l: 0 };
     std.color.getHSL(hsl);
     if (hsl.l > 0.72) std.color.setHSL(hsl.h, hsl.s, hsl.l * 0.8);
@@ -214,9 +219,26 @@ function LoadedCabinet({
 
   const lights = instance.lights ?? DEFAULT_CABINET_LIGHTS;
 
+  // Optional normalising transform for off-convention GLBs. Applied only to
+  // the mesh, so the interior lights (siblings) stay in the shared frame.
+  const t = model.modelTransform;
+  const meshOffset: [number, number, number] = t
+    ? [t.offsetMm[0] * MM, t.offsetMm[1] * MM, t.offsetMm[2] * MM]
+    : [0, 0, 0];
+  const meshRotation: [number, number, number] = t
+    ? [
+        (t.rotationDeg[0] * Math.PI) / 180,
+        (t.rotationDeg[1] * Math.PI) / 180,
+        (t.rotationDeg[2] * Math.PI) / 180,
+      ]
+    : [0, 0, 0];
+  const meshScale = t?.scale ?? 1;
+
   return (
     <group position={placement}>
-      <primitive object={cloned} />
+      <group position={meshOffset} rotation={meshRotation} scale={meshScale}>
+        <primitive object={cloned} />
+      </group>
       {lights.on && lights.brightness > 0.001 && (
         <CabinetInteriorLights model={model} lights={lights} />
       )}

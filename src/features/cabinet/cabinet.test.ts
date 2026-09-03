@@ -68,6 +68,44 @@ describe('profile → cabinet mapping', () => {
     expect(cabinetModelForProfile('uacc-wall-12u')?.id).toBe(MODEL.id);
     expect(cabinetModelForProfile('open-frame-700')).toBeUndefined();
   });
+
+  it('maps the realistic wall profile to the solid one-piece model', () => {
+    expect(cabinetModelForProfile('uacc-wall-12u-solid')?.id).toBe(
+      'uacc-wall-12u-600-solid',
+    );
+  });
+});
+
+describe('solid one-piece cabinet', () => {
+  const SOLID = getCabinetModel('uacc-wall-12u-600-solid')!;
+
+  it('normalises its off-convention GLB with a model transform', () => {
+    // Authored bottom-origin, so it is re-centred downward onto the shared
+    // "rail band at local y=0" convention; already metres/Y-up, so unit
+    // scale and no rotation.
+    expect(SOLID.modelTransform).toBeDefined();
+    expect(SOLID.modelTransform!.scale).toBe(1);
+    expect(SOLID.modelTransform!.rotationDeg).toEqual([0, 0, 0]);
+    expect(SOLID.modelTransform!.offsetMm[1]).toBeLessThan(0);
+  });
+
+  it('carries the whole mesh in one catch-all shell part', () => {
+    expect(SOLID.parts).toHaveLength(1);
+    const shell = SOLID.parts[0];
+    expect(shell.id).toBe('shell');
+    // The `*` pattern claims every node, whatever the GLB names them.
+    expect(partForNode(SOLID, 'UACC_Rack_12U_Wall_600_G')?.id).toBe('shell');
+    expect(partForNode(SOLID, 'anything-at-all')?.id).toBe('shell');
+  });
+
+  it('seeds its shell installed (visible) by default', () => {
+    const inst = defaultInstance(SOLID);
+    expect(inst.parts['shell'].state).toBe('installed');
+    expect(computePartTarget(SOLID.parts[0], { state: 'installed' }, {
+      mode: 'normal',
+      transparency: 'off',
+    }).visible).toBe(true);
+  });
 });
 
 describe('defaultInstance', () => {
