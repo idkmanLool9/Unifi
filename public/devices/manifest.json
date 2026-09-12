@@ -2,6 +2,7 @@
   "devices": [
     "generic/ups-2u",
     "genexis/hybrid-live-titanium",
+    "rackforge/pdu-1u-eu",
     "ubiquiti/dream-machine-pro",
     "ubiquiti/pro-max-24-poe",
     "ubiquiti/rack-panel-brush-1u",

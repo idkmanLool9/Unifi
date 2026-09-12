@@ -1,0 +1,197 @@
+{
+  "id": "rackforge-pdu-1u-eu",
+  "slug": "pdu-1u-eu",
+  "manufacturer": "rackforge",
+  "manufacturerName": "RackForge",
+  "productName": "PDU 1U EU",
+  "modelNumber": "PDU-1U-EU",
+  "category": "power",
+  "rackUnits": 1,
+  "widthMm": 482.6,
+  "heightMm": 43.7,
+  "depthMm": 44,
+  "weightKg": 2,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 1,
+  "maximumPowerWatts": 2,
+  "tags": [
+    "pdu",
+    "power",
+    "eu",
+    "rackforge"
+  ],
+  "description": "1U rack power distribution unit with eight EU (Schuko / CEE 7) outlets and 19-inch mounting ears.",
+  "modelTransform": {
+    "scale": 1,
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "offsetMm": [
+      0,
+      0,
+      22
+    ]
+  },
+  "mountingOffsetMm": 0,
+  "portsAuthored": true,
+  "ports": [
+    {
+      "id": "outlet-1",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 1",
+      "location": "front",
+      "positionMm": [
+        -183.8,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-2",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 2",
+      "location": "front",
+      "positionMm": [
+        -131.2,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-3",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 3",
+      "location": "front",
+      "positionMm": [
+        -78.7,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-4",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 4",
+      "location": "front",
+      "positionMm": [
+        -26.2,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-5",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 5",
+      "location": "front",
+      "positionMm": [
+        26.2,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-6",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 6",
+      "location": "front",
+      "positionMm": [
+        78.7,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-7",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 7",
+      "location": "front",
+      "positionMm": [
+        131.2,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "outlet-8",
+      "type": "power",
+      "count": 1,
+      "label": "Outlet 8",
+      "location": "front",
+      "positionMm": [
+        183.8,
+        0,
+        20
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "input",
+        "type": "c14",
+        "count": 1,
+        "location": "rear",
+        "label": "Mains input"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "presentation": {
+    "faceplate": "pdu",
+    "tone": "metal",
+    "portsLabel": "8 outlets"
+  }
+}
