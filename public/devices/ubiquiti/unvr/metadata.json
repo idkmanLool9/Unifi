@@ -1,0 +1,127 @@
+{
+  "id": "ubnt-unvr",
+  "slug": "unvr",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "UNVR",
+  "modelNumber": "UNVR",
+  "category": "storage",
+  "rackUnits": 1,
+  "widthMm": 442.4,
+  "heightMm": 43.7,
+  "depthMm": 327.3,
+  "weightKg": 2.9,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 40,
+  "maximumPowerWatts": 60,
+  "tags": [
+    "nvr",
+    "protect",
+    "storage",
+    "unifi"
+  ],
+  "description": "UniFi Network Video Recorder — four hot-swap 3.5\" drive bays for continuous camera recording, with a 10G SFP+ uplink and GbE management. 1U rack-mount.",
+  "modelTransform": {
+    "scale": 1,
+    "rotationDeg": [
+      0,
+      -90,
+      0
+    ],
+    "offsetMm": [
+      -0.1,
+      -20.25,
+      -4.8
+    ]
+  },
+  "mountingOffsetMm": 0,
+  "portsAuthored": true,
+  "ports": [
+    {
+      "id": "mgmt",
+      "type": "rj45",
+      "count": 1,
+      "label": "Management",
+      "location": "rear",
+      "positionMm": [
+        122.6,
+        -6.6,
+        -162
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        -1
+      ],
+      "speedGbps": 1,
+      "sizeMm": [
+        15.5,
+        13.5
+      ]
+    },
+    {
+      "id": "sfp",
+      "type": "sfp+",
+      "count": 1,
+      "label": "SFP+",
+      "location": "rear",
+      "positionMm": [
+        101.7,
+        -6.3,
+        -162
+      ],
+      "exitDirMm": [
+        0,
+        0,
+        -1
+      ],
+      "speedGbps": 10,
+      "sizeMm": [
+        14.5,
+        10.3
+      ]
+    }
+  ],
+  "leds": [
+    {
+      "id": "status",
+      "label": "Status",
+      "kind": "status",
+      "color": "#4c82f7",
+      "state": "on",
+      "positionMm": [
+        117,
+        -1.9,
+        -161
+      ],
+      "diameterMm": 2,
+      "intensity": 1
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "dc",
+        "type": "dc",
+        "count": 1,
+        "location": "rear",
+        "label": "Power"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "cooling": {
+    "fanCount": 3,
+    "airflow": "front-to-rear",
+    "fanDiameterMm": 40
+  },
+  "presentation": {
+    "faceplate": "storage",
+    "tone": "dark",
+    "portsLabel": "2 ports",
+    "speedLabel": "10G SFP+"
+  }
+}
