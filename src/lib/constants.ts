@@ -45,3 +45,6 @@ export const VIEW_POSES: Record<
 
 /** Interactive cabinet part-state store. */
 export const CABINET_STORE_KEY = 'rackforge-cabinet';
+
+/** Bill-of-materials / pricing preferences (display currency). */
+export const PRICING_STORE_KEY = 'rackforge-pricing';

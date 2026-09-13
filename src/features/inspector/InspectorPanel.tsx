@@ -12,6 +12,7 @@ import { CableInspector } from './cable/CableInspector';
 import { DeviceInspector } from './device/DeviceInspector';
 import { PlacementSection } from './PlacementSection';
 import { SceneInfoSection } from './sections/SceneInfoSection';
+import { BillOfMaterialsSection } from './sections/BillOfMaterialsSection';
 import { CameraSection } from './sections/CameraSection';
 import { ViewSection } from './sections/ViewSection';
 import { LightingSection } from './sections/LightingSection';
@@ -150,6 +151,7 @@ export function InspectorPanel() {
                   </>
                 ) : (
                   <>
+                    <BillOfMaterialsSection />
                     <SceneInfoSection />
                     <CameraSection />
                     <ViewSection />

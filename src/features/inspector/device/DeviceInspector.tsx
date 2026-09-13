@@ -26,6 +26,8 @@ import {
 import { useAuthoredDevicesStore } from '@/stores/authoredDevicesStore';
 import { toast } from '@/stores/toastStore';
 import { CATEGORY_LABELS } from '@/features/library/catalog';
+import { formatMoney, priceForDevice } from '@/features/devices/pricing';
+import { usePricingStore } from '@/stores/pricingStore';
 import {
   rotatedFootprintMm,
   shelfDeckRect,
@@ -44,6 +46,8 @@ const FACING_OPTIONS: ReadonlyArray<{
 ];
 
 function ProductSection({ definition }: { definition: DeviceDefinition }) {
+  const currency = usePricingStore((s) => s.currency);
+  const unitUsd = priceForDevice(definition);
   return (
     <CollapsibleSection title="Device">
       <InfoRow label="Product">{definition.productName}</InfoRow>
@@ -51,6 +55,9 @@ function ProductSection({ definition }: { definition: DeviceDefinition }) {
       <InfoRow label="Model">{definition.modelNumber}</InfoRow>
       <InfoRow label="Category">
         {CATEGORY_LABELS[definition.category]}
+      </InfoRow>
+      <InfoRow label="Unit price">
+        {unitUsd === undefined ? '—' : formatMoney(unitUsd, currency)}
       </InfoRow>
       <InfoRow label="Status">
         <span className="rounded-md bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">
