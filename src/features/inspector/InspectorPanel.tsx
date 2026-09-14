@@ -116,7 +116,7 @@ export function InspectorPanel() {
                 {headerChip}
               </span>
             </PanelHeader>
-            <div className="relative flex-1 overflow-x-hidden overflow-y-auto">
+            <div className="relative flex-1 overflow-x-hidden overflow-y-auto pb-2.5">
               {/* Live placement readout while a drag is in progress */}
               <PlacementSection />
               {/* Keyed remount with entrance-only animation (see M5 note) */}

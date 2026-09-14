@@ -153,7 +153,7 @@ export function LibraryPanel() {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-2.5 pt-1 pb-3">
+      <div className="flex-1 overflow-y-auto px-2.5 pt-2.5 pb-3">
         {loading ? (
           <div className="space-y-1 pt-1">
             {Array.from({ length: 6 }, (_, i) => (
@@ -170,7 +170,7 @@ export function LibraryPanel() {
             transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
           >
               {activeTab === 'browse' && (
-                <div className="space-y-1">
+                <div className="space-y-2.5">
                   {brands.map((brand) => (
                     <BrandGroup key={brand.id} brand={brand} />
                   ))}

@@ -48,23 +48,15 @@ export function BrandGroup({ brand }: { brand: CatalogBrand }) {
   }, [devices]);
 
   return (
-    <div
-      className={cn(
-        'rounded-[10px] transition-colors',
-        expanded && 'bg-surface-raised/60 ring-1 ring-edge',
-      )}
-    >
+    <div className="overflow-hidden rounded-xl border border-edge bg-surface-raised shadow-xs">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={() => toggleBrand(brand.id)}
-        className={cn(
-          'flex w-full items-center gap-2 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-100',
-          !expanded && 'hover:bg-surface-hover',
-        )}
+        className="group flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors duration-100 hover:bg-surface-hover"
       >
         <BrandMonogram brand={brand} />
-        <span className="flex-1 truncate text-[12.5px] font-semibold text-primary">
+        <span className="flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] text-primary">
           {brand.name}
         </span>
         <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-[10px] font-semibold text-muted tabular-nums">
@@ -72,8 +64,8 @@ export function BrandGroup({ brand }: { brand: CatalogBrand }) {
         </span>
         <motion.span
           animate={{ rotate: expanded ? 90 : 0 }}
-          transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
-          className="flex text-muted"
+          transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="flex text-muted transition-colors group-hover:text-secondary"
         >
           <ChevronRight className="size-3.5" strokeWidth={2} />
         </motion.span>
@@ -85,10 +77,10 @@ export function BrandGroup({ brand }: { brand: CatalogBrand }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="px-1 pb-1.5">
+            <div className="border-t border-edge px-1.5 pt-0.5 pb-1.5">
               {devices.length === 0 ? (
                 <div className="mx-1 mb-1 flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-edge-strong px-3 py-4 text-center">
                   <PackageOpen className="size-4 text-muted" strokeWidth={1.5} />

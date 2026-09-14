@@ -98,16 +98,16 @@ export function DeviceCard({ device }: DeviceCardProps) {
         ]);
       }}
       className={cn(
-        'group relative w-full cursor-pointer rounded-[10px] border p-2 text-left',
-        'transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out',
+        'group relative w-full cursor-pointer rounded-lg border p-2 text-left',
+        'transition-[background-color,border-color] duration-100 ease-out',
         selected
-          ? 'border-accent/60 bg-accent-soft/60 shadow-xs'
-          : 'border-transparent hover:-translate-y-px hover:border-edge hover:bg-surface-raised hover:shadow-sm',
+          ? 'border-accent/50 bg-accent-soft'
+          : 'border-transparent hover:bg-surface-hover',
       )}
     >
       <div className="flex items-start gap-2.5">
         {/* Thumbnail tile */}
-        <div className="relative flex h-11 w-[76px] shrink-0 items-center rounded-lg border border-edge bg-surface-raised px-1.5 transition-transform duration-150 ease-out group-hover:scale-[1.03]">
+        <div className="relative flex h-11 w-[74px] shrink-0 items-center rounded-lg border border-edge bg-background px-1.5 transition-transform duration-150 ease-out group-hover:scale-[1.03]">
           <DeviceThumbnail device={device} />
           {device.badge && (
             <span
