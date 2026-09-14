@@ -9,9 +9,9 @@ export function InfoRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-6 items-center justify-between gap-3">
+    <div className="flex min-h-7 items-center justify-between gap-3 py-0.5">
       <span className="text-xs text-secondary">{label}</span>
-      <span className="text-[11px] font-medium text-primary tabular-nums">
+      <span className="text-right text-xs font-medium text-primary tabular-nums">
         {children}
       </span>
     </div>
