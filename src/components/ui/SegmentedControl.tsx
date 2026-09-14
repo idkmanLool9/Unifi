@@ -44,7 +44,7 @@ export function SegmentedControl<T extends string>({
               <motion.span
                 layoutId={layoutId}
                 transition={{ type: 'spring', stiffness: 600, damping: 45 }}
-                className="absolute inset-0 rounded-[6px] bg-surface-raised shadow-xs ring-1 ring-edge"
+                className="absolute inset-0 rounded-[6px] bg-surface-raised shadow-sm ring-1 ring-edge/70"
               />
             )}
             <span className="relative">{option.label}</span>

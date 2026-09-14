@@ -270,7 +270,7 @@ export function TopToolbar() {
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={() => void exportProject()}
-            className="ml-0.5 flex h-7 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
+            className="ml-0.5 flex h-7 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-medium text-on-accent shadow-accent transition-colors hover:bg-accent-hover"
           >
             <Download className="size-3.5" strokeWidth={2} />
             Export

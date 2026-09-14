@@ -8,6 +8,8 @@ import { shouldSuppressClick } from '@/stores/dragStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { useRackStore } from '@/stores/rackStore';
+import { usePricingStore } from '@/stores/pricingStore';
+import { formatMoney, priceForDevice } from '@/features/devices/pricing';
 import { cn } from '@/lib/utils';
 
 function Chip({
@@ -40,6 +42,8 @@ export function DeviceCard({ device }: DeviceCardProps) {
   const toggleFavorite = useLibraryStore((s) => s.toggleFavorite);
 
   const brand = brandById(device.brandId);
+  const currency = usePricingStore((s) => s.currency);
+  const price = priceForDevice({ id: device.id });
 
   return (
     <motion.div
@@ -95,37 +99,40 @@ export function DeviceCard({ device }: DeviceCardProps) {
       }}
       className={cn(
         'group relative w-full cursor-pointer rounded-[10px] border p-2 text-left',
-        'transition-colors duration-100',
+        'transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out',
         selected
-          ? 'border-accent/60 bg-accent-soft/60'
-          : 'border-transparent hover:border-edge hover:bg-surface-hover',
+          ? 'border-accent/60 bg-accent-soft/60 shadow-xs'
+          : 'border-transparent hover:-translate-y-px hover:border-edge hover:bg-surface-raised hover:shadow-sm',
       )}
     >
       <div className="flex items-start gap-2.5">
         {/* Thumbnail tile */}
-        <div className="flex h-11 w-[76px] shrink-0 items-center rounded-lg border border-edge bg-surface-raised px-1.5 transition-transform duration-150 group-hover:scale-[1.03]">
+        <div className="relative flex h-11 w-[76px] shrink-0 items-center rounded-lg border border-edge bg-surface-raised px-1.5 transition-transform duration-150 ease-out group-hover:scale-[1.03]">
           <DeviceThumbnail device={device} />
+          {device.badge && (
+            <span
+              className={cn(
+                'absolute -top-1 -left-1 rounded-[4px] px-1 py-px text-[8.5px] font-bold tracking-wide uppercase shadow-xs',
+                device.badge === 'new'
+                  ? 'bg-success text-white'
+                  : 'bg-accent text-on-accent',
+              )}
+            >
+              {device.badge}
+            </span>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-1">
+          <div className="flex items-baseline justify-between gap-1.5">
             <p className="truncate text-[12.5px] leading-tight font-medium text-primary">
               {device.name}
             </p>
-            {device.badge && (
-              <span
-                className={cn(
-                  'shrink-0 rounded-sm px-1 py-px text-[9px] font-bold tracking-wide uppercase',
-                  device.badge === 'new'
-                    ? 'bg-success/15 text-success'
-                    : 'bg-accent-soft text-accent',
-                )}
-              >
-                {device.badge}
-              </span>
-            )}
+            <span className="shrink-0 text-[11px] font-semibold text-primary tabular-nums">
+              {price === undefined ? '—' : formatMoney(price, currency)}
+            </span>
           </div>
-          <p className="mt-px truncate text-[10.5px] leading-tight text-muted">
+          <p className="mt-0.5 truncate text-[10.5px] leading-tight text-muted">
             {brand?.name} · {CATEGORY_LABELS[device.category]}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -137,9 +144,6 @@ export function DeviceCard({ device }: DeviceCardProps) {
                 PoE
               </Chip>
             )}
-            <span className="ml-auto pr-0.5 text-[10px] text-muted tabular-nums">
-              {device.weightKg} kg · {device.depthMm} mm
-            </span>
           </div>
         </div>
       </div>

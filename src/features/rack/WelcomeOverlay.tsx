@@ -147,7 +147,7 @@ export function WelcomeOverlay() {
                 type="button"
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setStep('size')}
-                className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-[10px] bg-accent text-[13px] font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
+                className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-[10px] bg-accent text-[13px] font-medium text-on-accent shadow-accent transition-colors hover:bg-accent-hover"
               >
                 <Plus className="size-4" strokeWidth={2} />
                 Create New Rack
@@ -200,7 +200,7 @@ export function WelcomeOverlay() {
                   type="button"
                   whileTap={{ scale: 0.98 }}
                   onClick={handleCreate}
-                  className="flex h-9 flex-1 items-center justify-center rounded-[10px] bg-accent text-[13px] font-medium text-on-accent shadow-xs transition-colors hover:bg-accent-hover"
+                  className="flex h-9 flex-1 items-center justify-center rounded-[10px] bg-accent text-[13px] font-medium text-on-accent shadow-accent transition-colors hover:bg-accent-hover"
                 >
                   Create {units}U Rack
                 </motion.button>

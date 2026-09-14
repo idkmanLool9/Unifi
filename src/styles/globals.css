@@ -29,6 +29,7 @@
   --color-accent: var(--rf-accent);
   --color-accent-hover: var(--rf-accent-hover);
   --color-accent-soft: var(--rf-accent-soft);
+  --color-accent-line: var(--rf-accent-line);
   --color-on-accent: var(--rf-on-accent);
 
   --color-tooltip: var(--rf-tooltip-bg);
@@ -39,103 +40,123 @@
   --color-danger: var(--rf-danger);
 
   --shadow-xs: var(--rf-shadow-xs);
+  --shadow-sm: var(--rf-shadow-sm);
   --shadow-panel: var(--rf-shadow-panel);
   --shadow-overlay: var(--rf-shadow-overlay);
   --shadow-tooltip: var(--rf-shadow-tooltip);
+  --shadow-accent: var(--rf-shadow-accent);
 
+  /* Consistent corner scale (Apple/UniFi lean on soft, even radii). */
+  --radius-xs: 0.3125rem; /* 5px  — chips, small controls */
+  --radius-sm: 0.4375rem; /* 7px  — buttons, inputs */
+  --radius-md: 0.5625rem; /* 9px  — cards, list rows */
+  --radius-lg: 0.75rem; /* 12px — panels, popovers */
   --radius-panel: 0.75rem;
+  --radius-xl: 1rem; /* 16px — dialogs */
 
+  /* Motion — strong custom curves; UI stays crisp and fast. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-swift: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ---- Dark (default) ---------------------------------------------- */
 :root,
 :root[data-theme='dark'] {
-  --rf-background: #0a0b0d;
-  --rf-surface: #121316;
-  --rf-surface-raised: #191b1f;
-  --rf-surface-hover: #1f2126;
-  --rf-surface-active: #25282d;
-  --rf-glass: rgb(18 19 22 / 0.82);
+  --rf-background: #0b0c0f;
+  --rf-surface: #131519;
+  --rf-surface-raised: #1a1d22;
+  --rf-surface-hover: #20242a;
+  --rf-surface-active: #282c33;
+  --rf-glass: rgb(20 22 27 / 0.72);
 
-  --rf-edge: rgb(255 255 255 / 0.065);
-  --rf-edge-strong: rgb(255 255 255 / 0.13);
+  --rf-edge: rgb(255 255 255 / 0.07);
+  --rf-edge-strong: rgb(255 255 255 / 0.14);
 
-  --rf-text-primary: #f5f6f7;
-  --rf-text-secondary: #9aa0aa;
-  --rf-text-muted: #5f646c;
+  --rf-text-primary: #f4f6f8;
+  --rf-text-secondary: #a2a9b4;
+  --rf-text-muted: #646b76;
 
-  --rf-accent: #4c82f7;
-  --rf-accent-hover: #6494f9;
-  --rf-accent-soft: rgb(76 130 247 / 0.15);
+  --rf-accent: #3d8bff;
+  --rf-accent-hover: #5a9dff;
+  --rf-accent-soft: rgb(61 139 255 / 0.16);
+  --rf-accent-line: rgb(61 139 255 / 0.4);
   --rf-on-accent: #ffffff;
 
-  --rf-tooltip-bg: #26282d;
-  --rf-tooltip-text: #f5f6f7;
+  --rf-tooltip-bg: #2a2e35;
+  --rf-tooltip-text: #f4f6f8;
 
-  --rf-success: #40ba71;
-  --rf-warning: #e8a33d;
-  --rf-danger: #e5544b;
+  --rf-success: #3ecf8e;
+  --rf-warning: #eaa544;
+  --rf-danger: #f0564b;
 
-  --rf-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --rf-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.35);
+  --rf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px -2px rgb(0 0 0 / 0.4);
   --rf-shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.05),
-    0 8px 24px rgb(0 0 0 / 0.4);
+    0 12px 34px -10px rgb(0 0 0 / 0.55);
   --rf-shadow-overlay: 0 0 0 1px rgb(255 255 255 / 0.07),
-    0 4px 12px rgb(0 0 0 / 0.35), 0 16px 48px rgb(0 0 0 / 0.5);
+    0 4px 12px -4px rgb(0 0 0 / 0.4), 0 20px 50px -12px rgb(0 0 0 / 0.6);
   --rf-shadow-tooltip: 0 0 0 1px rgb(255 255 255 / 0.06),
-    0 4px 16px rgb(0 0 0 / 0.5);
+    0 6px 18px -4px rgb(0 0 0 / 0.5);
+  --rf-shadow-accent: 0 1px 2px rgb(0 0 0 / 0.3),
+    0 4px 14px -4px rgb(61 139 255 / 0.5);
 
-  --rf-canvas-top: #17191d;
-  --rf-canvas-bottom: #0a0b0d;
-  --rf-stage-glow: rgb(148 168 205 / 0.05);
-  --rf-vignette: rgb(0 0 0 / 0.32);
-  --rf-grid-cell: #292c32;
-  --rf-grid-section: #3c4048;
+  --rf-canvas-top: #191c21;
+  --rf-canvas-bottom: #0b0c0f;
+  --rf-stage-glow: rgb(150 172 210 / 0.06);
+  --rf-vignette: rgb(0 0 0 / 0.34);
+  --rf-grid-cell: #2b2f36;
+  --rf-grid-section: #3e434c;
 
   color-scheme: dark;
 }
 
 /* ---- Light -------------------------------------------------------- */
 :root[data-theme='light'] {
-  --rf-background: #e9ebee;
-  --rf-surface: #f7f8fa;
+  --rf-background: #e7e9ee;
+  --rf-surface: #f6f8fa;
   --rf-surface-raised: #ffffff;
-  --rf-surface-hover: #eceef1;
-  --rf-surface-active: #e2e5ea;
-  --rf-glass: rgb(250 251 252 / 0.85);
+  --rf-surface-hover: #eef1f4;
+  --rf-surface-active: #e4e8ed;
+  --rf-glass: rgb(252 253 254 / 0.72);
 
-  --rf-edge: rgb(15 18 25 / 0.07);
-  --rf-edge-strong: rgb(15 18 25 / 0.15);
+  --rf-edge: rgb(12 17 29 / 0.08);
+  --rf-edge-strong: rgb(12 17 29 / 0.14);
 
-  --rf-text-primary: #17191d;
-  --rf-text-secondary: #5a616d;
-  --rf-text-muted: #99a0ab;
+  --rf-text-primary: #0c0e12;
+  --rf-text-secondary: #565e6b;
+  --rf-text-muted: #929aa6;
 
-  --rf-accent: #2f6bef;
-  --rf-accent-hover: #245ad6;
-  --rf-accent-soft: rgb(47 107 239 / 0.1);
+  --rf-accent: #0a6cf5;
+  --rf-accent-hover: #085ad4;
+  --rf-accent-soft: rgb(10 108 245 / 0.09);
+  --rf-accent-line: rgb(10 108 245 / 0.28);
   --rf-on-accent: #ffffff;
 
-  --rf-tooltip-bg: #26282d;
-  --rf-tooltip-text: #f5f6f7;
+  --rf-tooltip-bg: #16181d;
+  --rf-tooltip-text: #f4f6f8;
 
-  --rf-success: #1f9d55;
-  --rf-warning: #c07f1a;
-  --rf-danger: #d43d33;
+  --rf-success: #12a150;
+  --rf-warning: #ba7d17;
+  --rf-danger: #d63b31;
 
-  --rf-shadow-xs: 0 1px 2px rgb(15 18 25 / 0.06);
-  --rf-shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.05),
-    0 8px 24px rgb(15 18 25 / 0.07);
-  --rf-shadow-overlay: 0 0 0 1px rgb(15 18 25 / 0.06),
-    0 4px 12px rgb(15 18 25 / 0.08), 0 16px 48px rgb(15 18 25 / 0.14);
-  --rf-shadow-tooltip: 0 4px 16px rgb(15 18 25 / 0.24);
+  --rf-shadow-xs: 0 1px 1.5px rgb(12 17 29 / 0.06);
+  --rf-shadow-sm: 0 1px 2px rgb(12 17 29 / 0.06),
+    0 3px 8px -3px rgb(12 17 29 / 0.1);
+  --rf-shadow-panel: 0 0 0 1px rgb(12 17 29 / 0.04),
+    0 10px 30px -10px rgb(12 17 29 / 0.14);
+  --rf-shadow-overlay: 0 0 0 1px rgb(12 17 29 / 0.05),
+    0 6px 16px -6px rgb(12 17 29 / 0.1), 0 20px 48px -12px rgb(12 17 29 / 0.2);
+  --rf-shadow-tooltip: 0 6px 20px -6px rgb(12 17 29 / 0.28);
+  --rf-shadow-accent: 0 1px 2px rgb(10 108 245 / 0.2),
+    0 5px 16px -6px rgb(10 108 245 / 0.5);
 
-  --rf-canvas-top: #f1f3f6;
-  --rf-canvas-bottom: #d9dde3;
-  --rf-stage-glow: rgb(255 255 255 / 0.45);
-  --rf-vignette: rgb(30 40 60 / 0.1);
-  --rf-grid-cell: #c2c8d1;
-  --rf-grid-section: #9ca4b0;
+  --rf-canvas-top: #f4f6f9;
+  --rf-canvas-bottom: #e2e6ec;
+  --rf-stage-glow: rgb(255 255 255 / 0.5);
+  --rf-vignette: rgb(28 38 58 / 0.09);
+  --rf-grid-cell: #c6ccd5;
+  --rf-grid-section: #a0a8b4;
 
   color-scheme: light;
 }
@@ -152,9 +173,19 @@ body,
 
 body {
   @apply bg-background font-sans text-primary antialiased;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  letter-spacing: -0.006em;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optical tightening on headings/labels for a more refined type feel. */
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.018em;
 }
 
 ::selection {
@@ -167,12 +198,18 @@ body {
   scrollbar-color: var(--rf-edge-strong) transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 *::-webkit-scrollbar-thumb {
   background: var(--rf-edge-strong);
-  border-radius: 4px;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--rf-text-muted);
+  background-clip: content-box;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
@@ -182,7 +219,7 @@ body {
 :focus-visible {
   outline: 2px solid var(--rf-accent);
   outline-offset: 1px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -194,50 +231,53 @@ body {
 input[type='range'] {
   appearance: none;
   -webkit-appearance: none;
-  height: 14px;
+  height: 16px;
   width: 100%;
   background: transparent;
   cursor: pointer;
 }
 input[type='range']::-webkit-slider-runnable-track {
-  height: 3px;
-  border-radius: 2px;
+  height: 4px;
+  border-radius: 9999px;
   background: var(--rf-track, var(--rf-surface-active));
 }
 input[type='range']::-moz-range-track {
-  height: 3px;
-  border-radius: 2px;
+  height: 4px;
+  border-radius: 9999px;
   background: var(--rf-track, var(--rf-surface-active));
 }
 input[type='range']::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  margin-top: -4.5px;
-  height: 12px;
-  width: 12px;
+  margin-top: -5px;
+  height: 14px;
+  width: 14px;
   border-radius: 9999px;
   background: #ffffff;
-  border: 1px solid rgb(15 18 25 / 0.12);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
-  transition: transform 0.12s var(--ease-swift, ease);
+  border: 1px solid rgb(12 17 29 / 0.14);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
+  transition: transform 0.13s var(--ease-out, ease);
 }
 input[type='range']::-moz-range-thumb {
-  height: 12px;
-  width: 12px;
+  height: 14px;
+  width: 14px;
   border-radius: 9999px;
   background: #ffffff;
-  border: 1px solid rgb(15 18 25 / 0.12);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  border: 1px solid rgb(12 17 29 / 0.14);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
 }
 input[type='range']:hover::-webkit-slider-thumb {
-  transform: scale(1.15);
+  transform: scale(1.12);
+}
+input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.02);
 }
 input[type='range']:focus-visible {
   outline: none;
 }
 input[type='range']:focus-visible::-webkit-slider-thumb {
   outline: 2px solid var(--rf-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -249,12 +289,12 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 .viewport-backdrop {
   background:
     radial-gradient(
-      42% 24% at 50% 74%,
+      44% 26% at 50% 74%,
       var(--rf-stage-glow) 0%,
       transparent 100%
     ),
     radial-gradient(
-      120% 90% at 50% 0%,
+      125% 95% at 50% -5%,
       var(--rf-canvas-top) 0%,
       var(--rf-canvas-bottom) 100%
     );
@@ -292,6 +332,6 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 /* Frosted glass for floating viewport widgets */
 .glass-panel {
   background: var(--rf-glass);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
 }
