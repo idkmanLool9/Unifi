@@ -58,7 +58,7 @@ function NavRow({
         'flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs transition-colors',
         active
           ? 'bg-accent/12 font-medium text-accent'
-          : 'text-secondary hover:bg-raised hover:text-primary',
+          : 'text-secondary hover:bg-surface-raised hover:text-primary',
       )}
       style={{ paddingLeft: 8 + depth * 14 }}
     >
@@ -158,7 +158,7 @@ export function LibrarySidebar() {
             <span
               role="button"
               tabIndex={-1}
-              className="-ml-1 rounded p-0.5 hover:bg-raised"
+              className="-ml-1 rounded p-0.5 hover:bg-surface-raised"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleCollapse(node.id);
@@ -222,7 +222,7 @@ export function LibrarySidebar() {
               const name = window.prompt('Category name');
               if (name?.trim()) addCategory(name.trim());
             }}
-            className="rounded p-0.5 text-muted transition-colors hover:bg-raised hover:text-primary"
+            className="rounded p-0.5 text-muted transition-colors hover:bg-surface-raised hover:text-primary"
           >
             <Plus className="size-3" />
           </button>
@@ -264,7 +264,7 @@ export function LibrarySidebar() {
               setRenaming(created.id);
               setRenameText(created.name);
             }}
-            className="rounded p-0.5 text-muted transition-colors hover:bg-raised hover:text-primary"
+            className="rounded p-0.5 text-muted transition-colors hover:bg-surface-raised hover:text-primary"
           >
             <FolderPlus className="size-3" />
           </button>

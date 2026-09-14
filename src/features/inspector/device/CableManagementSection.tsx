@@ -71,7 +71,7 @@ export function CableManagementSection({
         </InfoRow>
 
         {/* Fill bar */}
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-raised">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
           <div
             className={cn(
               'h-full rounded-full transition-all',
@@ -119,7 +119,7 @@ export function CableManagementSection({
           {usage.perNode.map((node) => (
             <div
               key={node.key}
-              className="flex items-center justify-between rounded-md bg-raised px-2 py-1 text-[10.5px]"
+              className="flex items-center justify-between rounded-md bg-surface-raised px-2 py-1 text-[10.5px]"
             >
               <span className="font-medium text-secondary">{node.nodeId}</span>
               <span

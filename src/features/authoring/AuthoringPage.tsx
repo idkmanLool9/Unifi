@@ -139,7 +139,7 @@ function AuthoringStatusBar({ deviceId }: { deviceId: string | null }) {
       <button
         type="button"
         onClick={() => setCategory('validation')}
-        className="ml-auto flex items-center gap-2 rounded px-1.5 py-0.5 transition-colors hover:bg-raised"
+        className="ml-auto flex items-center gap-2 rounded px-1.5 py-0.5 transition-colors hover:bg-surface-raised"
         title="Open the Validation category"
       >
         {validation.errors > 0 && (

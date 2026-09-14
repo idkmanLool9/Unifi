@@ -526,7 +526,7 @@ function PortEtherSection({
                   className={
                     active
                       ? 'rounded-full border border-accent/50 bg-accent/12 px-2 py-0.5 text-[10px] font-medium text-accent'
-                      : 'rounded-full border border-edge px-2 py-0.5 text-[10px] font-medium text-secondary hover:bg-raised'
+                      : 'rounded-full border border-edge px-2 py-0.5 text-[10px] font-medium text-secondary hover:bg-surface-raised'
                   }
                 >
                   {zone}
@@ -555,7 +555,7 @@ function PortEtherSection({
         <button
           type="button"
           onClick={() => patch({ customColor: undefined, colorMode: undefined })}
-          className="h-6 w-full rounded-lg border border-edge text-[10.5px] font-medium text-secondary transition-colors hover:bg-raised"
+          className="h-6 w-full rounded-lg border border-edge text-[10.5px] font-medium text-secondary transition-colors hover:bg-surface-raised"
         >
           Clear custom color (inherit)
         </button>

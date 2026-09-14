@@ -362,7 +362,7 @@ export function CableInspector({ cable }: { cable: CableInstance }) {
                 ignoreManagers: undefined,
               })
             }
-            className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+            className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
           >
             <RotateCcw className="size-3" strokeWidth={1.75} />
             Reset routing
@@ -537,7 +537,7 @@ function ManagementTools({ cable }: { cable: CableInstance }) {
       <button
         type="button"
         onClick={() => reverseCable(cable.id)}
-        className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+        className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
       >
         <ArrowLeftRight className="size-3" strokeWidth={1.75} />
         Reverse direction
@@ -703,7 +703,7 @@ function BundleSection({ cable }: { cable: CableInstance }) {
                     });
                   }
                 }}
-                className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+                className="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
               >
                 <Scissors className="size-3" strokeWidth={1.75} />
                 Split this cable out
@@ -780,7 +780,7 @@ function PresetSection({ cable }: { cable: CableInstance }) {
                 <button
                   type="button"
                   onClick={() => apply(preset.id)}
-                  className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-edge px-2 text-left text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+                  className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-edge px-2 text-left text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
                   title={`Apply ${preset.name}`}
                 >
                   <span
@@ -816,7 +816,7 @@ function PresetSection({ cable }: { cable: CableInstance }) {
           <button
             type="button"
             onClick={save}
-            className="flex h-7 shrink-0 items-center gap-1 rounded-lg border border-edge px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+            className="flex h-7 shrink-0 items-center gap-1 rounded-lg border border-edge px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
           >
             <BookmarkPlus className="size-3.5" strokeWidth={1.75} />
             Save

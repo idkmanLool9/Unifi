@@ -97,7 +97,7 @@ export function CommandPalette() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/40 backdrop-blur-[3px]"
             onClick={() => setOpen(false)}
             aria-hidden
           />
@@ -151,15 +151,23 @@ export function CommandPalette() {
                           onPointerMove={() => setActiveIndex(index)}
                           className={cn(
                             'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left transition-colors duration-75',
-                            active && 'bg-surface-hover',
+                            active && 'bg-accent-soft',
                             disabled && 'opacity-40',
                           )}
                         >
                           <Icon
-                            className="size-4 shrink-0 text-secondary"
+                            className={cn(
+                              'size-4 shrink-0',
+                              active ? 'text-accent' : 'text-secondary',
+                            )}
                             strokeWidth={1.75}
                           />
-                          <span className="flex-1 truncate text-[12.5px] text-primary">
+                          <span
+                            className={cn(
+                              'flex-1 truncate text-[12.5px]',
+                              active ? 'font-medium text-accent' : 'text-primary',
+                            )}
+                          >
                             {command.label}
                           </span>
                           {command.shortcut && <Kbd>{command.shortcut}</Kbd>}

@@ -86,7 +86,7 @@ export function LibraryPage() {
 
   return (
     <div
-      className="relative flex h-dvh flex-col bg-canvas text-primary"
+      className="relative flex h-dvh flex-col bg-background text-primary"
       onDragEnter={(e) => {
         if (!isFileDrag(e)) return;
         e.preventDefault();
@@ -121,7 +121,7 @@ export function LibraryPage() {
         <button
           type="button"
           onClick={() => void navigate('/')}
-          className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-secondary transition-colors hover:bg-raised hover:text-primary"
+          className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-secondary transition-colors hover:bg-surface-raised hover:text-primary"
         >
           <ArrowLeft className="size-3.5" strokeWidth={1.75} />
           Editor
@@ -141,7 +141,7 @@ export function LibraryPage() {
         <button
           type="button"
           onClick={() => setImportOpen(true)}
-          className="flex h-7 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+          className="flex h-7 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-xs font-semibold text-on-accent shadow-accent transition-[background-color,transform] hover:bg-accent-hover active:scale-[0.98]"
         >
           <Import className="size-3.5" strokeWidth={1.75} />
           Import
@@ -162,7 +162,7 @@ export function LibraryPage() {
       </div>
 
       {dragActive && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-canvas/70 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-accent bg-surface px-10 py-8 text-accent">
             <Upload className="size-8" strokeWidth={1.5} />
             <span className="text-sm font-semibold">Drop to import a device</span>

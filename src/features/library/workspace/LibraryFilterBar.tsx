@@ -54,7 +54,7 @@ function Chip({
           'flex h-6.5 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors',
           active
             ? 'border-accent/50 bg-accent/12 text-accent'
-            : 'border-edge text-secondary hover:bg-raised',
+            : 'border-edge text-secondary hover:bg-surface-raised',
         )}
       >
         {label}
@@ -82,7 +82,7 @@ function CheckRow({
     <button
       type="button"
       onClick={onToggle}
-      className="flex h-6.5 w-full items-center gap-2 rounded-md px-1.5 text-left text-[11px] text-secondary transition-colors hover:bg-raised"
+      className="flex h-6.5 w-full items-center gap-2 rounded-md px-1.5 text-left text-[11px] text-secondary transition-colors hover:bg-surface-raised"
     >
       <span
         className={cn(
@@ -114,7 +114,7 @@ function TriToggle({
         'flex h-6.5 items-center rounded-full border px-2.5 text-[11px] font-medium transition-colors',
         value !== undefined
           ? 'border-accent/50 bg-accent/12 text-accent'
-          : 'border-edge text-secondary hover:bg-raised',
+          : 'border-edge text-secondary hover:bg-surface-raised',
       )}
     >
       {label}
@@ -281,7 +281,7 @@ export function LibraryFilterBar({ resultCount }: { resultCount: number }) {
         <button
           type="button"
           onClick={clearFilters}
-          className="flex h-6.5 items-center gap-1 rounded-full px-2 text-[11px] font-medium text-muted transition-colors hover:bg-raised hover:text-primary"
+          className="flex h-6.5 items-center gap-1 rounded-full px-2 text-[11px] font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
         >
           <FilterX className="size-3" />
           Clear ({active})

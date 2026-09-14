@@ -65,7 +65,7 @@ const THEME_META: Record<ThemePreference, { icon: LucideIcon; label: string }> =
   };
 
 function Divider() {
-  return <div className="mx-1.5 h-4 w-px bg-edge-strong/60" />;
+  return <div className="mx-1.5 h-5 w-px bg-edge" />;
 }
 
 /** Segmented tool switcher with a sliding active pill. */
@@ -96,7 +96,7 @@ function ToolGroup() {
                 <motion.span
                   layoutId="active-tool-pill"
                   transition={{ type: 'spring', stiffness: 600, damping: 45 }}
-                  className="absolute inset-0 rounded-[7px] bg-accent shadow-xs"
+                  className="absolute inset-0 rounded-[7px] bg-accent shadow-accent"
                 />
               )}
               <Icon className="relative size-4" strokeWidth={2} />
@@ -175,7 +175,7 @@ export function TopToolbar() {
   };
 
   return (
-    <header className="relative z-20 flex h-[52px] shrink-0 items-center justify-between border-b border-edge bg-linear-to-b from-surface-raised/50 to-surface px-2.5">
+    <header className="relative z-20 flex h-[52px] shrink-0 items-center justify-between border-b border-edge bg-linear-to-b from-surface-raised/60 to-surface px-2.5 shadow-xs">
       {/* Left: panel toggle + brand + document */}
       <div className="flex min-w-0 flex-1 items-center gap-1">
         <Tooltip label="Toggle library" shortcut="[">
@@ -200,12 +200,15 @@ export function TopToolbar() {
           type="button"
           aria-haspopup="menu"
           onClick={openProjectMenu}
-          className="group flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-surface-hover"
+          className="group flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 transition-[background-color,transform] duration-100 hover:bg-surface-hover active:scale-[0.98]"
         >
-          <span className="truncate text-xs font-medium text-secondary transition-colors group-hover:text-primary">
+          <span className="truncate text-[12.5px] font-medium text-secondary transition-colors group-hover:text-primary">
             {documentName}
           </span>
-          <span className="size-1 shrink-0 rounded-full bg-warning/80" title="Unsaved changes" />
+          <span
+            className="size-1.5 shrink-0 rounded-full bg-warning ring-2 ring-warning/20"
+            title="Unsaved changes"
+          />
           <ChevronDown className="size-3 shrink-0 text-muted" strokeWidth={2} />
         </button>
       </div>

@@ -88,7 +88,7 @@ function EtherlightingSettings() {
   const reset = useEtherlightingStore((s) => s.reset);
 
   const selectClass =
-    'h-7 rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary focus:border-accent focus:outline-none';
+    'h-7 rounded-lg border border-edge bg-surface-raised px-1.5 text-xs font-medium text-primary shadow-xs transition-[border-color,box-shadow] hover:border-edge-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft';
 
   return (
     <>
@@ -363,7 +363,7 @@ function EtherlightingSettings() {
         <button
           type="button"
           onClick={reset}
-          className="h-7 rounded-lg border border-edge px-3 text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+          className="h-7 rounded-lg border border-edge px-3 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary active:scale-[0.98]"
         >
           Reset Etherlighting to defaults
         </button>
@@ -554,7 +554,7 @@ function SectionContent({ section }: { section: SectionId }) {
           <button
             type="button"
             onClick={() => setShortcutsOpen(true)}
-            className="mt-3 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover"
+            className="mt-3 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-on-accent shadow-accent transition-[background-color,transform] hover:bg-accent-hover active:scale-[0.98]"
           >
             View all shortcuts
           </button>

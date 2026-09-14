@@ -15,6 +15,8 @@ import { useLibraryMetaStore } from './libraryMetaStore';
 import { useLibraryWorkspaceStore } from './libraryWorkspaceStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
+import { usePricingStore } from '@/stores/pricingStore';
+import { formatMoney, priceForDevice } from '@/features/devices/pricing';
 import { cn } from '@/lib/utils';
 import type { LibraryEntry } from './libraryIndex';
 
@@ -140,6 +142,8 @@ function LibraryCard({
     entry.definition.manufacturerName,
   );
   const catalog = deviceById(entry.id);
+  const currency = usePricingStore((s) => s.currency);
+  const price = priceForDevice({ id: entry.definition.id });
 
   const contextEntries = (): MenuEntry[] => [
     {
@@ -189,14 +193,15 @@ function LibraryCard({
         openMenu(e.clientX, e.clientY, contextEntries());
       }}
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-xl border text-left transition-all duration-150',
+        'group flex h-full w-full flex-col overflow-hidden rounded-xl border text-left',
+        'transition-[transform,border-color,box-shadow] duration-150 ease-out',
         selected
           ? 'border-accent/60 bg-accent/6 shadow-[0_0_0_1px_var(--color-accent)]'
-          : 'border-edge bg-surface hover:-translate-y-0.5 hover:border-edge-strong hover:shadow-lg',
+          : 'border-edge bg-surface hover:-translate-y-0.5 hover:border-edge-strong hover:shadow-panel',
       )}
     >
       {/* Thumbnail well */}
-      <div className="relative flex h-[104px] shrink-0 items-center justify-center bg-raised/60 px-5">
+      <div className="relative flex h-[104px] shrink-0 items-center justify-center bg-surface-raised/60 px-5">
         {catalog && (
           <DeviceThumbnail
             device={catalog}
@@ -238,7 +243,7 @@ function LibraryCard({
             }}
             onKeyDown={() => {}}
             className={cn(
-              'rounded-md p-1 transition-colors hover:bg-raised',
+              'rounded-md p-1 transition-colors hover:bg-surface-raised',
               favorite ? 'text-warning opacity-100' : 'text-muted',
             )}
           >
@@ -252,8 +257,13 @@ function LibraryCard({
 
       {/* Identity */}
       <div className="flex min-h-0 flex-1 flex-col gap-1 p-2.5">
-        <div className="truncate text-[12.5px] font-semibold text-primary">
-          {entry.definition.productName}
+        <div className="flex items-baseline justify-between gap-1.5">
+          <span className="truncate text-[12.5px] font-semibold text-primary">
+            {entry.definition.productName}
+          </span>
+          <span className="shrink-0 text-[11px] font-semibold text-primary tabular-nums">
+            {price === undefined ? '—' : formatMoney(price, currency)}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span
@@ -265,16 +275,16 @@ function LibraryCard({
           <span className="truncate text-[11px] text-secondary">{info.name}</span>
         </div>
         <div className="mt-auto flex flex-wrap items-center gap-1">
-          <span className="rounded bg-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+          <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
             {entry.definition.rackUnits}U
           </span>
           {entry.portCount > 0 && (
-            <span className="rounded bg-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+            <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
               {entry.portCount} ports
             </span>
           )}
           {entry.poe && (
-            <span className="rounded bg-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+            <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
               PoE
             </span>
           )}

@@ -44,8 +44,8 @@ function ToggleChip({
       onClick={onClick}
       title={title}
       className={cn(
-        'flex h-[18px] items-center gap-1 rounded-[5px] px-1.5 transition-colors duration-100',
-        'hover:bg-surface-hover',
+        'flex h-[18px] items-center gap-1 rounded-[5px] px-1.5 transition-[background-color,transform] duration-100',
+        'hover:bg-surface-hover active:scale-95',
         on ? 'text-accent' : 'text-muted',
       )}
     >

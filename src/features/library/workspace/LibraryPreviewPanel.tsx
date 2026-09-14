@@ -16,6 +16,8 @@ import {
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Switch } from '@/components/ui/Switch';
 import { InfoRow } from '@/features/inspector/InfoRow';
+import { formatMoney, priceForDevice } from '@/features/devices/pricing';
+import { usePricingStore } from '@/stores/pricingStore';
 import { metadataJson } from '@/features/authoring/authoringModel';
 import {
   deviceModelUrl,
@@ -74,7 +76,7 @@ function Preview3D({ definition }: { definition: DeviceDefinition }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   return (
-    <div className="relative h-[210px] shrink-0 border-b border-edge bg-raised/40">
+    <div className="relative h-[210px] shrink-0 border-b border-edge bg-surface-raised/40">
       <Canvas
         ref={canvasRef}
         shadows
@@ -159,7 +161,7 @@ function Actions({ entry }: { entry: LibraryEntry }) {
             toast({ variant: 'error', title: result.message });
           }
         }}
-        className="flex h-7 items-center justify-center gap-1.5 rounded-lg bg-accent text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+        className="flex h-7 items-center justify-center gap-1.5 rounded-lg bg-accent text-[11px] font-semibold text-on-accent shadow-accent transition-[background-color,transform] hover:bg-accent-hover active:scale-[0.98]"
       >
         <PlusSquare className="size-3.5" strokeWidth={1.75} />
         Add to rack
@@ -167,7 +169,7 @@ function Actions({ entry }: { entry: LibraryEntry }) {
       <button
         type="button"
         onClick={() => void navigate(`/author?device=${entry.id}`)}
-        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
       >
         <Wrench className="size-3.5" strokeWidth={1.75} />
         Author
@@ -175,7 +177,7 @@ function Actions({ entry }: { entry: LibraryEntry }) {
       <button
         type="button"
         onClick={exportMetadata}
-        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
       >
         <FileDown className="size-3.5" strokeWidth={1.75} />
         Metadata
@@ -183,7 +185,7 @@ function Actions({ entry }: { entry: LibraryEntry }) {
       <button
         type="button"
         onClick={exportPackage}
-        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+        className="flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
       >
         <Package className="size-3.5" strokeWidth={1.75} />
         Package
@@ -245,8 +247,13 @@ function ReadinessSection({
 
 function SpecsSection({ entry }: { entry: LibraryEntry }) {
   const d = entry.definition;
+  const currency = usePricingStore((s) => s.currency);
+  const price = priceForDevice({ id: d.id });
   return (
     <CollapsibleSection title="Specifications">
+      <InfoRow label="List price">
+        {price === undefined ? '—' : formatMoney(price, currency)}
+      </InfoRow>
       <InfoRow label="Model">{d.modelNumber}</InfoRow>
       <InfoRow label="Rack units">{d.rackUnits}U</InfoRow>
       <InfoRow label="Dimensions">
@@ -462,7 +469,7 @@ function VersionSection({ entry }: { entry: LibraryEntry }) {
                 setNote('');
               }
             }}
-            className="h-7 shrink-0 rounded-lg border border-edge px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-raised"
+            className="h-7 shrink-0 rounded-lg border border-edge px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
           >
             Log
           </button>
