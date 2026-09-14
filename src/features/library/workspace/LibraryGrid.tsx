@@ -16,7 +16,10 @@ import { useLibraryWorkspaceStore } from './libraryWorkspaceStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
 import { usePricingStore } from '@/stores/pricingStore';
+import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
+import { toast } from '@/stores/toastStore';
 import { formatMoney, priceForDevice } from '@/features/devices/pricing';
+import { Plus, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LibraryEntry } from './libraryIndex';
 
@@ -27,9 +30,9 @@ import type { LibraryEntry } from './libraryIndex';
  * badges, favorite, pin, drag-to-collection and a context menu.
  */
 
-const CARD_H = 208;
-const CARD_MIN_W = 224;
-const GAP = 12;
+const CARD_H = 336;
+const CARD_MIN_W = 252;
+const GAP = 16;
 const OVERSCAN_ROWS = 2;
 
 export function LibraryGrid({
@@ -144,6 +147,20 @@ function LibraryCard({
   const catalog = deviceById(entry.id);
   const currency = usePricingStore((s) => s.currency);
   const price = priceForDevice({ id: entry.definition.id });
+  const addDevice = useDeviceInstancesStore((s) => s.addDevice);
+
+  const addToRack = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = addDevice(entry.id);
+    toast(
+      result.ok
+        ? {
+            variant: 'success',
+            title: `${entry.definition.productName} added to rack`,
+          }
+        : { variant: 'warning', title: result.message },
+    );
+  };
 
   const contextEntries = (): MenuEntry[] => [
     {
@@ -176,9 +193,11 @@ function LibraryCard({
   ];
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       draggable
+      aria-pressed={selected}
       onDragStart={(e) => {
         e.dataTransfer.setData('rackforge/device-id', entry.id);
         e.dataTransfer.effectAllowed = 'copy';
@@ -187,28 +206,35 @@ function LibraryCard({
         select(entry.id);
         markRecent(entry.id);
       }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          select(entry.id);
+          markRecent(entry.id);
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         select(entry.id);
         openMenu(e.clientX, e.clientY, contextEntries());
       }}
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-xl border text-left',
+        'group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-2xl border text-left',
         'transition-[transform,border-color,box-shadow] duration-150 ease-out',
         selected
-          ? 'border-accent/60 bg-accent/6 shadow-[0_0_0_1px_var(--color-accent)]'
-          : 'border-edge bg-surface hover:-translate-y-0.5 hover:border-edge-strong hover:shadow-panel',
+          ? 'border-accent/60 shadow-[0_0_0_1px_var(--color-accent)]'
+          : 'border-edge bg-surface-raised hover:-translate-y-0.5 hover:border-edge-strong hover:shadow-panel',
       )}
     >
-      {/* Thumbnail well */}
-      <div className="relative flex h-[104px] shrink-0 items-center justify-center bg-surface-raised/60 px-5">
+      {/* Product image well */}
+      <div className="relative flex h-[150px] shrink-0 items-center justify-center bg-linear-to-b from-surface-raised to-surface px-6">
         {catalog && (
           <DeviceThumbnail
             device={catalog}
-            className="max-h-[76px] drop-shadow-sm transition-transform duration-200 group-hover:scale-[1.03]"
+            className="max-h-[104px] w-full drop-shadow-md transition-transform duration-200 group-hover:scale-[1.04]"
           />
         )}
-        <div className="absolute left-2 top-2 flex gap-1">
+        <div className="absolute left-2.5 top-2.5 flex gap-1">
           {entry.verified && (
             <span
               title="Verified — authored and production ready"
@@ -231,74 +257,91 @@ function LibraryCard({
             </span>
           )}
         </div>
-        <div className="absolute right-1.5 top-1.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          {pinned && <Pin className="size-3.5 text-accent" fill="currentColor" />}
-          <span
-            role="button"
-            tabIndex={-1}
-            title={favorite ? 'Unfavorite' : 'Favorite'}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(entry.id);
-            }}
-            onKeyDown={() => {}}
-            className={cn(
-              'rounded-md p-1 transition-colors hover:bg-surface-raised',
-              favorite ? 'text-warning opacity-100' : 'text-muted',
-            )}
-          >
-            <Star className="size-3.5" fill={favorite ? 'currentColor' : 'none'} />
-          </span>
-        </div>
-        {favorite && (
-          <Star className="absolute right-2.5 top-2.5 size-3.5 text-warning group-hover:opacity-0" fill="currentColor" />
+        <button
+          type="button"
+          title={favorite ? 'Unfavorite' : 'Favorite'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(entry.id);
+          }}
+          className={cn(
+            'absolute right-2.5 top-2.5 flex size-7 items-center justify-center rounded-full transition-colors',
+            favorite
+              ? 'text-warning opacity-100'
+              : 'text-muted opacity-0 hover:bg-surface-active group-hover:opacity-100',
+          )}
+        >
+          <Star className="size-3.5" fill={favorite ? 'currentColor' : 'none'} />
+        </button>
+        {pinned && (
+          <Pin
+            className="absolute bottom-2.5 right-2.5 size-3.5 text-accent"
+            fill="currentColor"
+          />
         )}
+        <span
+          className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-md bg-surface-raised/85 px-1.5 py-0.5 text-[9.5px] font-semibold shadow-xs backdrop-blur-sm"
+          style={{ color: info.accent }}
+        >
+          {info.monogram}
+        </span>
       </div>
 
-      {/* Identity */}
-      <div className="flex min-h-0 flex-1 flex-col gap-1 p-2.5">
-        <div className="flex items-baseline justify-between gap-1.5">
-          <span className="truncate text-[12.5px] font-semibold text-primary">
-            {entry.definition.productName}
-          </span>
-          <span className="shrink-0 text-[11px] font-semibold text-primary tabular-nums">
-            {price === undefined ? '—' : formatMoney(price, currency)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className="flex size-4 shrink-0 items-center justify-center rounded text-[8px] font-bold"
-            style={{ backgroundColor: `${info.accent}26`, color: info.accent }}
-          >
-            {info.monogram}
-          </span>
-          <span className="truncate text-[11px] text-secondary">{info.name}</span>
-        </div>
-        <div className="mt-auto flex flex-wrap items-center gap-1">
-          <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+      {/* Identity + specs + action */}
+      <div className="flex min-h-0 flex-1 flex-col border-t border-edge px-3.5 pt-3 pb-3.5">
+        <h3 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-primary">
+          {entry.definition.productName}
+        </h3>
+        <p className="mt-0.5 truncate font-mono text-[10.5px] text-muted">
+          {entry.definition.modelNumber}
+        </p>
+        <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-snug text-secondary">
+          {entry.definition.description}
+        </p>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-1">
+          <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-[9.5px] font-semibold text-secondary tabular-nums">
             {entry.definition.rackUnits}U
           </span>
           {entry.portCount > 0 && (
-            <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+            <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-[9.5px] font-semibold text-secondary tabular-nums">
               {entry.portCount} ports
             </span>
           )}
           {entry.poe && (
-            <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[9.5px] font-medium text-secondary">
+            <span className="flex items-center gap-0.5 rounded-md bg-surface-active px-1.5 py-0.5 text-[9.5px] font-semibold text-secondary">
+              <Zap className="size-2.5" strokeWidth={2.5} />
               PoE
             </span>
           )}
           {!entry.ready && (
             <span
               title={entry.issues.map((i) => i.label).join('\n')}
-              className="ml-auto flex items-center gap-1 rounded bg-warning/12 px-1.5 py-0.5 text-[9.5px] font-medium text-warning"
+              className="ml-auto flex items-center gap-1 rounded-md bg-warning/12 px-1.5 py-0.5 text-[9.5px] font-semibold text-warning"
             >
               <PackagePlus className="size-2.5" />
               {entry.issues.filter((i) => i.level !== 'info').length} to do
             </span>
           )}
         </div>
+
+        <div className="mt-auto pt-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[15px] font-semibold tracking-[-0.01em] text-primary tabular-nums">
+              {price === undefined ? '—' : formatMoney(price, currency)}
+            </span>
+            <span className="text-[10px] text-muted">estimated</span>
+          </div>
+          <button
+            type="button"
+            onClick={addToRack}
+            className="mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-accent text-[12px] font-semibold text-on-accent shadow-accent transition-[background-color,transform] hover:bg-accent-hover active:scale-[0.98]"
+          >
+            <Plus className="size-3.5" strokeWidth={2.5} />
+            Add to rack
+          </button>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
