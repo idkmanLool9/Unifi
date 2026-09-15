@@ -1,0 +1,578 @@
+{
+  "id": "ubnt-usw-pro-max-24-poe",
+  "slug": "pro-max-24-poe",
+  "thumbnailPath": "devices/ubiquiti/pro-max-24-poe/thumbnail.webp",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "Pro Max 24 PoE",
+  "modelNumber": "USW-Pro-Max-24-PoE",
+  "category": "switching",
+  "rackUnits": 1,
+  "widthMm": 442,
+  "heightMm": 44,
+  "depthMm": 325,
+  "weightKg": 3.9,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 44,
+  "maximumPowerWatts": 444,
+  "tags": [
+    "poe",
+    "etherlighting",
+    "2.5g",
+    "10g",
+    "new"
+  ],
+  "description": "Etherlighting switch with 16 GbE and 8 2.5 GbE PoE ports, dual 10G SFP+ uplinks and a 400 W PoE budget.",
+  "mountingOffsetMm": 0,
+  "portsAuthored": true,
+  "ports": [
+    {
+      "id": "2p5gbe-bottom-1-1",
+      "type": "rj45",
+      "count": 1,
+      "label": "2.5 GbE PoE (bottom row)",
+      "location": "front",
+      "positionMm": [
+        57.5,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-1-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        71.96,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-2-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        86.42,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-3-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        100.88,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-4-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        115.34,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-5-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        129.8,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-6-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        144.26,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-7-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        158.72,
+        -6,
+        163.5
+      ],
+      "speedGbps": 2.5,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "sfp-1-1",
+      "type": "sfp+",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        176.62,
+        -8.58,
+        162.5
+      ],
+      "speedGbps": 10,
+      "sizeMm": [
+        15.69,
+        11.6
+      ]
+    },
+    {
+      "id": "rj45-8-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        40.72,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-9-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        26.26,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-10-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        11.8,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-11-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -2.66,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-12-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -17.12,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-13-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -31.58,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-14-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -46.04,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-15-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -60.5,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-16-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -76.78,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-17-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -91.24,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-18-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -105.7,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-19-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -120.16,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-20-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -134.62,
+        -6,
+        163.45
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-21-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -149.08,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-22-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -163.54,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "rj45-23-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        -178,
+        -6,
+        163.5
+      ],
+      "speedGbps": 1,
+      "poe": true,
+      "etherlighting": true,
+      "sizeMm": [
+        14.46,
+        12.75
+      ]
+    },
+    {
+      "id": "sfp-1",
+      "type": "sfp+",
+      "count": 1,
+      "location": "front",
+      "positionMm": [
+        192.34,
+        -8.58,
+        162.5
+      ],
+      "speedGbps": 10,
+      "sizeMm": [
+        15.69,
+        11.6
+      ]
+    },
+    {
+      "id": "c13-1",
+      "type": "c13",
+      "count": 1,
+      "location": "rear",
+      "positionMm": [
+        -171.24,
+        -3.56,
+        -160.66
+      ],
+      "sizeMm": [
+        32.19,
+        26.11
+      ]
+    }
+  ],
+  "leds": [
+    {
+      "id": "status",
+      "label": "System status",
+      "kind": "status",
+      "color": "#4c82f7",
+      "positionMm": [
+        205,
+        8,
+        162.5
+      ],
+      "diameterMm": 2,
+      "intensity": 1,
+      "state": "on"
+    }
+  ],
+  "lighting": {
+    "etherlighting": true,
+    "perPortLink": true,
+    "poeIndicator": true,
+    "speedColors": {
+      "1g": "#9aa3ad",
+      "2.5g": "#22c1a4",
+      "10g": "#7c5cff"
+    },
+    "portHighlightColor": "#4c82f7",
+    "statusLed": {
+      "color": "#4c82f7",
+      "positionMm": [
+        205,
+        8,
+        162.5
+      ]
+    },
+    "colorMode": "speed",
+    "effects": [
+      "breathe",
+      "rainbow"
+    ]
+  },
+  "power": {
+    "connectors": [
+      {
+        "id": "ac",
+        "type": "c14",
+        "count": 1,
+        "location": "rear"
+      }
+    ],
+    "poeBudgetW": 400,
+    "sources": [
+      "ac"
+    ]
+  },
+  "cooling": {
+    "fanCount": 2,
+    "airflow": "side-to-side",
+    "fanDiameterMm": 40
+  },
+  "presentation": {
+    "faceplate": "network",
+    "tone": "dark",
+    "badge": "new",
+    "portsLabel": "26 ports",
+    "speedLabel": "2.5G / 10G",
+    "poe": true
+  }
+}
