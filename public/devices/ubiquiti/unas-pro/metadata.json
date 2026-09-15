@@ -1,0 +1,78 @@
+{
+  "id": "ubnt-unas-pro",
+  "slug": "unas-pro",
+  "thumbnailPath": "devices/ubiquiti/unas-pro/thumbnail.webp",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "UNAS Pro",
+  "modelNumber": "UNAS-Pro",
+  "category": "storage",
+  "rackUnits": 1,
+  "widthMm": 442.4,
+  "heightMm": 43.7,
+  "depthMm": 386.5,
+  "weightKg": 3.2,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 33,
+  "maximumPowerWatts": 100,
+  "tags": [
+    "nas",
+    "storage",
+    "unifi",
+    "7-bay"
+  ],
+  "description": "UniFi 7-bay rackmount NAS — seven hot-swap 3.5\" drive bays with a front status display, a 10G SFP+ uplink and 1 GbE management. 1U rack-mount.",
+  "ports": [
+    {
+      "id": "sfp",
+      "type": "sfp+",
+      "count": 1,
+      "label": "10G SFP+",
+      "location": "rear",
+      "speedGbps": 10
+    },
+    {
+      "id": "mgmt",
+      "type": "rj45",
+      "count": 1,
+      "label": "Management",
+      "location": "rear",
+      "speedGbps": 1
+    }
+  ],
+  "leds": [
+    {
+      "id": "status",
+      "label": "Status",
+      "kind": "status",
+      "color": "#4c82f7",
+      "state": "on"
+    }
+  ],
+  "power": {
+    "connectors": [
+      {
+        "id": "ac",
+        "type": "c14",
+        "count": 1,
+        "location": "rear",
+        "label": "Power"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "cooling": {
+    "fanCount": 2,
+    "airflow": "front-to-rear",
+    "fanDiameterMm": 40
+  },
+  "presentation": {
+    "faceplate": "storage",
+    "tone": "dark",
+    "portsLabel": "2 ports",
+    "speedLabel": "10G SFP+"
+  }
+}

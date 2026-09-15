@@ -18,6 +18,7 @@ export const DEVICE_PRICES_USD: Record<string, number> = {
   'ubnt-usw-pro-aggregation': 1099,
   'ubnt-unvr-pro': 799,
   'ubnt-unvr': 499,
+  'ubnt-unas-pro': 499,
   'ubnt-ucg-ultra': 129,
   'ubnt-rack-shelf-1u': 49,
   'ubnt-uacc-rack-panel-brush-1u': 29,
