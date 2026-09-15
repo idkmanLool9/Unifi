@@ -122,6 +122,13 @@ export function LibrarySidebar() {
     })
     .sort((a, b) => b.count - a.count);
 
+  // A built-in category node is shown only when it (or a descendant) holds
+  // at least one device — so trimming manufacturers never leaves empty
+  // "Servers" / "Firewalls" branches dangling in the tree.
+  const subtreeHasDevices = (node: CategoryNode): boolean =>
+    countFor(node.id) > 0 ||
+    (node.children?.some(subtreeHasDevices) ?? false);
+
   const select = (next: LibraryScope) => setScope(next);
   const toggleCollapse = (id: string) =>
     setCollapsed((c) =>
@@ -129,6 +136,7 @@ export function LibrarySidebar() {
     );
 
   const renderNode = (node: CategoryNode, depth: number) => {
+    if (!subtreeHasDevices(node)) return null;
     const active = scopeEquals(scope, { kind: 'category', nodeId: node.id });
     const isCollapsed = collapsed.includes(node.id);
     const count = countFor(node.id);

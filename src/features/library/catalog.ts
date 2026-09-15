@@ -48,28 +48,12 @@ export interface CatalogBrand {
 /** Visual identities for known manufacturers; unknown ones get a fallback. */
 const BRAND_VISUALS: Record<string, { monogram: string; tint: string }> = {
   ubiquiti: { monogram: 'Ub', tint: '#2f6bef' },
-  dell: { monogram: 'De', tint: '#0f7bc4' },
-  synology: { monogram: 'Sy', tint: '#8a8f99' },
-  apc: { monogram: 'AP', tint: '#c2483d' },
-  cisco: { monogram: 'Ci', tint: '#12a3b4' },
-  mikrotik: { monogram: 'Mi', tint: '#5a8dd6' },
-  supermicro: { monogram: 'Su', tint: '#3f9e5f' },
-  hpe: { monogram: 'HP', tint: '#25b28a' },
-  tplink: { monogram: 'TP', tint: '#3aa0d8' },
+  genexis: { monogram: 'Ge', tint: '#e5734b' },
+  rackforge: { monogram: 'RF', tint: '#0a6cf5' },
 };
 
 /** Stable presentation order for known manufacturers. */
-const BRAND_ORDER = [
-  'ubiquiti',
-  'dell',
-  'synology',
-  'apc',
-  'cisco',
-  'mikrotik',
-  'supermicro',
-  'hpe',
-  'tplink',
-];
+const BRAND_ORDER = ['ubiquiti', 'genexis', 'rackforge'];
 
 export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
   routing: 'Routing',
@@ -105,9 +89,9 @@ function brandName(id: string): string {
   return definition?.manufacturerName ?? id;
 }
 
-/** All brands with devices, plus known empty brands (kept for browsing). */
+/** Every manufacturer that has at least one device in the catalog. */
 export function catalogBrands(): CatalogBrand[] {
-  const ids = new Set<string>([...manufacturerIds(), 'tplink']);
+  const ids = new Set<string>(manufacturerIds());
   return [...ids]
     .sort((a, b) => {
       const ai = BRAND_ORDER.indexOf(a);

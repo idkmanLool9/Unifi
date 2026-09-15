@@ -62,8 +62,24 @@ describe('deviceInstancesStore', () => {
   });
 
   it('rejects devices deeper than the rack', () => {
-    seedRack();
-    const result = useDeviceInstancesStore.getState().addDevice('dell-r760');
+    // A shallow desktop mini-rack (~400mm) can't fit the 480mm UNVR Pro.
+    useRackStore.setState({
+      rack: {
+        id: 'rack-1',
+        name: 'Test Rack',
+        profileId: 'unifi-minirack',
+        railMode: 'manual',
+        railSpacingMm: 400,
+        units: 6,
+        finish: 'graphite',
+        orientation: 'front',
+        showUnitNumbers: true,
+        showRearPosts: true,
+        showFloorMarker: true,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    const result = useDeviceInstancesStore.getState().addDevice('ubnt-unvr-pro');
     expect(result).toMatchObject({ ok: false, reason: 'too-deep' });
   });
 

@@ -18,7 +18,7 @@ const SUGGESTIONS = [
   { label: '10G aggregation', detail: 'Popular filter' },
 ];
 
-const POPULAR_IDS = ['ubnt-udm-pro', 'ubnt-usw-pro-48-poe', 'apc-smt1500rm'];
+const POPULAR_IDS = ['ubnt-udm-pro', 'ubnt-usw-pro-48-poe', 'ubnt-usw-pro-max-24-poe'];
 
 function SectionLabel({
   icon: Icon,
