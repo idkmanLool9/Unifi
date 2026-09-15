@@ -1,6 +1,7 @@
 {
   "id": "rackforge-pdu-1u-eu",
   "slug": "pdu-1u-eu",
+  "thumbnailPath": "devices/rackforge/pdu-1u-eu/thumbnail.webp",
   "manufacturer": "rackforge",
   "manufacturerName": "RackForge",
   "productName": "PDU 1U EU",

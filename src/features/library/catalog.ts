@@ -6,6 +6,7 @@
  */
 import {
   allDevices,
+  deviceThumbnailUrl,
   devicesByManufacturer,
   getDevice,
   manufacturerIds,
@@ -34,6 +35,12 @@ export interface CatalogDevice {
   badge?: 'popular' | 'new';
   faceplate: FaceplateStyle;
   tone: 'dark' | 'metal';
+  /**
+   * Real product render, present only for devices that ship a thumbnail
+   * asset (those with a 3D model). Absent devices fall back to the
+   * procedural faceplate illustration.
+   */
+  thumbnailUrl?: string;
 }
 
 export interface CatalogBrand {
@@ -81,6 +88,12 @@ function toCatalogView(definition: DeviceDefinition): CatalogDevice {
     badge: definition.presentation.badge,
     faceplate: definition.presentation.faceplate,
     tone: definition.presentation.tone,
+    // Only expose a thumbnail URL when the device declares one, so devices
+    // without a shipped asset never trigger a 404 on the convention path.
+    thumbnailUrl:
+      definition.thumbnailPath !== undefined
+        ? deviceThumbnailUrl(definition)
+        : undefined,
   };
 }
 

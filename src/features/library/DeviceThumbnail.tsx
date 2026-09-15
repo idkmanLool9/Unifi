@@ -1,11 +1,13 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { CatalogDevice } from './catalog';
 
 /**
- * Procedural front-faceplate illustration for a device. Drawn as SVG from
- * the device's category and rack height, so every catalog entry gets a
- * crisp, consistent thumbnail without shipping image assets.
+ * Device thumbnail. Devices that ship a real product render (those with a
+ * 3D model) show that image; everything else falls back to a procedural
+ * SVG faceplate drawn from the device's category and rack height, so every
+ * catalog entry gets a crisp, consistent thumbnail. A failed image load
+ * also drops back to the SVG.
  */
 
 const PLATE_W = 190;
@@ -154,6 +156,26 @@ interface DeviceThumbnailProps {
 }
 
 export function DeviceThumbnail({ device, className }: DeviceThumbnailProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  // Real product render, when the device ships one and it loads cleanly.
+  if (device.thumbnailUrl && !imageFailed) {
+    return (
+      <img
+        src={device.thumbnailUrl}
+        alt={device.name}
+        loading="lazy"
+        decoding="async"
+        onError={() => setImageFailed(true)}
+        className={cn('block max-h-full w-full object-contain', className)}
+      />
+    );
+  }
+
+  return <ProceduralFaceplate device={device} className={className} />;
+}
+
+function ProceduralFaceplate({ device, className }: DeviceThumbnailProps) {
   const gradientId = useId();
   const tone = TONE[device.tone];
   const h = device.units * U_H;

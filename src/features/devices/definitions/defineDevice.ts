@@ -32,6 +32,9 @@ export interface DeviceSeed {
   presentation: DevicePresentation;
   widthMm?: number;
   heightMm?: number;
+  /** Explicit asset paths; when absent they derive from manufacturer/slug. */
+  frontModelPath?: string;
+  thumbnailPath?: string;
   mountingStandard?: DeviceDefinition['mountingStandard'];
   defaultFacing?: RackOrientation;
   tags?: string[];

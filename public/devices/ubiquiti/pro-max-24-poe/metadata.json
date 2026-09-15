@@ -1,6 +1,7 @@
 {
   "id": "ubnt-usw-pro-max-24-poe",
   "slug": "pro-max-24-poe",
+  "thumbnailPath": "devices/ubiquiti/pro-max-24-poe/thumbnail.webp",
   "manufacturer": "ubiquiti",
   "manufacturerName": "Ubiquiti",
   "productName": "Pro Max 24 PoE",

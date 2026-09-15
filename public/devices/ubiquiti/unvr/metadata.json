@@ -1,6 +1,7 @@
 {
   "id": "ubnt-unvr",
   "slug": "unvr",
+  "thumbnailPath": "devices/ubiquiti/unvr/thumbnail.webp",
   "manufacturer": "ubiquiti",
   "manufacturerName": "Ubiquiti",
   "productName": "UNVR",

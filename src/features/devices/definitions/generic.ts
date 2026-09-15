@@ -10,6 +10,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
   defineDevice({
     id: 'gen-patch-24',
     slug: 'patch-panel-24',
+    thumbnailPath: 'devices/generic/patch-panel-24/thumbnail.webp',
     manufacturer: 'generic',
     manufacturerName: 'Generic',
     productName: '24-Port Keystone Panel',
@@ -118,6 +119,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
   defineDevice({
     id: 'gen-blank-1u',
     slug: 'blank-panel-1u',
+    thumbnailPath: 'devices/generic/blank-panel-1u/thumbnail.webp',
     manufacturer: 'generic',
     manufacturerName: 'Generic',
     productName: '1U Blank Panel',
@@ -419,6 +421,7 @@ export const GENERIC_DEVICES: DeviceDefinition[] = [
   defineDevice({
     id: 'gen-wifi-router',
     slug: 'wifi-router',
+    thumbnailPath: 'devices/generic/wifi-router/thumbnail.webp',
     manufacturer: 'generic',
     manufacturerName: 'Generic',
     productName: 'Wireless Router',

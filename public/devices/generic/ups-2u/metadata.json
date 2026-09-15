@@ -1,6 +1,7 @@
 {
   "id": "gen-ups-2u",
   "slug": "ups-2u",
+  "thumbnailPath": "devices/generic/ups-2u/thumbnail.webp",
   "manufacturer": "generic",
   "manufacturerName": "Generic",
   "productName": "2U Rackmount UPS",

@@ -1,6 +1,7 @@
 {
   "id": "ubnt-udm-pro",
   "slug": "dream-machine-pro",
+  "thumbnailPath": "devices/ubiquiti/dream-machine-pro/thumbnail.webp",
   "manufacturer": "ubiquiti",
   "manufacturerName": "Ubiquiti",
   "productName": "Dream Machine Pro",

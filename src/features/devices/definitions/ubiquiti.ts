@@ -328,6 +328,7 @@ export const UBIQUITI_DEVICES: DeviceDefinition[] = [
   defineDevice({
     id: 'ubnt-ucg-ultra',
     slug: 'cloud-gateway-ultra',
+    thumbnailPath: 'devices/ubiquiti/cloud-gateway-ultra/thumbnail.webp',
     manufacturer: 'ubiquiti',
     manufacturerName: 'Ubiquiti',
     productName: 'Cloud Gateway Ultra',
