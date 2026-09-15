@@ -8,6 +8,7 @@ import {
   Layers,
   Plus,
   Star,
+  Trash2,
 } from 'lucide-react';
 import { useLibraryEntries } from './useLibraryEntries';
 import { classifyDevice, CATEGORY_TREE, type CategoryNode } from './categoryTree';
@@ -18,6 +19,7 @@ import {
   type LibraryScope,
 } from './libraryWorkspaceStore';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 import { useMenuStore } from '@/stores/menuStore';
 import { cn } from '@/lib/utils';
 
@@ -90,6 +92,7 @@ export function LibrarySidebar() {
   const setScope = useLibraryWorkspaceStore((s) => s.setScope);
   const favoriteIds = useLibraryStore((s) => s.favoriteIds);
   const recentIds = useLibraryStore((s) => s.recentIds);
+  const removedIds = useCatalogEditsStore((s) => s.removedIds);
   const customCategories = useLibraryMetaStore((s) => s.customCategories);
   const collections = useLibraryMetaStore((s) => s.collections);
   const addCollection = useLibraryMetaStore((s) => s.addCollection);
@@ -219,6 +222,16 @@ export function LibrarySidebar() {
         <span className="flex-1">Recent</span>
         <span className="text-[10px] text-muted">{recentIds.length}</span>
       </NavRow>
+      {removedIds.length > 0 && (
+        <NavRow
+          active={scope.kind === 'removed'}
+          onClick={() => select({ kind: 'removed' })}
+        >
+          <Trash2 className="size-3.5" strokeWidth={1.75} />
+          <span className="flex-1">Removed</span>
+          <span className="text-[10px] text-muted">{removedIds.length}</span>
+        </NavRow>
+      )}
 
       <SectionTitle
         action={

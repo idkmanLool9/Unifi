@@ -14,6 +14,7 @@ import { useLibraryEntries } from './useLibraryEntries';
 import { useLibraryMetaStore } from './libraryMetaStore';
 import { useLibraryWorkspaceStore } from './libraryWorkspaceStore';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 
 /**
  * The Device Library workspace — RackForge's asset browser. One page
@@ -35,6 +36,7 @@ export function LibraryPage() {
   const recentIds = useLibraryStore((s) => s.recentIds);
   const pinnedIds = useLibraryMetaStore((s) => s.pinnedIds);
   const collections = useLibraryMetaStore((s) => s.collections);
+  const removedIds = useCatalogEditsStore((s) => s.removedIds);
   const [importOpen, setImportOpen] = useState(false);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -46,7 +48,13 @@ export function LibraryPage() {
     Array.from(e.dataTransfer.types).includes('Files');
 
   const results = useMemo(() => {
-    let scoped = entries;
+    const removed = new Set(removedIds);
+    // Removed devices are hidden from every view except the Removed scope,
+    // which shows only them so they can be restored.
+    let scoped =
+      scope.kind === 'removed'
+        ? entries.filter((e) => removed.has(e.id))
+        : entries.filter((e) => !removed.has(e.id));
     switch (scope.kind) {
       case 'favorites':
         scoped = scoped.filter((e) => favoriteIds.includes(e.id));
@@ -78,7 +86,7 @@ export function LibraryPage() {
       return [...filtered].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     }
     return sortEntries(filtered, sort, recentIds);
-  }, [entries, scope, query, filters, sort, favoriteIds, recentIds, pinnedIds, collections]);
+  }, [entries, scope, query, filters, sort, favoriteIds, recentIds, pinnedIds, collections, removedIds]);
 
   const selected = selectedId
     ? entries.find((e) => e.id === selectedId)

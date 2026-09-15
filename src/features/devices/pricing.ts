@@ -1,3 +1,4 @@
+import { getPriceOverride } from '@/stores/catalogEditsStore';
 import type { RackProfileId } from '@/features/rack/rackProfiles';
 
 /**
@@ -79,9 +80,14 @@ export const RACK_PROFILE_PRICES_USD: Record<RackProfileId, number> = {
   custom: 299,
 };
 
-/** Unit price of a device, or undefined when we have no estimate for it. */
+/**
+ * Unit price of a device, or undefined when we have no estimate for it.
+ * A user-set override (from the library inspector) wins over the built-in
+ * estimate — including an explicit 0 for a free item.
+ */
 export function priceForDevice(def: { id: string }): number | undefined {
-  return DEVICE_PRICES_USD[def.id];
+  const override = getPriceOverride(def.id);
+  return override ?? DEVICE_PRICES_USD[def.id];
 }
 
 /** List price of a rack profile, or undefined when unknown. */

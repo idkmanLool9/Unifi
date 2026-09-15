@@ -11,6 +11,8 @@ import {
   Info,
   Package,
   PlusSquare,
+  RotateCcw,
+  Trash2,
   Wrench,
 } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
@@ -18,6 +20,7 @@ import { Switch } from '@/components/ui/Switch';
 import { InfoRow } from '@/features/inspector/InfoRow';
 import { formatMoney, priceForDevice } from '@/features/devices/pricing';
 import { usePricingStore } from '@/stores/pricingStore';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 import { metadataJson } from '@/features/authoring/authoringModel';
 import {
   deviceModelUrl,
@@ -133,6 +136,9 @@ function download(filename: string, text: string, type = 'application/json') {
 function Actions({ entry }: { entry: LibraryEntry }) {
   const navigate = useNavigate();
   const addDevice = useDeviceInstancesStore((s) => s.addDevice);
+  const removed = useCatalogEditsStore((s) => s.removedIds.includes(entry.id));
+  const removeDevice = useCatalogEditsStore((s) => s.removeDevice);
+  const restoreDevice = useCatalogEditsStore((s) => s.restoreDevice);
 
   const exportMetadata = () =>
     download(`${entry.definition.slug}-metadata.json`, metadataJson(entry.definition));
@@ -190,6 +196,31 @@ function Actions({ entry }: { entry: LibraryEntry }) {
         <Package className="size-3.5" strokeWidth={1.75} />
         Package
       </button>
+      {removed ? (
+        <button
+          type="button"
+          onClick={() => {
+            restoreDevice(entry.id);
+            toast({ variant: 'success', title: 'Restored to library' });
+          }}
+          className="col-span-2 flex h-7 items-center justify-center gap-1.5 rounded-lg border border-edge text-[11px] font-medium text-secondary transition-colors hover:bg-surface-raised"
+        >
+          <RotateCcw className="size-3.5" strokeWidth={1.75} />
+          Restore to library
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            removeDevice(entry.id);
+            toast({ variant: 'success', title: 'Removed from library' });
+          }}
+          className="col-span-2 flex h-7 items-center justify-center gap-1.5 rounded-lg border border-danger/30 text-[11px] font-medium text-danger transition-colors hover:bg-danger/10"
+        >
+          <Trash2 className="size-3.5" strokeWidth={1.75} />
+          Delete from library
+        </button>
+      )}
     </div>
   );
 }
@@ -248,12 +279,59 @@ function ReadinessSection({
 function SpecsSection({ entry }: { entry: LibraryEntry }) {
   const d = entry.definition;
   const currency = usePricingStore((s) => s.currency);
+  const override = useCatalogEditsStore((s) => s.priceUsd[d.id]);
+  const setPrice = useCatalogEditsStore((s) => s.setPrice);
+  const clearPrice = useCatalogEditsStore((s) => s.clearPrice);
   const price = priceForDevice({ id: d.id });
   return (
     <CollapsibleSection title="Specifications">
-      <InfoRow label="List price">
-        {price === undefined ? '—' : formatMoney(price, currency)}
-      </InfoRow>
+      {/* Editable list price. Saved instantly and flows to the cart. */}
+      <div className="flex items-center justify-between gap-2 py-1">
+        <span className="text-xs text-secondary">
+          List price
+          <span className="ml-1 text-muted">(USD)</span>
+        </span>
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted">
+              $
+            </span>
+            <input
+              type="number"
+              min={0}
+              inputMode="decimal"
+              value={price ?? ''}
+              placeholder="—"
+              aria-label="List price in US dollars"
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '') {
+                  clearPrice(d.id);
+                  return;
+                }
+                const n = Number(v);
+                if (Number.isFinite(n)) setPrice(d.id, Math.max(0, n));
+              }}
+              className="h-7 w-24 rounded-lg border border-edge bg-surface-raised pl-5 pr-2 text-right text-xs font-medium text-primary focus:border-accent focus:outline-none"
+            />
+          </div>
+          {override !== undefined && (
+            <button
+              type="button"
+              onClick={() => clearPrice(d.id)}
+              title="Reset to default price"
+              className="rounded-md p-1 text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+            >
+              <RotateCcw className="size-3.5" strokeWidth={1.75} />
+            </button>
+          )}
+        </div>
+      </div>
+      {currency !== 'USD' && price !== undefined && (
+        <div className="-mt-0.5 pb-1 text-right text-[10.5px] text-muted">
+          ≈ {formatMoney(price, currency)}
+        </div>
+      )}
       <InfoRow label="Model">{d.modelNumber}</InfoRow>
       <InfoRow label="Rack units">{d.rackUnits}U</InfoRow>
       <InfoRow label="Dimensions">

@@ -11,6 +11,7 @@ import {
   getDevice,
   manufacturerIds,
 } from '@/features/devices/deviceRegistry';
+import { isDeviceRemoved } from '@/stores/catalogEditsStore';
 import type {
   DeviceCategory,
   DeviceDefinition,
@@ -104,7 +105,11 @@ function brandName(id: string): string {
 
 /** Every manufacturer that has at least one device in the catalog. */
 export function catalogBrands(): CatalogBrand[] {
-  const ids = new Set<string>(manufacturerIds());
+  const ids = new Set<string>(
+    manufacturerIds().filter((id) =>
+      devicesByManufacturer(id).some((d) => !isDeviceRemoved(d.id)),
+    ),
+  );
   return [...ids]
     .sort((a, b) => {
       const ai = BRAND_ORDER.indexOf(a);
@@ -121,7 +126,9 @@ export function catalogBrands(): CatalogBrand[] {
 }
 
 export const catalogDevices = (): CatalogDevice[] =>
-  allDevices().map(toCatalogView);
+  allDevices()
+    .filter((d) => !isDeviceRemoved(d.id))
+    .map(toCatalogView);
 
 export const deviceById = (id: string): CatalogDevice | undefined => {
   const definition = getDevice(id);
@@ -132,4 +139,6 @@ export const brandById = (id: string): CatalogBrand | undefined =>
   catalogBrands().find((b) => b.id === id);
 
 export const devicesByBrand = (brandId: string): CatalogDevice[] =>
-  devicesByManufacturer(brandId).map(toCatalogView);
+  devicesByManufacturer(brandId)
+    .filter((d) => !isDeviceRemoved(d.id))
+    .map(toCatalogView);

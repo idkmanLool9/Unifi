@@ -1,5 +1,6 @@
 import { getDevice, useRegistryStore } from '@/features/devices/deviceRegistry';
 import { priceForDevice, priceForProfile } from '@/features/devices/pricing';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 import { getProfile } from '@/features/rack/rackProfiles';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { useRackStore } from '@/stores/rackStore';
@@ -108,5 +109,7 @@ export function useBillOfMaterials(): BillOfMaterials {
   const instances = useDeviceInstancesStore((s) => s.instances);
   // Re-derive when external device definitions finish loading.
   useRegistryStore((s) => s.version);
+  // Re-derive when the user edits a price override.
+  useCatalogEditsStore((s) => s.priceUsd);
   return computeBom(rack, instances, getDevice);
 }

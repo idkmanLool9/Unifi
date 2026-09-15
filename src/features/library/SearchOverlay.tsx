@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Clock, Search, SearchX, TrendingUp } from 'lucide-react';
 import { DeviceThumbnail } from './DeviceThumbnail';
 import { brandById, deviceById } from './catalog';
+import { isDeviceRemoved } from '@/stores/catalogEditsStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 
 /**
@@ -103,7 +104,7 @@ export function SearchOverlay({ query, onClose }: SearchOverlayProps) {
             <div className="space-y-px">
               {POPULAR_IDS.map((id) => {
                 const device = deviceById(id);
-                if (!device) return null;
+                if (!device || isDeviceRemoved(id)) return null;
                 return (
                   <button
                     key={id}

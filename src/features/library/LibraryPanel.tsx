@@ -13,6 +13,7 @@ import {
   type CatalogDevice,
 } from './catalog';
 import { useRegistryStore } from '@/features/devices/deviceRegistry';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 import { PanelHeader } from '@/components/ui/PanelHeader';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -73,8 +74,11 @@ export function LibraryPanel() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Re-derive the catalog when external definitions finish loading.
+  // Re-derive the catalog when external definitions finish loading, or when
+  // the user removes/restores a device or edits a price.
   useRegistryStore((s) => s.version);
+  useCatalogEditsStore((s) => s.removedIds);
+  useCatalogEditsStore((s) => s.priceUsd);
   const brands = catalogBrands();
   const devices = catalogDevices();
 

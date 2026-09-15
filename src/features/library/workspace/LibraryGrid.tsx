@@ -16,6 +16,7 @@ import { useLibraryWorkspaceStore } from './libraryWorkspaceStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useMenuStore, type MenuEntry } from '@/stores/menuStore';
 import { usePricingStore } from '@/stores/pricingStore';
+import { useCatalogEditsStore } from '@/stores/catalogEditsStore';
 import { useDeviceInstancesStore } from '@/stores/deviceInstancesStore';
 import { toast } from '@/stores/toastStore';
 import { formatMoney, priceForDevice } from '@/features/devices/pricing';
@@ -146,6 +147,8 @@ function LibraryCard({
   );
   const catalog = deviceById(entry.id);
   const currency = usePricingStore((s) => s.currency);
+  // Re-render this card when its price override changes.
+  useCatalogEditsStore((s) => s.priceUsd[entry.id]);
   const price = priceForDevice({ id: entry.definition.id });
   const addDevice = useDeviceInstancesStore((s) => s.addDevice);
 

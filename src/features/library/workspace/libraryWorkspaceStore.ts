@@ -12,6 +12,7 @@ export type LibraryScope =
   | { kind: 'all' }
   | { kind: 'favorites' }
   | { kind: 'recent' }
+  | { kind: 'removed' }
   | { kind: 'category'; nodeId: string }
   | { kind: 'manufacturer'; id: string }
   | { kind: 'collection'; id: string };
