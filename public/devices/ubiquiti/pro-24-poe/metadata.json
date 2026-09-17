@@ -1,0 +1,322 @@
+{
+  "id": "ubnt-usw-pro-24-poe",
+  "slug": "pro-24-poe",
+  "thumbnailPath": "devices/ubiquiti/pro-24-poe/thumbnail.webp",
+  "manufacturer": "ubiquiti",
+  "manufacturerName": "Ubiquiti",
+  "productName": "Pro 24 PoE",
+  "modelNumber": "USW-Pro-24-PoE",
+  "category": "switching",
+  "rackUnits": 1,
+  "widthMm": 442.4,
+  "heightMm": 44,
+  "depthMm": 287,
+  "weightKg": 3.9,
+  "mountingStandard": "eia-310",
+  "defaultFacing": "front",
+  "powerConsumptionWatts": 45,
+  "maximumPowerWatts": 480,
+  "tags": [
+    "switch",
+    "poe",
+    "switching",
+    "unifi"
+  ],
+  "description": "UniFi Pro 24 PoE — 24 Gigabit RJ45 ports with PoE+/PoE++ and 2 10G SFP+ uplinks, in a 1U rack-mount switch with a front status display.",
+  "mountingOffsetMm": 0,
+  "portsAuthored": true,
+  "ports": [
+    {
+      "id": "sfp-1",
+      "type": "sfp+",
+      "count": 1,
+      "location": "front",
+      "positionMm": [192.33, 10.84, 142.25],
+      "speedGbps": 10,
+      "sizeMm": [14.3, 9.5]
+    },
+    {
+      "id": "sfp-2",
+      "type": "sfp+",
+      "count": 1,
+      "location": "front",
+      "positionMm": [192.27, -4.64, 142.25],
+      "speedGbps": 10,
+      "sizeMm": [14.3, 9.5]
+    },
+    {
+      "id": "rj45-3",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [26.97, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-13",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [13.09, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-14",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [27.19, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-15",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [40.91, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-16",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [55.37, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-17",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [68.7, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-18",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [86.62, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-19",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [99.99, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-20",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [114.25, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-21",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [127.9, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-22",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [142.06, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-23",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [155.97, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-24",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [-1.1, -3.04, 142.7],
+      "rotationDeg": [0, 0, -180],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 12.94]
+    },
+    {
+      "id": "rj45-1",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [40.91, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-2",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [54.9, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-4",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [68.88, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-5",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [85.87, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-6",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [100.42, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-7",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [114.38, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-8",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [128.3, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-9",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [142.06, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-10",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [155.75, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-11",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [13.09, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    },
+    {
+      "id": "rj45-12",
+      "type": "rj45",
+      "count": 1,
+      "location": "front",
+      "positionMm": [-1.1, 9.26, 142.61],
+      "speedGbps": 1,
+      "poe": true,
+      "sizeMm": [13.79, 11.4]
+    }
+  ],
+  "leds": [],
+  "power": {
+    "connectors": [
+      {
+        "id": "ac",
+        "type": "c14",
+        "count": 1,
+        "location": "rear",
+        "label": "Power"
+      }
+    ],
+    "sources": [
+      "ac"
+    ]
+  },
+  "presentation": {
+    "faceplate": "network",
+    "tone": "dark",
+    "portsLabel": "24 ports",
+    "speedLabel": "1G · 10G SFP+",
+    "poe": true
+  }
+}

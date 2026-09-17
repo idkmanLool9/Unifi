@@ -14,6 +14,7 @@ export const DEVICE_PRICES_USD: Record<string, number> = {
   // Ubiquiti
   'ubnt-udm-pro': 379,
   'ubnt-usw-pro-48-poe': 1099,
+  'ubnt-usw-pro-24-poe': 799,
   'ubnt-usw-pro-max-24-poe': 599,
   'ubnt-usw-pro-aggregation': 1099,
   'ubnt-unvr-pro': 799,
